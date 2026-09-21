@@ -1,0 +1,311 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import Link from "next/link";
+import { confirmerBon, refuserArticle, validerArticle } from "@/app/actions";
+import { demarrerSignatureDocuSign } from "./docusign-actions";
+
+type Statut = "EN_ATTENTE" | "VALIDE" | "REFUSE";
+
+export type ArticleAffiche = {
+  id: string;
+  nom: string;
+  qte: string;
+  poidsKg: number;
+  temp: string;
+  dlc: string;
+  bloque: boolean;
+  temperatureHorsPlage: boolean;
+  statut: Statut;
+  motifRefus: string;
+};
+
+export type BonAffiche = {
+  id: string;
+  numero: string;
+  entrepriseNom: string;
+  associationNom: string;
+  articles: ArticleAffiche[];
+  donateurSigne: boolean;
+  associationSigne: boolean;
+  confirme: boolean;
+  poidsTotalRetenu: number | null;
+};
+
+export default function BonEnlevementClient({ bon, docusignConfigure }: { bon: BonAffiche; docusignConfigure: boolean }) {
+  const [ecran, setEcran] = useState<"revue" | "succes">(bon.confirme ? "succes" : "revue");
+  const [articles, setArticles] = useState(bon.articles);
+  const [motifs, setMotifs] = useState<Record<string, string>>(
+    Object.fromEntries(bon.articles.map((a) => [a.id, a.motifRefus]))
+  );
+  const donateurSigne = bon.donateurSigne;
+  const associationSigne = bon.associationSigne;
+  const [erreurSignature, setErreurSignature] = useState<string | null>(null);
+  const [signatureEnCours, setSignatureEnCours] = useState<"DONATEUR" | "ASSOCIATION" | null>(null);
+  const [, startTransition] = useTransition();
+
+  const valider = (article: ArticleAffiche) => {
+    if (article.bloque) return;
+    setArticles((prev) => prev.map((a) => (a.id === article.id ? { ...a, statut: "VALIDE" } : a)));
+    startTransition(() => {
+      void validerArticle(article.id);
+    });
+  };
+
+  const refuser = (article: ArticleAffiche) => {
+    setArticles((prev) => prev.map((a) => (a.id === article.id ? { ...a, statut: "REFUSE" } : a)));
+    startTransition(() => {
+      void refuserArticle(article.id, motifs[article.id] ?? "");
+    });
+  };
+
+  const demarrerSignature = (role: "DONATEUR" | "ASSOCIATION") => {
+    setErreurSignature(null);
+    setSignatureEnCours(role);
+    startTransition(async () => {
+      const resultat = await demarrerSignatureDocuSign(bon.id, role);
+      if (!resultat.ok) {
+        setErreurSignature(resultat.error);
+        setSignatureEnCours(null);
+        return;
+      }
+      window.location.href = resultat.url;
+    });
+  };
+
+  const nombreValides = articles.filter((a) => a.statut === "VALIDE").length;
+  const nombreRefuses = articles.filter((a) => a.statut === "REFUSE").length;
+  const poidsRetenu = articles.filter((a) => a.statut === "VALIDE").reduce((total, a) => total + a.poidsKg, 0);
+
+  const confirmer = () => {
+    startTransition(async () => {
+      const resultat = await confirmerBon(bon.id);
+      if (!resultat.ok) {
+        setErreurSignature(resultat.error ?? "Impossible de confirmer.");
+        return;
+      }
+      setErreurSignature(null);
+      setEcran("succes");
+    });
+  };
+
+  if (ecran === "succes") {
+    return (
+      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg">
+        <header className="flex items-center gap-3 px-5 pt-5 pb-3">
+          <h1 className="flex-1 font-display text-lg font-semibold">Bon n°{bon.numero}</h1>
+        </header>
+        <main className="flex flex-1 flex-col items-center gap-4 px-6 pt-6 text-center">
+          <div className="mt-6 flex h-18 w-18 items-center justify-center rounded-full bg-brand-tint">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M5 13L9.5 17.5L19 7" stroke="#1E4B36" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <div>
+            <h2 className="mb-1.5 text-lg font-semibold">Bon d&apos;enlèvement confirmé</h2>
+            <p className="text-sm leading-relaxed text-ink-muted">
+              N°{bon.numero} horodaté
+              <br />
+              par scan QR code
+            </p>
+          </div>
+          <div className="w-full space-y-2 rounded-2xl border border-border bg-surface p-4 text-left text-sm">
+            <div className="flex justify-between">
+              <span className="text-ink-muted">Articles validés</span>
+              <span className="font-semibold">{nombreValides} / {articles.length}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-ink-muted">Articles refusés</span>
+              <span className="font-semibold">{nombreRefuses}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-ink-muted">Archivé dans</span>
+              <Link href="/archives" className="font-semibold underline">
+                Mes archives
+              </Link>
+            </div>
+          </div>
+        </main>
+        <footer className="space-y-2.5 px-6 pt-4 pb-6">
+          <a
+            href={`/api/bon-enlevement/${bon.id}/pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full rounded-full bg-ink py-3.5 text-center text-sm font-bold text-white"
+          >
+            Voir le PDF
+          </a>
+          <Link href="/dons" className="block w-full rounded-full border border-border bg-surface py-3.5 text-center text-sm font-semibold">
+            Retour aux dons disponibles
+          </Link>
+        </footer>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg">
+      <header className="px-5 pt-5 pb-3">
+        <div className="mb-2.5 flex items-center gap-3">
+          <Link href="/dons" aria-label="Retour" className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-full border border-border bg-surface">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M15 18L9 12L15 6" stroke="#201F1B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Link>
+          <div className="flex-1">
+            <h1 className="text-[17px] font-semibold">Bon n°{bon.numero}</h1>
+            <div className="text-xs text-ink-muted">{bon.entrepriseNom} &rarr; {bon.associationNom}</div>
+          </div>
+        </div>
+        <div className="flex items-start gap-2 rounded-xl bg-accent-tint px-3 py-2.5">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0" aria-hidden="true">
+            <path d="M12 9V13.5" stroke="#C1622E" strokeWidth="2" strokeLinecap="round" />
+            <circle cx="12" cy="16.3" r="1" fill="#C1622E" />
+            <circle cx="12" cy="12" r="9" stroke="#C1622E" strokeWidth="1.8" />
+          </svg>
+          <span className="text-[11.5px] leading-snug text-accent">
+            Chaîne du froid, DLC/DDM et état des produits : vérifiez chaque ligne avant signature.
+          </span>
+        </div>
+      </header>
+
+      <main className="flex-1 space-y-5 overflow-y-auto px-5 pb-4">
+        <ul className="space-y-2.5">
+          {articles.map((article) => {
+            const estRefuse = article.statut === "REFUSE";
+            const estValide = article.statut === "VALIDE";
+            return (
+              <li key={article.id} className={`space-y-2.5 rounded-2xl border bg-surface p-3.5 ${estRefuse ? "border-[#E7C4AE]" : "border-border"}`}>
+                <div className="flex justify-between gap-2">
+                  <div className="text-sm font-semibold">{article.nom}</div>
+                  <span className={`whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${article.bloque ? "bg-accent-tint text-accent" : "bg-brand-tint text-brand-dark"}`}>
+                    {article.dlc}
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <label className="mb-0.5 block text-[11px] text-ink-muted">Quantité constatée</label>
+                    <input type="text" defaultValue={article.qte} className="w-full rounded-lg border border-border px-2.5 py-2 text-[13px]" />
+                  </div>
+                  <div className="flex-1">
+                    <label className="mb-0.5 block text-[11px] text-ink-muted">Température</label>
+                    <input
+                      type="text"
+                      defaultValue={article.temp}
+                      className={`w-full rounded-lg border px-2.5 py-2 text-[13px] ${article.temperatureHorsPlage ? "border-[#E7C4AE] text-accent" : "border-border"}`}
+                    />
+                  </div>
+                </div>
+                {article.bloque && (
+                  <div className="rounded-lg bg-accent-tint px-2.5 py-1.5 text-[11.5px] text-accent">
+                    DLC dépassée : le refus est obligatoire, la validation est désactivée.
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => valider(article)}
+                    disabled={article.bloque}
+                    className={`flex-1 rounded-full border-[1.5px] py-2 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50 ${
+                      estValide ? "border-brand bg-brand text-white" : "border-border bg-surface text-ink-muted"
+                    }`}
+                  >
+                    Valider
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => refuser(article)}
+                    className={`flex-1 rounded-full border-[1.5px] py-2 text-xs font-bold ${
+                      estRefuse ? "border-accent bg-accent text-white" : "border-border bg-surface text-ink-muted"
+                    }`}
+                  >
+                    Refuser
+                  </button>
+                </div>
+                {estRefuse && (
+                  <input
+                    type="text"
+                    value={motifs[article.id] ?? ""}
+                    onChange={(e) => setMotifs((prev) => ({ ...prev, [article.id]: e.target.value }))}
+                    onBlur={() => startTransition(() => void refuserArticle(article.id, motifs[article.id] ?? ""))}
+                    placeholder="Motif du refus (ex. DLC dépassée)"
+                    className="w-full rounded-lg border border-[#E7C4AE] bg-accent-tint/40 px-2.5 py-2 text-xs"
+                  />
+                )}
+              </li>
+            );
+          })}
+        </ul>
+
+        <div className="space-y-1.5 rounded-2xl border border-border bg-surface p-4 text-sm">
+          <div className="flex justify-between">
+            <span className="text-ink-muted">Articles validés</span>
+            <span className="font-semibold">{nombreValides} / {articles.length}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-ink-muted">Articles refusés</span>
+            <span className={`font-semibold ${nombreRefuses > 0 ? "text-accent" : ""}`}>{nombreRefuses}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-ink-muted">Poids total retenu</span>
+            <span className="font-semibold">{poidsRetenu.toLocaleString("fr-FR")} kg</span>
+          </div>
+        </div>
+
+        <div className="space-y-3.5 rounded-2xl border border-border bg-surface p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold">Signatures</h2>
+            <span className="flex items-center gap-1 text-[11px] font-semibold text-ink-muted">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 15V17M6 10V8C6 4.7 8.7 2 12 2C15.3 2 18 4.7 18 8V10M5 10H19L18 21H6L5 10Z" stroke="#6B6459" strokeWidth="1.8" strokeLinejoin="round" />
+              </svg>
+              DocuSign
+            </span>
+          </div>
+
+          {!docusignConfigure && (
+            <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">
+              Signature électronique DocuSign non configurée sur ce déploiement (voir .env.example).
+            </div>
+          )}
+
+          <div className="flex gap-2.5">
+            <button
+              type="button"
+              onClick={() => demarrerSignature("DONATEUR")}
+              disabled={donateurSigne || !docusignConfigure || signatureEnCours !== null}
+              className={`flex-1 rounded-xl border-[1.5px] border-dashed border-[#C7C1B0] py-3.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${
+                donateurSigne ? "bg-brand-tint text-brand-dark" : "bg-surface"
+              }`}
+            >
+              {donateurSigne ? "Donateur signé" : signatureEnCours === "DONATEUR" ? "Ouverture…" : "Signer (donateur)"}
+            </button>
+            <button
+              type="button"
+              onClick={() => demarrerSignature("ASSOCIATION")}
+              disabled={associationSigne || !docusignConfigure || signatureEnCours !== null}
+              className={`flex-1 rounded-xl border-[1.5px] border-dashed border-[#C7C1B0] py-3.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${
+                associationSigne ? "bg-brand-tint text-brand-dark" : "bg-surface"
+              }`}
+            >
+              {associationSigne ? "Association signé" : signatureEnCours === "ASSOCIATION" ? "Ouverture…" : "Signer (association)"}
+            </button>
+          </div>
+          <p className="text-[11px] text-ink-muted">
+            Chaque signature ouvre la cérémonie de signature électronique qualifiée DocuSign, directement dans
+            l&apos;application.
+          </p>
+        </div>
+      </main>
+
+      <footer className="space-y-2.5 border-t border-border bg-surface px-5 pt-3 pb-5">
+        {erreurSignature && (
+          <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreurSignature}</div>
+        )}
+        <button type="button" onClick={confirmer} className="w-full rounded-full bg-brand py-3.5 text-[15px] font-bold text-white">
+          Confirmer l&apos;enlèvement
+        </button>
+      </footer>
+    </div>
+  );
+}

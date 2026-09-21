@@ -1,0 +1,270 @@
+"use client";
+
+import { useState, useTransition, type FormEvent } from "react";
+import { ajouterArticleManuel, changerModeDon, publierDon, retirerArticle } from "@/app/actions";
+
+type Article = {
+  id: string;
+  designation: string;
+  quantiteDeclaree: string;
+  poidsKg: number;
+};
+
+type Don = {
+  id: string;
+  mode: "LISTE_PREALABLE" | "BORDEREAU_OUVERT";
+  articles: Article[];
+};
+
+export default function NouveauDonClient({ don }: { don: Don }) {
+  const [donId, setDonId] = useState(don.id);
+  const [mode, setMode] = useState(don.mode);
+  const [articles, setArticles] = useState<Article[]>(don.articles);
+  const [afficherFormulaireManuel, setAfficherFormulaireManuel] = useState(false);
+  const [designation, setDesignation] = useState("");
+  const [poids, setPoids] = useState("");
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [vientDetrePublie, setVientDetrePublie] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  const changerDeMode = (nouveauMode: typeof mode) => {
+    setMode(nouveauMode);
+    startTransition(() => {
+      void changerModeDon(donId, nouveauMode);
+    });
+  };
+
+  const retirer = (id: string) => {
+    setArticles((prev) => prev.filter((a) => a.id !== id));
+    startTransition(() => {
+      void retirerArticle(id);
+    });
+  };
+
+  const ajouter = (event: FormEvent) => {
+    event.preventDefault();
+    setErreur(null);
+    startTransition(async () => {
+      const resultat = await ajouterArticleManuel(donId, designation, poids);
+      if (!resultat.ok) {
+        setErreur(resultat.error ?? "Impossible d'ajouter cet article.");
+        return;
+      }
+      setArticles((prev) => [
+        ...prev,
+        { id: `temp-${Date.now()}`, designation: designation.trim(), quantiteDeclaree: `${poids} kg`, poidsKg: Number(poids.replace(",", ".")) },
+      ]);
+      setDesignation("");
+      setPoids("");
+      setAfficherFormulaireManuel(false);
+      setVientDetrePublie(false);
+    });
+  };
+
+  const publier = () => {
+    startTransition(async () => {
+      const nouveauBrouillon = await publierDon(donId);
+      setDonId(nouveauBrouillon.id);
+      setMode(nouveauBrouillon.mode);
+      setArticles(nouveauBrouillon.articles);
+      setVientDetrePublie(true);
+    });
+  };
+
+  const poidsTotal = articles.reduce((total, a) => total + a.poidsKg, 0);
+
+  return (
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg">
+      <header className="flex items-center gap-3 px-5 pt-5 pb-3">
+        <button
+          type="button"
+          aria-label="Retour"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-surface"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M15 18L9 12L15 6" stroke="#201F1B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        <h1 className="flex-1 font-display text-xl font-semibold">Nouveau don</h1>
+        <span className="rounded-full border border-border px-2.5 py-1 text-xs text-ink-muted">Brouillon</span>
+      </header>
+
+      <div className="px-5 pb-4">
+        <div className="flex gap-1 rounded-xl bg-surface-alt p-1">
+          <button
+            type="button"
+            onClick={() => changerDeMode("BORDEREAU_OUVERT")}
+            className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${
+              mode === "BORDEREAU_OUVERT" ? "bg-brand text-white" : "text-ink-muted"
+            }`}
+          >
+            Bordereau ouvert
+          </button>
+          <button
+            type="button"
+            onClick={() => changerDeMode("LISTE_PREALABLE")}
+            className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${
+              mode === "LISTE_PREALABLE" ? "bg-brand text-white" : "text-ink-muted"
+            }`}
+          >
+            Liste à l&apos;avance
+          </button>
+        </div>
+      </div>
+
+      <main className="flex-1 space-y-5 px-5 pb-4">
+        {vientDetrePublie && (
+          <div className="flex items-start justify-between gap-2.5 rounded-xl bg-brand-tint px-4 py-3.5">
+            <p className="text-sm leading-snug text-brand-dark">
+              Don publié ! Il est visible des associations. Un nouveau brouillon a été créé ci-dessous.
+            </p>
+            <button
+              type="button"
+              onClick={() => setVientDetrePublie(false)}
+              aria-label="Fermer"
+              className="shrink-0 text-brand-dark"
+            >
+              &times;
+            </button>
+          </div>
+        )}
+        {mode === "LISTE_PREALABLE" && (
+          <div className="flex items-start gap-2.5 rounded-xl bg-brand-tint px-4 py-3.5">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0" aria-hidden="true">
+              <path d="M12 8V13" stroke="#2E6B4E" strokeWidth="2" strokeLinecap="round" />
+              <circle cx="12" cy="16.5" r="1" fill="#2E6B4E" />
+              <circle cx="12" cy="12" r="9" stroke="#2E6B4E" strokeWidth="2" />
+            </svg>
+            <p className="text-sm leading-snug text-brand-dark">
+              En attente qu&apos;une association se positionne, ou assignation par le coordinateur.
+            </p>
+          </div>
+        )}
+
+        <section>
+          <div className="mb-2.5 flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold">Articles ajoutés</h2>
+            <span className="text-sm text-ink-muted">{articles.length} articles</span>
+          </div>
+
+          <ul className="space-y-2.5">
+            {articles.map((article) => (
+              <li key={article.id} className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3.5">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-alt">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M4 7L12 3L20 7V17L12 21L4 17V7Z" stroke="#6B6459" strokeWidth="1.6" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold">{article.designation}</div>
+                  <div className="mt-0.5 text-xs text-ink-muted">
+                    {article.quantiteDeclaree} · {article.poidsKg.toLocaleString("fr-FR")} kg
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => retirer(article.id)}
+                  aria-label={`Retirer ${article.designation}`}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bg"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M6 6L18 18M18 6L6 18" stroke="#6B6459" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </button>
+              </li>
+            ))}
+            {articles.length === 0 && (
+              <li className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-ink-muted">
+                Aucun article pour l&apos;instant.
+              </li>
+            )}
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="mb-2.5 text-sm font-semibold">Ajouter un article</h2>
+          <div className="flex gap-2.5">
+            <button
+              type="button"
+              className="flex flex-1 flex-col items-center gap-1.5 rounded-xl bg-brand px-2.5 py-3.5 text-xs font-semibold text-white"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M4 8V6C4 4.9 4.9 4 6 4H8M20 8V6C20 4.9 19.1 4 18 4H16M4 16V18C4 19.1 4.9 20 6 20H8M20 16V18C20 19.1 19.1 20 18 20H16"
+                  stroke="#FFFFFF"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+                <rect x="8" y="9" width="2" height="6" fill="#FFFFFF" />
+                <rect x="11" y="9" width="1" height="6" fill="#FFFFFF" />
+                <rect x="14" y="9" width="2" height="6" fill="#FFFFFF" />
+              </svg>
+              Scanner un code-barres
+            </button>
+            <button
+              type="button"
+              onClick={() => setAfficherFormulaireManuel((v) => !v)}
+              className="flex flex-1 flex-col items-center gap-1.5 rounded-xl border border-border bg-surface px-2.5 py-3.5 text-xs font-semibold"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 5V19M5 12H19" stroke="#201F1B" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+              Ajouter manuellement
+            </button>
+          </div>
+
+          {afficherFormulaireManuel && (
+            <form onSubmit={ajouter} className="mt-2.5 flex flex-col gap-2.5 rounded-xl border border-border bg-surface p-3.5">
+              {erreur && <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreur}</div>}
+              <div>
+                <label htmlFor="designation" className="mb-1 block text-xs text-ink-muted">
+                  Désignation (produit en vrac)
+                </label>
+                <input
+                  id="designation"
+                  type="text"
+                  value={designation}
+                  onChange={(e) => setDesignation(e.target.value)}
+                  placeholder="Ex. Pommes Golden"
+                  className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="poids" className="mb-1 block text-xs text-ink-muted">
+                  Poids net (kg)
+                </label>
+                <input
+                  id="poids"
+                  type="text"
+                  inputMode="decimal"
+                  value={poids}
+                  onChange={(e) => setPoids(e.target.value)}
+                  placeholder="Ex. 6"
+                  className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
+                />
+              </div>
+              <button type="submit" disabled={isPending} className="self-start rounded-full bg-ink px-4.5 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                Ajouter à la liste
+              </button>
+            </form>
+          )}
+        </section>
+      </main>
+
+      <footer className="border-t border-border bg-surface px-5 pt-3.5 pb-5">
+        <div className="mb-3 flex justify-between text-sm text-ink-muted">
+          <span>{articles.length} articles</span>
+          <span>Poids estimé : {poidsTotal.toLocaleString("fr-FR")} kg</span>
+        </div>
+        <button
+          type="button"
+          onClick={publier}
+          disabled={articles.length === 0 || isPending}
+          className="w-full rounded-full bg-brand py-3.5 text-base font-bold text-white disabled:opacity-50"
+        >
+          Publier le don
+        </button>
+      </footer>
+    </div>
+  );
+}

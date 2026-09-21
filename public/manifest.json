@@ -1,0 +1,10 @@
+{
+  "name": "Dons invendus",
+  "short_name": "Dons invendus",
+  "description": "Traçabilité des dons d'invendus alimentaires et non alimentaires entre entreprises et associations.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f4ee",
+  "theme_color": "#2e6b4e",
+  "icons": []
+}

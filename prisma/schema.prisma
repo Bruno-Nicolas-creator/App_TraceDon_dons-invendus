@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ENTREPRISE
+  ASSOCIATION
+  COORDINATEUR
+}
+
+enum ModeDon {
+  LISTE_PREALABLE
+  BORDEREAU_OUVERT
+}
+
+enum StatutDon {
+  BROUILLON
+  PUBLIE
+  PRIS_EN_CHARGE
+  CLOTURE
+}
+
+enum StatutArticle {
+  EN_ATTENTE
+  VALIDE
+  REFUSE
+}
+
+enum StatutRescrit {
+  NON_DEPOSE
+  EN_ATTENTE
+  ACCORD_TACITE
+  REPONSE_RECUE
+}
+
+enum RoleSignataire {
+  DONATEUR
+  ASSOCIATION
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  nom           String
+  role          Role
+  entrepriseId  String?
+  entreprise    Entreprise? @relation(fields: [entrepriseId], references: [id])
+  associationId String?
+  association   Association? @relation(fields: [associationId], references: [id])
+  createdAt     DateTime @default(now())
+}
+
+model Enseigne {
+  id             String       @id @default(cuid())
+  denomination   String
+  siretSiege     String
+  nombreSieges   Int          @default(1)
+  entreprises    Entreprise[]
+  abonnement     Abonnement?
+  createdAt      DateTime     @default(now())
+}
+
+model Abonnement {
+  id           String   @id @default(cuid())
+  enseigneId   String   @unique
+  enseigne     Enseigne @relation(fields: [enseigneId], references: [id])
+  formule      String
+  montant      Float
+  periodicite  String
+  dateDebut    DateTime @default(now())
+  statut       String   @default("actif")
+}
+
+model Entreprise {
+  id               String   @id @default(cuid())
+  raisonSociale    String
+  formeJuridique   String?
+  siret            String
+  adresse          String
+  secteurActivite  String?
+  coutRevientKg    Float    @default(0)
+  enseigneId       String?
+  enseigne         Enseigne? @relation(fields: [enseigneId], references: [id])
+  users            User[]
+  dons             Don[]
+  bonsEnlevement   BonEnlevement[]
+  attestations     AttestationFiscale[]
+  conventions      Convention[]
+  createdAt        DateTime @default(now())
+}
+
+model Reseau {
+  id            String        @id @default(cuid())
+  denomination  String
+  perimetre     String?
+  associations  Association[]
+}
+
+model Association {
+  id                        String        @id @default(cuid())
+  denomination              String
+  rna                       String
+  adresse                   String
+  categorieEligibilite      String?
+  declarationInteretGeneral Boolean       @default(false)
+  rescritStatut             StatutRescrit @default(NON_DEPOSE)
+  rescritDateDepot          DateTime?
+  rescritPreuveUrl          String?
+  verifiee                  Boolean       @default(false)
+  verifieeLe                DateTime?
+  verifieePar               String?
+  reseauId                  String?
+  reseau                    Reseau?       @relation(fields: [reseauId], references: [id])
+  users                     User[]
+  donsAssignes              Don[]
+  bonsEnlevement            BonEnlevement[]
+  attestations              AttestationFiscale[]
+  conventions               Convention[]
+  createdAt                 DateTime      @default(now())
+}
+
+model Convention {
+  id            String      @id @default(cuid())
+  entrepriseId  String
+  entreprise    Entreprise  @relation(fields: [entrepriseId], references: [id])
+  associationId String
+  association   Association @relation(fields: [associationId], references: [id])
+  dateSignature DateTime    @default(now())
+  dureeAns      Int         @default(1)
+  statut        String      @default("active")
+}
+
+model Don {
+  id                  String       @id @default(cuid())
+  entrepriseId        String
+  entreprise          Entreprise   @relation(fields: [entrepriseId], references: [id])
+  mode                ModeDon      @default(BORDEREAU_OUVERT)
+  statut              StatutDon    @default(BROUILLON)
+  categorie           String       @default("Alimentaire")
+  distanceLabel       String?
+  associationAssigneeId String?
+  associationAssignee Association? @relation(fields: [associationAssigneeId], references: [id])
+  articles            Article[]
+  bonEnlevement       BonEnlevement?
+  createdAt           DateTime     @default(now())
+  publieLe            DateTime?
+}
+
+model Article {
+  id                 String        @id @default(cuid())
+  donId              String
+  don                Don           @relation(fields: [donId], references: [id], onDelete: Cascade)
+  codeBarres         String?
+  designation        String
+  quantiteDeclaree   String
+  quantiteConstatee  String?
+  poidsKg            Float
+  dlcOuEtat          String?
+  temperature        String?
+  dlcDepassee        Boolean       @default(false)
+  statut             StatutArticle @default(EN_ATTENTE)
+  motifRefus         String?
+  createdAt          DateTime      @default(now())
+}
+
+model BonEnlevement {
+  id                       String      @id @default(cuid())
+  numero                   String      @unique
+  donId                    String      @unique
+  don                      Don         @relation(fields: [donId], references: [id])
+  entrepriseId             String
+  entreprise               Entreprise  @relation(fields: [entrepriseId], references: [id])
+  associationId            String
+  association              Association @relation(fields: [associationId], references: [id])
+  dateHeureEnlevement      DateTime?
+  poidsTotalRetenu         Float?
+  signatureDonateurLe      DateTime?
+  signatureAssociationLe   DateTime?
+  confirme                 Boolean     @default(false)
+  docusignEnvelopeId       String?
+  signatures               Signature[]
+  attestationId            String?
+  attestation              AttestationFiscale? @relation(fields: [attestationId], references: [id])
+  createdAt                DateTime    @default(now())
+}
+
+model Signature {
+  id              String         @id @default(cuid())
+  bonEnlevementId String
+  bonEnlevement   BonEnlevement  @relation(fields: [bonEnlevementId], references: [id], onDelete: Cascade)
+  role            RoleSignataire
+  signataireNom   String?
+  horodatage      DateTime       @default(now())
+  referenceDocuSign String?
+}
+
+model AttestationFiscale {
+  id               String      @id @default(cuid())
+  numeroOrdre      String      @unique
+  entrepriseId     String
+  entreprise       Entreprise  @relation(fields: [entrepriseId], references: [id])
+  associationId    String
+  association      Association @relation(fields: [associationId], references: [id])
+  periodeDebut     DateTime
+  periodeFin       DateTime
+  montantCalcule   Float
+  bonsEnlevement   BonEnlevement[]
+  createdAt        DateTime    @default(now())
+}

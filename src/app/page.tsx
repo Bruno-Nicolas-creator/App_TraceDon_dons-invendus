@@ -1,0 +1,29 @@
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
+import NouveauDonClient from "./NouveauDonClient";
+
+// Cette page peut créer un brouillon en base : elle ne doit jamais être
+// pré-rendue statiquement (build) ni servie depuis un cache obsolète.
+export const dynamic = "force-dynamic";
+
+async function getOrCreateBrouillon(entrepriseId: string) {
+  const existant = await prisma.don.findFirst({
+    where: { entrepriseId, statut: "BROUILLON" },
+    include: { articles: { orderBy: { createdAt: "asc" } } },
+  });
+  if (existant) return existant;
+
+  return prisma.don.create({
+    data: { entrepriseId },
+    include: { articles: true },
+  });
+}
+
+export default async function NouveauDonPage() {
+  const session = await getSession();
+  if (!session || session.role !== "ENTREPRISE" || !session.entrepriseId) redirect("/connexion");
+
+  const don = await getOrCreateBrouillon(session.entrepriseId);
+  return <NouveauDonClient don={don} />;
+}

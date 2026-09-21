@@ -1,0 +1,51 @@
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
+import ArchivesClient, { type AttestationArchive, type BonArchive } from "./ArchivesClient";
+
+export const dynamic = "force-dynamic";
+
+const formatDate = (date: Date) =>
+  date.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+
+export default async function ArchivesPage() {
+  const session = await getSession();
+  if (!session) redirect("/connexion");
+  if (session.role === "COORDINATEUR") redirect("/coordinateur");
+
+  const bonWhere =
+    session.role === "ENTREPRISE" ? { entrepriseId: session.entrepriseId! } : { associationId: session.associationId! };
+  const attestationWhere = bonWhere;
+
+  const [bons, attestations] = await Promise.all([
+    prisma.bonEnlevement.findMany({
+      where: { ...bonWhere, confirme: true },
+      include: { association: true, entreprise: true },
+      orderBy: { dateHeureEnlevement: "desc" },
+    }),
+    prisma.attestationFiscale.findMany({
+      where: attestationWhere,
+      include: { association: true, entreprise: true },
+      orderBy: { periodeDebut: "desc" },
+    }),
+  ]);
+
+  const nomPartenaire = (partenaires: { entreprise: { raisonSociale: string }; association: { denomination: string } }) =>
+    session.role === "ENTREPRISE" ? partenaires.association.denomination : partenaires.entreprise.raisonSociale;
+
+  const bonsAffiches: BonArchive[] = bons.map((bon) => ({
+    id: bon.id,
+    titre: `Bon n°${bon.numero} — ${nomPartenaire(bon)}`,
+    date: bon.dateHeureEnlevement ? formatDate(bon.dateHeureEnlevement) : "—",
+    poids: `${(bon.poidsTotalRetenu ?? 0).toLocaleString("fr-FR")} kg`,
+  }));
+
+  const attestationsAffichees: AttestationArchive[] = attestations.map((att) => ({
+    id: att.id,
+    titre: `Attestation ${att.numeroOrdre} — ${nomPartenaire(att)}`,
+    periode: `${formatDate(att.periodeDebut)} – ${formatDate(att.periodeFin)}`,
+    montant: `${att.montantCalcule.toLocaleString("fr-FR")} €`,
+  }));
+
+  return <ArchivesClient bons={bonsAffiches} attestations={attestationsAffichees} />;
+}
