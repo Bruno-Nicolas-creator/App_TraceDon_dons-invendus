@@ -3,10 +3,18 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createSessionCookie, hashPassword, landingPathForRole } from "@/lib/auth";
+import { rechercherOrganismes, type SuggestionOrganisme } from "@/lib/rechercheEntreprises";
 
 function echec(code: string, email: string, type: string): never {
   const params = new URLSearchParams({ erreur: code, email, type });
   redirect(`/inscription?${params.toString()}`);
+}
+
+export async function rechercherOrganismeAction(
+  q: string,
+  type: "ENTREPRISE" | "ASSOCIATION"
+): Promise<SuggestionOrganisme[]> {
+  return rechercherOrganismes(q, type);
 }
 
 export async function inscriptionAction(formData: FormData) {
