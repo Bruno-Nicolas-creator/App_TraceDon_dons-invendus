@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { rechercherProduitParCodeBarre, type ProduitScanne } from "@/lib/openFoodFacts";
 
 async function requireSession() {
   const session = await getSession();
@@ -30,6 +31,40 @@ export async function ajouterArticleManuel(donId: string, designation: string, p
   });
   revalidatePath("/");
   return { ok: true };
+}
+
+export async function rechercherProduitAction(codeBarre: string): Promise<ProduitScanne | null> {
+  await requireSession();
+  return rechercherProduitParCodeBarre(codeBarre);
+}
+
+export async function ajouterArticleScanne(
+  donId: string,
+  codeBarres: string,
+  designation: string,
+  poidsUnitaireKg: number,
+  nombreUnites: number
+) {
+  const session = await requireSession();
+  const don = await prisma.don.findUniqueOrThrow({ where: { id: donId } });
+  if (don.entrepriseId !== session.entrepriseId) throw new Error("Don non autorisé.");
+
+  if (!designation.trim() || !Number.isFinite(poidsUnitaireKg) || poidsUnitaireKg <= 0 || !Number.isFinite(nombreUnites) || nombreUnites <= 0) {
+    return { ok: false, error: "Poids unitaire ou nombre d'unités invalide." };
+  }
+
+  const poidsKg = poidsUnitaireKg * nombreUnites;
+  await prisma.article.create({
+    data: {
+      donId,
+      codeBarres: codeBarres.trim() || null,
+      designation: designation.trim(),
+      quantiteDeclaree: `${nombreUnites} unité(s) × ${poidsUnitaireKg.toLocaleString("fr-FR")} kg`,
+      poidsKg,
+    },
+  });
+  revalidatePath("/");
+  return { ok: true, poidsKg };
 }
 
 export async function retirerArticle(articleId: string) {

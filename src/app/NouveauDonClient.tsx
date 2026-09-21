@@ -1,7 +1,15 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
-import { ajouterArticleManuel, changerModeDon, publierDon, retirerArticle } from "@/app/actions";
+import {
+  ajouterArticleManuel,
+  ajouterArticleScanne,
+  changerModeDon,
+  publierDon,
+  rechercherProduitAction,
+  retirerArticle,
+} from "@/app/actions";
+import BarcodeScanner from "@/components/BarcodeScanner";
 
 type Article = {
   id: string;
@@ -26,6 +34,16 @@ export default function NouveauDonClient({ don }: { don: Don }) {
   const [erreur, setErreur] = useState<string | null>(null);
   const [vientDetrePublie, setVientDetrePublie] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  const [afficherScanner, setAfficherScanner] = useState(false);
+  const [scanEnCours, setScanEnCours] = useState(false);
+  const [articleScanne, setArticleScanne] = useState<{
+    codeBarres: string;
+    designation: string;
+    poidsUnitaireKg: string;
+  } | null>(null);
+  const [nombreUnites, setNombreUnites] = useState("1");
+  const [erreurScan, setErreurScan] = useState<string | null>(null);
 
   const changerDeMode = (nouveauMode: typeof mode) => {
     setMode(nouveauMode);
@@ -57,6 +75,62 @@ export default function NouveauDonClient({ don }: { don: Don }) {
       setDesignation("");
       setPoids("");
       setAfficherFormulaireManuel(false);
+      setVientDetrePublie(false);
+    });
+  };
+
+  const codeDetecte = (code: string) => {
+    setAfficherScanner(false);
+    setAfficherFormulaireManuel(false);
+    setScanEnCours(true);
+    setErreurScan(null);
+    startTransition(async () => {
+      const produit = await rechercherProduitAction(code);
+      setScanEnCours(false);
+      if (produit) {
+        setArticleScanne({
+          codeBarres: code,
+          designation: produit.designation,
+          poidsUnitaireKg: produit.poidsUnitaireKg != null ? String(produit.poidsUnitaireKg).replace(".", ",") : "",
+        });
+      } else {
+        setArticleScanne({ codeBarres: code, designation: "", poidsUnitaireKg: "" });
+        setErreurScan("Produit non trouvé sur Open Food Facts. Renseigne les informations manuellement.");
+      }
+      setNombreUnites("1");
+    });
+  };
+
+  const poidsTotalScanne =
+    articleScanne && nombreUnites
+      ? (Number(articleScanne.poidsUnitaireKg.replace(",", ".")) || 0) * (Number(nombreUnites) || 0)
+      : 0;
+
+  const ajouterScanne = (event: FormEvent) => {
+    event.preventDefault();
+    if (!articleScanne) return;
+    setErreur(null);
+    setErreurScan(null);
+    const poidsUnitaire = Number(articleScanne.poidsUnitaireKg.replace(",", "."));
+    const unites = Number(nombreUnites);
+    const designationScannee = articleScanne.designation;
+    startTransition(async () => {
+      const resultat = await ajouterArticleScanne(donId, articleScanne.codeBarres, designationScannee, poidsUnitaire, unites);
+      if (!resultat.ok) {
+        setErreurScan(resultat.error ?? "Impossible d'ajouter cet article.");
+        return;
+      }
+      setArticles((prev) => [
+        ...prev,
+        {
+          id: `temp-${Date.now()}`,
+          designation: designationScannee.trim(),
+          quantiteDeclaree: `${unites} unité(s) × ${poidsUnitaire.toLocaleString("fr-FR")} kg`,
+          poidsKg: resultat.poidsKg ?? poidsUnitaire * unites,
+        },
+      ]);
+      setArticleScanne(null);
+      setNombreUnites("1");
       setVientDetrePublie(false);
     });
   };
@@ -186,6 +260,11 @@ export default function NouveauDonClient({ don }: { don: Don }) {
           <div className="flex gap-2.5">
             <button
               type="button"
+              onClick={() => {
+                setArticleScanne(null);
+                setErreurScan(null);
+                setAfficherScanner(true);
+              }}
               className="flex flex-1 flex-col items-center gap-1.5 rounded-xl bg-brand px-2.5 py-3.5 text-xs font-semibold text-white"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -203,7 +282,10 @@ export default function NouveauDonClient({ don }: { don: Don }) {
             </button>
             <button
               type="button"
-              onClick={() => setAfficherFormulaireManuel((v) => !v)}
+              onClick={() => {
+                setArticleScanne(null);
+                setAfficherFormulaireManuel((v) => !v);
+              }}
               className="flex flex-1 flex-col items-center gap-1.5 rounded-xl border border-border bg-surface px-2.5 py-3.5 text-xs font-semibold"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -248,8 +330,77 @@ export default function NouveauDonClient({ don }: { don: Don }) {
               </button>
             </form>
           )}
+
+          {scanEnCours && (
+            <div className="mt-2.5 rounded-xl border border-border bg-surface p-3.5 text-center text-xs text-ink-muted">
+              Recherche du produit…
+            </div>
+          )}
+
+          {articleScanne && (
+            <form onSubmit={ajouterScanne} className="mt-2.5 flex flex-col gap-2.5 rounded-xl border border-border bg-surface p-3.5">
+              {erreurScan && <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreurScan}</div>}
+              <div className="text-xs text-ink-muted">Code-barres scanné : {articleScanne.codeBarres}</div>
+              <div>
+                <label htmlFor="designationScan" className="mb-1 block text-xs text-ink-muted">
+                  Désignation
+                </label>
+                <input
+                  id="designationScan"
+                  type="text"
+                  value={articleScanne.designation}
+                  onChange={(e) => setArticleScanne((prev) => (prev ? { ...prev, designation: e.target.value } : prev))}
+                  placeholder="Ex. Nutella 400g"
+                  className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label htmlFor="poidsUnitaire" className="mb-1 block text-xs text-ink-muted">
+                    Poids unitaire (kg)
+                  </label>
+                  <input
+                    id="poidsUnitaire"
+                    type="text"
+                    inputMode="decimal"
+                    value={articleScanne.poidsUnitaireKg}
+                    onChange={(e) => setArticleScanne((prev) => (prev ? { ...prev, poidsUnitaireKg: e.target.value } : prev))}
+                    placeholder="Ex. 0,4"
+                    className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="nombreUnites" className="mb-1 block text-xs text-ink-muted">
+                    Nombre d&apos;unités remises
+                  </label>
+                  <input
+                    id="nombreUnites"
+                    type="text"
+                    inputMode="numeric"
+                    value={nombreUnites}
+                    onChange={(e) => setNombreUnites(e.target.value)}
+                    placeholder="Ex. 12"
+                    className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
+                  />
+                </div>
+              </div>
+              <div className="text-xs font-semibold text-ink">
+                Poids total : {poidsTotalScanne.toLocaleString("fr-FR")} kg
+              </div>
+              <div className="flex gap-2.5">
+                <button type="submit" disabled={isPending} className="rounded-full bg-ink px-4.5 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                  Ajouter à la liste
+                </button>
+                <button type="button" onClick={() => setArticleScanne(null)} className="rounded-full px-4.5 py-2 text-sm font-semibold text-ink-muted">
+                  Annuler
+                </button>
+              </div>
+            </form>
+          )}
         </section>
       </main>
+
+      {afficherScanner && <BarcodeScanner onDetected={codeDetecte} onClose={() => setAfficherScanner(false)} />}
 
       <footer className="border-t border-border bg-surface px-5 pt-3.5 pb-5">
         <div className="mb-3 flex justify-between text-sm text-ink-muted">
