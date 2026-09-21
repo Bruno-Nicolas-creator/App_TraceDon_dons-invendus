@@ -37,10 +37,12 @@ async function main() {
   const carrefour = await prisma.entreprise.create({
     data: {
       id: "ent_carrefour",
-      raisonSociale: "Carrefour City Bastille",
+      raisonSociale: "Carrefour City Nice Masséna",
       formeJuridique: "SAS",
       siret: "40125333800234",
-      adresse: "12 rue de la Roquette, 75011 Paris",
+      adresse: "20 Avenue Jean Médecin, 06000 Nice",
+      latitude: 43.700263,
+      longitude: 7.268397,
       secteurActivite: "Commerce de détail alimentaire",
       coutRevientKg: 2.8,
       enseigneId: enseigneCarrefour.id,
@@ -50,10 +52,12 @@ async function main() {
   const boulangerie = await prisma.entreprise.create({
     data: {
       id: "ent_boulangerie",
-      raisonSociale: "Boulangerie Marceau",
+      raisonSociale: "Boulangerie du Palais",
       formeJuridique: "EI",
       siret: "80234511200019",
-      adresse: "4 av. Marceau, 75008 Paris",
+      adresse: "8 Rue de France, 06000 Nice",
+      latitude: 43.6966,
+      longitude: 7.264117,
       secteurActivite: "Boulangerie-pâtisserie",
       coutRevientKg: 3.5,
     },
@@ -62,10 +66,12 @@ async function main() {
   const superette = await prisma.entreprise.create({
     data: {
       id: "ent_superette",
-      raisonSociale: "Supérette du Marché",
+      raisonSociale: "Supérette Masséna",
       formeJuridique: "SARL",
       siret: "81234567800045",
-      adresse: "15 rue de la Fontaine, 75011 Paris",
+      adresse: "15 Rue Masséna, 06000 Nice",
+      latitude: 43.697483,
+      longitude: 7.266847,
       secteurActivite: "Commerce de détail alimentaire",
       coutRevientKg: 2.5,
     },
@@ -74,12 +80,28 @@ async function main() {
   const bioMarche = await prisma.entreprise.create({
     data: {
       id: "ent_bio",
-      raisonSociale: "Bio'Marché",
+      raisonSociale: "Bio'Marché Nice Centre",
       formeJuridique: "SAS",
       siret: "82345678900012",
-      adresse: "28 rue de Charonne, 75011 Paris",
+      adresse: "12 Rue Paradis, 06000 Nice",
+      latitude: 43.697374,
+      longitude: 7.267328,
       secteurActivite: "Commerce non alimentaire",
       coutRevientKg: 4.2,
+    },
+  });
+
+  const epicerie = await prisma.entreprise.create({
+    data: {
+      id: "ent_epicerie",
+      raisonSociale: "Épicerie Fine Gambetta",
+      formeJuridique: "SARL",
+      siret: "83456789000021",
+      adresse: "30 Boulevard Gambetta, 06000 Nice",
+      latitude: 43.697291,
+      longitude: 7.25631,
+      secteurActivite: "Épicerie fine",
+      coutRevientKg: 3.9,
     },
   });
 
@@ -87,8 +109,10 @@ async function main() {
     data: {
       id: "assoc_coeur",
       denomination: "Coeur Partage",
-      rna: "W751234567",
-      adresse: "8 rue de Charonne, 75011 Paris",
+      rna: "W061234567",
+      adresse: "12 Rue Pastorelli, 06000 Nice",
+      latitude: 43.702315,
+      longitude: 7.273499,
       categorieEligibilite: "Aide alimentaire",
       declarationInteretGeneral: true,
       rescritStatut: "EN_ATTENTE",
@@ -102,9 +126,11 @@ async function main() {
   const restoSolidaire = await prisma.association.create({
     data: {
       id: "assoc_resto",
-      denomination: "Resto Solidaire 11e",
-      rna: "W759876543",
-      adresse: "20 bd Voltaire, 75011 Paris",
+      denomination: "Resto Solidaire Nice",
+      rna: "W069876543",
+      adresse: "18 Rue Gioffrédo, 06000 Nice",
+      latitude: 43.701507,
+      longitude: 7.275996,
       categorieEligibilite: "Aide alimentaire",
       declarationInteretGeneral: true,
       rescritStatut: "ACCORD_TACITE",
@@ -119,8 +145,10 @@ async function main() {
     data: {
       id: "assoc_panier",
       denomination: "Panier Fraternité",
-      rna: "W751122334",
-      adresse: "5 rue Sedaine, 75011 Paris",
+      rna: "W061122334",
+      adresse: "6 Avenue Thiers, 06000 Nice",
+      latitude: 43.70497,
+      longitude: 7.263615,
       categorieEligibilite: "Aide alimentaire",
       declarationInteretGeneral: true,
       rescritStatut: "NON_DEPOSE",
@@ -132,13 +160,33 @@ async function main() {
     data: {
       id: "assoc_mains",
       denomination: "Les Mains Tendues",
-      rna: "W755566778",
-      adresse: "3 rue de Lappe, 75011 Paris",
+      rna: "W065566778",
+      adresse: "10 Rue Alphonse Karr, 06000 Nice",
+      latitude: 43.699109,
+      longitude: 7.265568,
       categorieEligibilite: "Aide alimentaire et non alimentaire",
       declarationInteretGeneral: true,
       rescritStatut: "EN_ATTENTE",
       rescritDateDepot: new Date("2026-06-02"),
       verifiee: false,
+    },
+  });
+
+  await prisma.association.create({
+    data: {
+      id: "assoc_partage06",
+      denomination: "Partage Côte d'Azur",
+      rna: "W064433221",
+      adresse: "2 Boulevard Victor Hugo, 06000 Nice",
+      latitude: 43.700455,
+      longitude: 7.26723,
+      categorieEligibilite: "Aide alimentaire",
+      declarationInteretGeneral: true,
+      rescritStatut: "REPONSE_RECUE",
+      rescritDateDepot: new Date("2025-11-04"),
+      verifiee: true,
+      verifieeLe: new Date("2025-12-01"),
+      verifieePar: "Bruno (coordinateur)",
     },
   });
 
@@ -166,7 +214,7 @@ async function main() {
       mode: "BORDEREAU_OUVERT",
       statut: "PUBLIE",
       categorie: "Alimentaire",
-      distanceLabel: "900 m",
+      distanceLabel: "1 km",
       publieLe: new Date(),
       articles: { create: [{ designation: "Viennoiseries invendues", quantiteDeclaree: "3 kg", poidsKg: 3 }] },
     },
@@ -178,7 +226,7 @@ async function main() {
       mode: "BORDEREAU_OUVERT",
       statut: "PUBLIE",
       categorie: "Alimentaire",
-      distanceLabel: "1,1 km",
+      distanceLabel: "760 m",
       publieLe: new Date(),
       articles: { create: [{ designation: "Produits frais divers", quantiteDeclaree: "11 kg", poidsKg: 11 }] },
     },
@@ -190,9 +238,21 @@ async function main() {
       mode: "BORDEREAU_OUVERT",
       statut: "PUBLIE",
       categorie: "Non alimentaire",
-      distanceLabel: "1,4 km",
+      distanceLabel: "740 m",
       publieLe: new Date(),
       articles: { create: [{ designation: "Produits d'hygiène invendus", quantiteDeclaree: "14 kg", poidsKg: 14 }] },
+    },
+  });
+
+  await prisma.don.create({
+    data: {
+      entrepriseId: epicerie.id,
+      mode: "BORDEREAU_OUVERT",
+      statut: "PUBLIE",
+      categorie: "Alimentaire",
+      distanceLabel: "1,5 km",
+      publieLe: new Date(),
+      articles: { create: [{ designation: "Conserves et épicerie sèche", quantiteDeclaree: "9 kg", poidsKg: 9 }] },
     },
   });
 
