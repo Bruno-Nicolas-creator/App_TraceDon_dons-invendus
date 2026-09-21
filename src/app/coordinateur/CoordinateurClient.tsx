@@ -69,8 +69,8 @@ export default function CoordinateurClient({
   const enAttente = associations.filter((a) => !(verifieesLocal[a.id] ?? a.verifiee)).length;
 
   return (
-    <div className="flex min-h-screen bg-bg">
-      <aside className="flex w-58 shrink-0 flex-col bg-brand-dark p-4">
+    <div className="flex min-h-screen flex-col bg-bg lg:flex-row">
+      <aside className="hidden w-58 shrink-0 flex-col bg-brand-dark p-4 lg:flex">
         <div className="mb-6 flex items-center gap-2.5 px-2">
           <div className="flex h-7.5 w-7.5 items-center justify-center rounded-lg bg-brand-tint font-display text-sm font-bold text-brand-dark">D</div>
           <span className="font-display text-base font-semibold text-white">DonSolidaire</span>
@@ -94,8 +94,18 @@ export default function CoordinateurClient({
         </Link>
       </aside>
 
+      <div className="flex items-center justify-between bg-brand-dark px-4 py-3 lg:hidden">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-tint font-display text-sm font-bold text-brand-dark">D</div>
+          <span className="font-display text-sm font-semibold text-white">DonSolidaire</span>
+        </div>
+        <Link href="/profil" className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-tint text-xs font-bold text-brand-dark">
+          {nomCoordinateur.slice(0, 1).toUpperCase()}
+        </Link>
+      </div>
+
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center gap-4 border-b border-border px-8">
+        <header className="hidden h-16 shrink-0 items-center gap-4 border-b border-border px-8 lg:flex">
           <div className="flex max-w-90 flex-1 items-center gap-2 rounded-full border border-border bg-surface px-3.5 py-2">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <circle cx="11" cy="11" r="7" stroke="#6B6459" strokeWidth="1.8" />
@@ -105,77 +115,81 @@ export default function CoordinateurClient({
           </div>
         </header>
 
-        <main className="flex-1 space-y-6 overflow-y-auto px-8 py-7">
+        <main className="flex-1 space-y-5 overflow-y-auto px-4 py-5 lg:space-y-6 lg:px-8 lg:py-7">
           <div className="flex items-center justify-between">
-            <h1 className="font-display text-2xl font-semibold">Tableau de bord</h1>
-            <span className="rounded-full border border-border bg-surface px-3.5 py-2 text-[13px] font-semibold text-ink-muted">Septembre 2026</span>
+            <h1 className="font-display text-xl font-semibold lg:text-2xl">Tableau de bord</h1>
+            <span className="rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-ink-muted lg:px-3.5 lg:py-2 lg:text-[13px]">
+              Septembre 2026
+            </span>
           </div>
 
-          <div className="grid grid-cols-4 gap-4">
-            <div className="rounded-2xl border border-border bg-surface p-4.5">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+            <div className="rounded-2xl border border-border bg-surface p-3.5 lg:p-4.5">
               <div className="mb-2 text-xs text-ink-muted">Poids donné ce mois</div>
-              <div className="font-display text-[26px] font-bold">{poidsMois}</div>
+              <div className="font-display text-xl font-bold lg:text-[26px]">{poidsMois}</div>
               <div className="mt-1 text-xs text-brand-dark">Cumul des bons confirmés</div>
             </div>
-            <div className="rounded-2xl border border-border bg-surface p-4.5">
+            <div className="rounded-2xl border border-border bg-surface p-3.5 lg:p-4.5">
               <div className="mb-2 text-xs text-ink-muted">Dons réalisés</div>
-              <div className="font-display text-[26px] font-bold">{nombreDons}</div>
+              <div className="font-display text-xl font-bold lg:text-[26px]">{nombreDons}</div>
               <div className="mt-1 text-xs text-ink-muted">Bons d&apos;enlèvement confirmés</div>
             </div>
-            <div className="rounded-2xl border border-border bg-surface p-4.5">
+            <div className="rounded-2xl border border-border bg-surface p-3.5 lg:p-4.5">
               <div className="mb-2 text-xs text-ink-muted">Taux de refus</div>
-              <div className="font-display text-[26px] font-bold">{tauxRefus}</div>
+              <div className="font-display text-xl font-bold lg:text-[26px]">{tauxRefus}</div>
               <div className="mt-1 text-xs text-ink-muted">Articles refusés / total</div>
             </div>
-            <div className="rounded-2xl border border-border bg-surface p-4.5">
+            <div className="rounded-2xl border border-border bg-surface p-3.5 lg:p-4.5">
               <div className="mb-2 text-xs text-ink-muted">Associations à vérifier</div>
-              <div className="font-display text-[26px] font-bold text-accent">{enAttente}</div>
+              <div className="font-display text-xl font-bold text-accent lg:text-[26px]">{enAttente}</div>
               <div className="mt-1 text-xs text-ink-muted">Vérification manuelle requise</div>
             </div>
           </div>
 
-          <div className="flex items-start gap-5">
-            <div className="flex-[1.4] rounded-2xl border border-border bg-surface p-5">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
+            <div className="rounded-2xl border border-border bg-surface p-4 lg:flex-[1.4] lg:p-5">
               <div className="mb-3.5 flex items-center justify-between">
                 <h2 className="text-[15px] font-semibold">Associations à vérifier</h2>
                 <span className="text-xs text-ink-muted">{enAttente} en attente</span>
               </div>
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="text-left">
-                    <th className="border-b border-border pb-2 pr-3 text-[11px] font-semibold uppercase text-ink-muted">Association</th>
-                    <th className="border-b border-border pb-2 pr-3 text-[11px] font-semibold uppercase text-ink-muted">RNA</th>
-                    <th className="border-b border-border pb-2 pr-3 text-[11px] font-semibold uppercase text-ink-muted">Rescrit fiscal</th>
-                    <th className="border-b border-border pb-2" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {associations.map((asso) => {
-                    const verifiee = verifieesLocal[asso.id] ?? asso.verifiee;
-                    return (
-                      <tr key={asso.id}>
-                        <td className="border-b border-surface-alt py-3 text-[13px] font-semibold">{asso.nom}</td>
-                        <td className="border-b border-surface-alt py-3 text-[13px] text-ink-muted">{asso.rna}</td>
-                        <td className="border-b border-surface-alt py-3">
-                          <span className={`rounded-full px-2.5 py-1 text-xs ${RESCRIT_STYLES[asso.rescritVariant]}`}>{asso.rescrit}</span>
-                        </td>
-                        <td className="border-b border-surface-alt py-3 text-right">
-                          <button
-                            type="button"
-                            onClick={() => toggleVerifie(asso.id, verifiee)}
-                            className={`rounded-full border border-border px-3.5 py-1.5 text-xs font-semibold ${verifiee ? "bg-brand-tint text-brand-dark" : "bg-surface"}`}
-                          >
-                            {verifiee ? "Vérifiée" : "Vérifier"}
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[480px] border-collapse">
+                  <thead>
+                    <tr className="text-left">
+                      <th className="border-b border-border pb-2 pr-3 text-[11px] font-semibold uppercase text-ink-muted">Association</th>
+                      <th className="border-b border-border pb-2 pr-3 text-[11px] font-semibold uppercase text-ink-muted">RNA</th>
+                      <th className="border-b border-border pb-2 pr-3 text-[11px] font-semibold uppercase text-ink-muted">Rescrit fiscal</th>
+                      <th className="border-b border-border pb-2" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {associations.map((asso) => {
+                      const verifiee = verifieesLocal[asso.id] ?? asso.verifiee;
+                      return (
+                        <tr key={asso.id}>
+                          <td className="border-b border-surface-alt py-3 text-[13px] font-semibold">{asso.nom}</td>
+                          <td className="border-b border-surface-alt py-3 text-[13px] text-ink-muted">{asso.rna}</td>
+                          <td className="border-b border-surface-alt py-3">
+                            <span className={`rounded-full px-2.5 py-1 text-xs ${RESCRIT_STYLES[asso.rescritVariant]}`}>{asso.rescrit}</span>
+                          </td>
+                          <td className="border-b border-surface-alt py-3 text-right">
+                            <button
+                              type="button"
+                              onClick={() => toggleVerifie(asso.id, verifiee)}
+                              className={`rounded-full border border-border px-3.5 py-1.5 text-xs font-semibold ${verifiee ? "bg-brand-tint text-brand-dark" : "bg-surface"}`}
+                            >
+                              {verifiee ? "Vérifiée" : "Vérifier"}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            <div className="flex-1 rounded-2xl border border-border bg-surface p-5">
+            <div className="rounded-2xl border border-border bg-surface p-4 lg:flex-1 lg:p-5">
               <h2 className="mb-3.5 text-[15px] font-semibold">Dons sans association</h2>
               <div className="space-y-2.5">
                 {donsNonAssignes.map((don) => {
@@ -189,11 +203,11 @@ export default function CoordinateurClient({
                           Assigné à {nomAssigne}
                         </div>
                       ) : (
-                        <div className="flex gap-1.5">
+                        <div className="flex flex-col gap-1.5 sm:flex-row">
                           <select
                             value={selectionAssociation[don.id] ?? associations[0]?.id ?? ""}
                             onChange={(e) => setSelectionAssociation((prev) => ({ ...prev, [don.id]: e.target.value }))}
-                            className="min-w-0 flex-1 rounded-full border border-border bg-surface px-2.5 text-xs"
+                            className="min-w-0 flex-1 rounded-full border border-border bg-surface px-2.5 py-1.5 text-xs"
                           >
                             {associations.map((a) => (
                               <option key={a.id} value={a.id}>
