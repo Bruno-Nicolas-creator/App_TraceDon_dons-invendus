@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createSessionCookie, hashPassword, landingPathForRole } from "@/lib/auth";
 import { rechercherOrganismes, type SuggestionOrganisme } from "@/lib/rechercheEntreprises";
+import { rechercherAdresses, type SuggestionAdresse } from "@/lib/ignAdresse";
 
 function echec(code: string, email: string, type: string): never {
   const params = new URLSearchParams({ erreur: code, email, type });
@@ -15,6 +16,10 @@ export async function rechercherOrganismeAction(
   type: "ENTREPRISE" | "ASSOCIATION"
 ): Promise<SuggestionOrganisme[]> {
   return rechercherOrganismes(q, type);
+}
+
+export async function rechercherAdresseAction(q: string): Promise<SuggestionAdresse[]> {
+  return rechercherAdresses(q);
 }
 
 export async function inscriptionAction(formData: FormData) {
@@ -44,6 +49,13 @@ export async function inscriptionAction(formData: FormData) {
 
   const passwordHash = await hashPassword(motDePasse);
 
+  const latitudeBrute = Number(formData.get("adresseLatitude"));
+  const longitudeBrute = Number(formData.get("adresseLongitude"));
+  const coordonneesAdresse =
+    Number.isFinite(latitudeBrute) && Number.isFinite(longitudeBrute) && latitudeBrute !== 0
+      ? { latitude: latitudeBrute, longitude: longitudeBrute }
+      : {};
+
   if (type === "ENTREPRISE") {
     const raisonSociale = String(formData.get("raisonSociale") ?? "").trim();
     const siret = String(formData.get("siret") ?? "").trim();
@@ -62,6 +74,7 @@ export async function inscriptionAction(formData: FormData) {
         adresse,
         formeJuridique: formeJuridique || null,
         secteurActivite: secteurActivite || null,
+        ...coordonneesAdresse,
       },
     });
 
@@ -94,6 +107,7 @@ export async function inscriptionAction(formData: FormData) {
         adresse,
         categorieEligibilite: categorieEligibilite || null,
         declarationInteretGeneral,
+        ...coordonneesAdresse,
       },
     });
 

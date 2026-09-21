@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { inscriptionAction, rechercherOrganismeAction } from "./actions";
+import { inscriptionAction, rechercherOrganismeAction, rechercherAdresseAction } from "./actions";
 import type { SuggestionOrganisme } from "@/lib/rechercheEntreprises";
+import type { SuggestionAdresse } from "@/lib/ignAdresse";
 
 type TypeCompte = "ENTREPRISE" | "ASSOCIATION";
 
@@ -31,10 +32,49 @@ export default function InscriptionForm({
   const [formeJuridique, setFormeJuridique] = useState("");
   const [rna, setRna] = useState("");
   const [adresse, setAdresse] = useState("");
+  const [adresseLat, setAdresseLat] = useState<number | null>(null);
+  const [adresseLng, setAdresseLng] = useState<number | null>(null);
   const [suggestions, setSuggestions] = useState<SuggestionOrganisme[]>([]);
   const [suggestionsVisibles, setSuggestionsVisibles] = useState(false);
   const [rechercheEnCours, setRechercheEnCours] = useState(false);
   const requeteEnCours = useRef(0);
+
+  const [suggestionsAdresse, setSuggestionsAdresse] = useState<SuggestionAdresse[]>([]);
+  const [suggestionsAdresseVisibles, setSuggestionsAdresseVisibles] = useState(false);
+  const [rechercheAdresseEnCours, setRechercheAdresseEnCours] = useState(false);
+  const requeteAdresseEnCours = useRef(0);
+
+  useEffect(() => {
+    const id = ++requeteAdresseEnCours.current;
+    const delai = setTimeout(() => {
+      if (adresse.trim().length < 3) {
+        if (requeteAdresseEnCours.current === id) setSuggestionsAdresse([]);
+        return;
+      }
+      setRechercheAdresseEnCours(true);
+      rechercherAdresseAction(adresse).then((resultats) => {
+        if (requeteAdresseEnCours.current === id) {
+          setSuggestionsAdresse(resultats);
+          setRechercheAdresseEnCours(false);
+        }
+      });
+    }, 300);
+    return () => clearTimeout(delai);
+  }, [adresse]);
+
+  const changerAdresse = (v: string) => {
+    setAdresse(v);
+    setAdresseLat(null);
+    setAdresseLng(null);
+  };
+
+  const choisirSuggestionAdresse = (s: SuggestionAdresse) => {
+    setAdresse(s.adresse);
+    setAdresseLat(s.latitude);
+    setAdresseLng(s.longitude);
+    setSuggestionsAdresse([]);
+    setSuggestionsAdresseVisibles(false);
+  };
 
   useEffect(() => {
     const id = ++requeteEnCours.current;
@@ -57,6 +97,8 @@ export default function InscriptionForm({
   const choisirSuggestion = (s: SuggestionOrganisme) => {
     setNomOrganisme(s.nom);
     setAdresse(s.adresse);
+    setAdresseLat(null);
+    setAdresseLng(null);
     if (type === "ENTREPRISE") {
       setSiret(s.siret ?? "");
       setFormeJuridique(s.formeJuridique ?? "");
@@ -74,6 +116,8 @@ export default function InscriptionForm({
     setFormeJuridique("");
     setRna("");
     setAdresse("");
+    setAdresseLat(null);
+    setAdresseLng(null);
     setSuggestions([]);
   };
 
@@ -148,15 +192,28 @@ export default function InscriptionForm({
                 onChange={setFormeJuridique}
               />
             </div>
-            <Champ
-              id="adresse"
-              name="adresse"
-              label="Adresse"
-              placeholder="12 rue de la Roquette, 75011 Paris"
-              required
-              value={adresse}
-              onChange={setAdresse}
-            />
+            <div className="relative">
+              <Champ
+                id="adresse"
+                name="adresse"
+                label="Adresse"
+                placeholder="12 rue de la Roquette, 75011 Paris"
+                required
+                value={adresse}
+                onChange={changerAdresse}
+                onFocus={() => setSuggestionsAdresseVisibles(true)}
+                onBlur={() => setTimeout(() => setSuggestionsAdresseVisibles(false), 150)}
+                autoComplete="off"
+              />
+              <SuggestionsAdresseDropdown
+                visible={suggestionsAdresseVisibles}
+                enCours={rechercheAdresseEnCours}
+                suggestions={suggestionsAdresse}
+                onChoisir={choisirSuggestionAdresse}
+              />
+            </div>
+            <input type="hidden" name="adresseLatitude" value={adresseLat ?? ""} />
+            <input type="hidden" name="adresseLongitude" value={adresseLng ?? ""} />
             <Champ id="secteurActivite" name="secteurActivite" label="Secteur d'activité" placeholder="Ex. Commerce de détail alimentaire" />
           </div>
         ) : (
@@ -185,15 +242,28 @@ export default function InscriptionForm({
               <Champ id="rna" name="rna" label="N° RNA / agrément" placeholder="W751234567" required value={rna} onChange={setRna} />
               <Champ id="categorieEligibilite" name="categorieEligibilite" label="Catégorie d'éligibilité" placeholder="Aide alimentaire" />
             </div>
-            <Champ
-              id="adresse"
-              name="adresse"
-              label="Adresse"
-              placeholder="8 rue de Charonne, 75011 Paris"
-              required
-              value={adresse}
-              onChange={setAdresse}
-            />
+            <div className="relative">
+              <Champ
+                id="adresse"
+                name="adresse"
+                label="Adresse"
+                placeholder="8 rue de Charonne, 75011 Paris"
+                required
+                value={adresse}
+                onChange={changerAdresse}
+                onFocus={() => setSuggestionsAdresseVisibles(true)}
+                onBlur={() => setTimeout(() => setSuggestionsAdresseVisibles(false), 150)}
+                autoComplete="off"
+              />
+              <SuggestionsAdresseDropdown
+                visible={suggestionsAdresseVisibles}
+                enCours={rechercheAdresseEnCours}
+                suggestions={suggestionsAdresse}
+                onChoisir={choisirSuggestionAdresse}
+              />
+            </div>
+            <input type="hidden" name="adresseLatitude" value={adresseLat ?? ""} />
+            <input type="hidden" name="adresseLongitude" value={adresseLng ?? ""} />
             <label htmlFor="declarationInteretGeneral" className="flex items-start gap-2.5 text-xs text-ink-muted">
               <input id="declarationInteretGeneral" name="declarationInteretGeneral" type="checkbox" className="mt-0.5" />
               Nous déclarons agir en tant qu&apos;organisme d&apos;intérêt général (déclaration auto-déclarative ; un
@@ -313,6 +383,41 @@ function SuggestionsDropdown({
             >
               <span className="block font-semibold text-ink">{s.nom}</span>
               <span className="block text-ink-muted">{s.adresse}</span>
+            </button>
+          </li>
+        ))
+      )}
+    </ul>
+  );
+}
+
+function SuggestionsAdresseDropdown({
+  visible,
+  enCours,
+  suggestions,
+  onChoisir,
+}: {
+  visible: boolean;
+  enCours: boolean;
+  suggestions: SuggestionAdresse[];
+  onChoisir: (s: SuggestionAdresse) => void;
+}) {
+  if (!visible || (!enCours && suggestions.length === 0)) return null;
+
+  return (
+    <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-border bg-surface shadow-lg">
+      {enCours && suggestions.length === 0 ? (
+        <li className="px-3 py-2 text-xs text-ink-muted">Recherche…</li>
+      ) : (
+        suggestions.map((s, i) => (
+          <li key={`${s.adresse}-${i}`}>
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => onChoisir(s)}
+              className="block w-full px-3 py-2 text-left text-xs hover:bg-surface-alt"
+            >
+              {s.adresse}
             </button>
           </li>
         ))
