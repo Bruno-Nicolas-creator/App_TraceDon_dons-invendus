@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { isDocuSignConfigured, verifierEtEnregistrerSignature } from "@/lib/docusign";
+import { calculerImpactCarbone } from "@/lib/impactCo2";
 import BonEnlevementClient, { type ArticleAffiche, type BonAffiche } from "./BonEnlevementClient";
 
 export default async function BonEnlevementPage({
@@ -51,6 +52,9 @@ export default async function BonEnlevementPage({
     motifRefus: a.motifRefus ?? "",
   }));
 
+  const impact =
+    bon.confirme && bon.poidsTotalRetenu ? await calculerImpactCarbone(bon.poidsTotalRetenu) : null;
+
   const bonAffiche: BonAffiche = {
     id: bon.id,
     numero: bon.numero,
@@ -63,5 +67,5 @@ export default async function BonEnlevementPage({
     poidsTotalRetenu: bon.poidsTotalRetenu,
   };
 
-  return <BonEnlevementClient bon={bonAffiche} docusignConfigure={isDocuSignConfigured()} />;
+  return <BonEnlevementClient bon={bonAffiche} docusignConfigure={isDocuSignConfigured()} impact={impact} />;
 }

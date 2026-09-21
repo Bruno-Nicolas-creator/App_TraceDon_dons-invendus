@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import BottomTabBar from "@/components/BottomTabBar";
+import { calculerImpactCarbone } from "@/lib/impactCo2";
 import { deconnexionAction } from "./actions";
 
 const LABEL_ROLE: Record<string, string> = {
@@ -21,6 +22,17 @@ export default async function ProfilPage() {
   } else if (session.associationId) {
     const association = await prisma.association.findUnique({ where: { id: session.associationId } });
     organisation = association?.denomination ?? null;
+  }
+
+  let impactCumule: { co2EviteKg: number; equivalenceKm: number | null; poidsTotalKg: number } | null = null;
+  if (session.role === "ENTREPRISE" && session.entrepriseId) {
+    const bonsConfirmes = await prisma.bonEnlevement.findMany({
+      where: { entrepriseId: session.entrepriseId, confirme: true },
+      select: { poidsTotalRetenu: true },
+    });
+    const poidsTotalKg = bonsConfirmes.reduce((total, b) => total + (b.poidsTotalRetenu ?? 0), 0);
+    const impact = poidsTotalKg > 0 ? await calculerImpactCarbone(poidsTotalKg) : null;
+    if (impact) impactCumule = { ...impact, poidsTotalKg };
   }
 
   const carte = (
@@ -62,7 +74,32 @@ export default async function ProfilPage() {
       <header className="px-5 pt-5 pb-3">
         <h1 className="font-display text-xl font-semibold">Mon profil</h1>
       </header>
-      <main className="flex-1 px-5 pb-4">{carte}</main>
+      <main className="flex-1 space-y-4 px-5 pb-4">
+        {carte}
+        {impactCumule && (
+          <div className="rounded-2xl bg-brand-tint p-4">
+            <div className="mb-1 text-xs font-semibold uppercase text-brand-dark">Impact cumulé</div>
+            <div className="mb-1 text-2xl font-bold text-brand-dark">
+              {impactCumule.co2EviteKg.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} kg de CO2 évités 🌱
+            </div>
+            <p className="text-xs leading-relaxed text-brand-dark">
+              Grâce à {impactCumule.poidsTotalKg.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} kg de dons
+              non jetés
+              {impactCumule.equivalenceKm != null && (
+                <>
+                  {" "}
+                  — soit l&apos;équivalent de{" "}
+                  <span className="font-semibold">
+                    {impactCumule.equivalenceKm.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} km
+                  </span>{" "}
+                  en voiture 🚗
+                </>
+              )}
+              .
+            </p>
+          </div>
+        )}
+      </main>
       <BottomTabBar active="profil" />
     </div>
   );

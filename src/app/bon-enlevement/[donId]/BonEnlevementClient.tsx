@@ -32,7 +32,17 @@ export type BonAffiche = {
   poidsTotalRetenu: number | null;
 };
 
-export default function BonEnlevementClient({ bon, docusignConfigure }: { bon: BonAffiche; docusignConfigure: boolean }) {
+type ImpactCarbone = { co2EviteKg: number; equivalenceKm: number | null };
+
+export default function BonEnlevementClient({
+  bon,
+  docusignConfigure,
+  impact,
+}: {
+  bon: BonAffiche;
+  docusignConfigure: boolean;
+  impact: ImpactCarbone | null;
+}) {
   const [ecran, setEcran] = useState<"revue" | "succes">(bon.confirme ? "succes" : "revue");
   const [articles, setArticles] = useState(bon.articles);
   const [motifs, setMotifs] = useState<Record<string, string>>(
@@ -125,6 +135,23 @@ export default function BonEnlevementClient({ bon, docusignConfigure }: { bon: B
               </Link>
             </div>
           </div>
+
+          {impact && (
+            <div className="w-full rounded-2xl bg-brand-tint p-4 text-left">
+              <div className="mb-1 text-sm font-semibold text-brand-dark">
+                🌱 {impact.co2EviteKg.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} kg de CO2 évités
+              </div>
+              {impact.equivalenceKm != null && (
+                <p className="text-xs leading-relaxed text-brand-dark">
+                  Soit l&apos;équivalent de{" "}
+                  <span className="font-semibold">
+                    {impact.equivalenceKm.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} km
+                  </span>{" "}
+                  parcourus en voiture 🚗
+                </p>
+              )}
+            </div>
+          )}
         </main>
         <footer className="space-y-2.5 px-6 pt-4 pb-6">
           <a
