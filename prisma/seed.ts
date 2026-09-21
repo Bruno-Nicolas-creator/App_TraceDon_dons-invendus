@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 const MOT_DE_PASSE_DEMO = "demo1234";
 
 async function main() {
+  await prisma.assignationRecurrente.deleteMany();
   await prisma.signature.deleteMany();
   await prisma.article.deleteMany();
   await prisma.bonEnlevement.deleteMany();
@@ -188,6 +189,19 @@ async function main() {
       verifieeLe: new Date("2025-12-01"),
       verifieePar: "Bruno (coordinateur)",
     },
+  });
+
+  // Planning récurrent : Carrefour City Nice Masséna reçoit Coeur Partage les jours
+  // impairs de la semaine et Resto Solidaire Nice les autres ; le week-end reste ouvert
+  // à la place de marché pour montrer les deux fonctionnements.
+  await prisma.assignationRecurrente.createMany({
+    data: [
+      { entrepriseId: carrefour.id, jourSemaine: 0, associationId: coeurPartage.id }, // lundi
+      { entrepriseId: carrefour.id, jourSemaine: 1, associationId: restoSolidaire.id }, // mardi
+      { entrepriseId: carrefour.id, jourSemaine: 2, associationId: coeurPartage.id }, // mercredi
+      { entrepriseId: carrefour.id, jourSemaine: 3, associationId: restoSolidaire.id }, // jeudi
+      { entrepriseId: carrefour.id, jourSemaine: 4, associationId: coeurPartage.id }, // vendredi
+    ],
   });
 
   // Don en brouillon pour l'écran "Nouveau don" (entreprise Carrefour)

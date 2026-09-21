@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { rechercherProduitParCodeBarre, type ProduitScanne } from "@/lib/openFoodFacts";
+import { jourSemaineDuJour } from "@/lib/planning";
 
 async function requireSession() {
   const session = await getSession();
@@ -89,7 +90,35 @@ export async function publierDon(donId: string) {
   const don = await prisma.don.findUniqueOrThrow({ where: { id: donId } });
   if (don.entrepriseId !== session.entrepriseId) throw new Error("Don non autorisé.");
 
-  await prisma.don.update({ where: { id: donId }, data: { statut: "PUBLIE", publieLe: new Date() } });
+  // Planning récurrent : si une seule association est attendue aujourd'hui, le don lui est
+  // assigné directement (bon d'enlèvement créé tout de suite) plutôt que publié sur la
+  // place de marché — cf. le fonctionnement réel des grandes surfaces (association fixe par jour).
+  const assignationsAujourdhui = await prisma.assignationRecurrente.findMany({
+    where: { entrepriseId: session.entrepriseId, jourSemaine: jourSemaineDuJour(new Date()), actif: true },
+    include: { association: true },
+  });
+
+  let assigneA: string | null = null;
+
+  if (assignationsAujourdhui.length === 1) {
+    const association = assignationsAujourdhui[0].association;
+    await prisma.don.update({
+      where: { id: donId },
+      data: { statut: "PRIS_EN_CHARGE", associationAssigneeId: association.id, publieLe: new Date() },
+    });
+    await prisma.bonEnlevement.create({
+      data: {
+        numero: await genererNumeroBon(),
+        donId,
+        entrepriseId: session.entrepriseId,
+        associationId: association.id,
+      },
+    });
+    assigneA = association.denomination;
+  } else {
+    await prisma.don.update({ where: { id: donId }, data: { statut: "PUBLIE", publieLe: new Date() } });
+  }
+
   revalidatePath("/");
   revalidatePath("/dons");
 
@@ -98,7 +127,7 @@ export async function publierDon(donId: string) {
     data: { entrepriseId: session.entrepriseId },
     include: { articles: true },
   });
-  return { id: nouveauBrouillon.id, mode: nouveauBrouillon.mode, articles: nouveauBrouillon.articles };
+  return { id: nouveauBrouillon.id, mode: nouveauBrouillon.mode, articles: nouveauBrouillon.articles, assigneA };
 }
 
 export async function sePositionner(donId: string) {

@@ -95,6 +95,7 @@ model Entreprise {
   bonsEnlevement   BonEnlevement[]
   attestations     AttestationFiscale[]
   conventions      Convention[]
+  assignationsRecurrentes AssignationRecurrente[]
   createdAt        DateTime @default(now())
 }
 
@@ -127,7 +128,24 @@ model Association {
   bonsEnlevement            BonEnlevement[]
   attestations              AttestationFiscale[]
   conventions               Convention[]
+  assignationsRecurrentes   AssignationRecurrente[]
   createdAt                 DateTime      @default(now())
+}
+
+// Planning hebdomadaire : association(s) attendue(s) chaque jour de la semaine
+// pour un enlèvement récurrent (mode "bordereau ouvert" — la liste des
+// articles n'est renseignée qu'au moment de l'enlèvement).
+model AssignationRecurrente {
+  id            String      @id @default(cuid())
+  entrepriseId  String
+  entreprise    Entreprise  @relation(fields: [entrepriseId], references: [id])
+  jourSemaine   Int // 0 = lundi ... 6 = dimanche
+  associationId String
+  association   Association @relation(fields: [associationId], references: [id])
+  actif         Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+
+  @@unique([entrepriseId, jourSemaine, associationId])
 }
 
 model Convention {

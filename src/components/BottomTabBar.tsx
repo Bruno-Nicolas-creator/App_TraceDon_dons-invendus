@@ -1,13 +1,31 @@
 import Link from "next/link";
 
-type Tab = "dons" | "archives" | "profil";
+type Tab = "dons" | "planning" | "archives" | "profil";
+type Role = "ENTREPRISE" | "ASSOCIATION" | "COORDINATEUR";
 
-function buildTabs(donsHref: string, donsLabel: string): { id: Tab; href: string; label: string }[] {
-  return [
-    { id: "dons", href: donsHref, label: donsLabel },
-    { id: "archives", href: "/archives", label: "Archives" },
-    { id: "profil", href: "/profil", label: "Profil" },
-  ];
+function tabsForRole(role: Role): { id: Tab; href: string; label: string }[] {
+  switch (role) {
+    case "ENTREPRISE":
+      return [
+        { id: "dons", href: "/", label: "Nouveau don" },
+        { id: "planning", href: "/planning", label: "Planning" },
+        { id: "archives", href: "/archives", label: "Archives" },
+        { id: "profil", href: "/profil", label: "Profil" },
+      ];
+    case "COORDINATEUR":
+      return [
+        { id: "dons", href: "/coordinateur", label: "Tableau de bord" },
+        { id: "archives", href: "/archives", label: "Archives" },
+        { id: "profil", href: "/profil", label: "Profil" },
+      ];
+    case "ASSOCIATION":
+    default:
+      return [
+        { id: "dons", href: "/dons", label: "Dons" },
+        { id: "archives", href: "/archives", label: "Archives" },
+        { id: "profil", href: "/profil", label: "Profil" },
+      ];
+  }
 }
 
 function TabIcon({ id, active }: { id: Tab; active: boolean }) {
@@ -16,6 +34,14 @@ function TabIcon({ id, active }: { id: Tab; active: boolean }) {
     return (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M12 3L4 9V21H20V9L12 3Z" stroke={stroke} strokeWidth="1.8" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (id === "planning") {
+    return (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <rect x="4" y="5" width="16" height="15" rx="2" stroke={stroke} strokeWidth="1.8" />
+        <path d="M4 9.5H20M8 3V6.5M16 3V6.5" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" />
       </svg>
     );
   }
@@ -35,16 +61,8 @@ function TabIcon({ id, active }: { id: Tab; active: boolean }) {
   );
 }
 
-export default function BottomTabBar({
-  active,
-  donsHref = "/dons",
-  donsLabel = "Dons",
-}: {
-  active: Tab;
-  donsHref?: string;
-  donsLabel?: string;
-}) {
-  const tabs = buildTabs(donsHref, donsLabel);
+export default function BottomTabBar({ active, role }: { active: Tab; role: Role }) {
+  const tabs = tabsForRole(role);
   return (
     <nav
       aria-label="Navigation principale"
@@ -53,15 +71,9 @@ export default function BottomTabBar({
       {tabs.map((tab) => {
         const isActive = tab.id === active;
         return (
-          <Link
-            key={tab.id}
-            href={tab.href}
-            className="flex flex-1 flex-col items-center gap-1"
-          >
+          <Link key={tab.id} href={tab.href} className="flex flex-1 flex-col items-center gap-1">
             <TabIcon id={tab.id} active={isActive} />
-            <span
-              className={`text-[10px] ${isActive ? "font-semibold text-brand" : "text-ink-muted"}`}
-            >
+            <span className={`text-[10px] ${isActive ? "font-semibold text-brand" : "text-ink-muted"}`}>
               {tab.label}
             </span>
           </Link>

@@ -139,7 +139,7 @@ export default function DonsDisponiblesClient({
         </ul>
       </main>
 
-      <BottomTabBar active="dons" />
+      <BottomTabBar active="dons" role="ASSOCIATION" />
     </div>
   );
 }

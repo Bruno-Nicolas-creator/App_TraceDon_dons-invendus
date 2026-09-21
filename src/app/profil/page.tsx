@@ -105,11 +105,7 @@ export default async function ProfilPage() {
           </div>
         )}
       </main>
-      <BottomTabBar
-        active="profil"
-        donsHref={session.role === "ENTREPRISE" ? "/" : "/dons"}
-        donsLabel={session.role === "ENTREPRISE" ? "Nouveau don" : "Dons"}
-      />
+      <BottomTabBar active="profil" role={session.role} />
     </div>
   );
 }

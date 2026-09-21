@@ -53,11 +53,5 @@ export default async function ArchivesPage() {
     montant: `${att.montantCalcule.toLocaleString("fr-FR")} €`,
   }));
 
-  const donsHref = session.role === "ENTREPRISE" ? "/" : session.role === "COORDINATEUR" ? "/coordinateur" : "/dons";
-  const donsLabel =
-    session.role === "ENTREPRISE" ? "Nouveau don" : session.role === "COORDINATEUR" ? "Tableau de bord" : "Dons";
-
-  return (
-    <ArchivesClient bons={bonsAffiches} attestations={attestationsAffichees} donsHref={donsHref} donsLabel={donsLabel} />
-  );
+  return <ArchivesClient bons={bonsAffiches} attestations={attestationsAffichees} role={session.role} />;
 }

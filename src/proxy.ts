@@ -6,7 +6,7 @@ const SESSION_COOKIE = "session";
 type Role = "ENTREPRISE" | "ASSOCIATION" | "COORDINATEUR";
 
 const ALLOWED_PREFIXES: Record<Role, string[]> = {
-  ENTREPRISE: ["/", "/archives", "/profil"],
+  ENTREPRISE: ["/", "/planning", "/associations", "/archives", "/profil"],
   ASSOCIATION: ["/dons", "/bon-enlevement", "/archives", "/profil"],
   COORDINATEUR: ["/coordinateur", "/archives", "/profil"],
 };

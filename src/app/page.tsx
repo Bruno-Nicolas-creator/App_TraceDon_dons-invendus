@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { jourSemaineDuJour } from "@/lib/planning";
 import NouveauDonClient from "./NouveauDonClient";
 
 // Cette page peut créer un brouillon en base : elle ne doit jamais être
@@ -25,5 +26,12 @@ export default async function NouveauDonPage() {
   if (!session || session.role !== "ENTREPRISE" || !session.entrepriseId) redirect("/connexion");
 
   const don = await getOrCreateBrouillon(session.entrepriseId);
-  return <NouveauDonClient don={don} />;
+
+  const assignationsAujourdhui = await prisma.assignationRecurrente.findMany({
+    where: { entrepriseId: session.entrepriseId, jourSemaine: jourSemaineDuJour(new Date()), actif: true },
+    include: { association: true },
+  });
+  const associationsAujourdhui = assignationsAujourdhui.map((a) => a.association.denomination);
+
+  return <NouveauDonClient don={don} associationsAujourdhui={associationsAujourdhui} />;
 }

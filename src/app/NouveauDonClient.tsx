@@ -9,6 +9,7 @@ import {
   rechercherProduitAction,
   retirerArticle,
 } from "@/app/actions";
+import Link from "next/link";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import BottomTabBar from "@/components/BottomTabBar";
 import PointsChargement from "@/components/PointsChargement";
@@ -27,7 +28,13 @@ type Don = {
   articles: Article[];
 };
 
-export default function NouveauDonClient({ don }: { don: Don }) {
+export default function NouveauDonClient({
+  don,
+  associationsAujourdhui,
+}: {
+  don: Don;
+  associationsAujourdhui: string[];
+}) {
   const [donId, setDonId] = useState(don.id);
   const [mode, setMode] = useState(don.mode);
   const [articles, setArticles] = useState<Article[]>(don.articles);
@@ -36,6 +43,7 @@ export default function NouveauDonClient({ don }: { don: Don }) {
   const [poids, setPoids] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
   const [vientDetrePublie, setVientDetrePublie] = useState(false);
+  const [assigneA, setAssigneA] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const [afficherScanner, setAfficherScanner] = useState(false);
@@ -153,6 +161,7 @@ export default function NouveauDonClient({ don }: { don: Don }) {
       setDonId(nouveauBrouillon.id);
       setMode(nouveauBrouillon.mode);
       setArticles(nouveauBrouillon.articles);
+      setAssigneA(nouveauBrouillon.assigneA);
       setVientDetrePublie(true);
     });
   };
@@ -175,7 +184,7 @@ export default function NouveauDonClient({ don }: { don: Don }) {
         <span className="rounded-full border border-border px-2.5 py-1 text-xs text-ink-muted">Brouillon</span>
       </header>
 
-      <div className="px-5 pb-4">
+      <div className="space-y-2.5 px-5 pb-4">
         <TogglePill
           valeur={mode}
           onChange={changerDeMode}
@@ -184,13 +193,41 @@ export default function NouveauDonClient({ don }: { don: Don }) {
             { valeur: "LISTE_PREALABLE", label: "Liste à l'avance" },
           ]}
         />
+        <Link
+          href="/associations"
+          className="flex items-center justify-center gap-1.5 rounded-full border border-border bg-surface py-2.5 text-xs font-semibold text-ink transition-transform active:scale-[0.98]"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M12 21C12 21 19 15.5 19 10.5C19 6.4 15.9 3 12 3C8.1 3 5 6.4 5 10.5C5 15.5 12 21 12 21Z"
+              stroke="#201F1B"
+              strokeWidth="1.6"
+            />
+            <circle cx="12" cy="10.5" r="2.3" stroke="#201F1B" strokeWidth="1.6" />
+          </svg>
+          Voir les associations à proximité
+        </Link>
       </div>
 
       <main className="flex-1 space-y-5 px-5 pb-4">
+        {associationsAujourdhui.length === 1 && !vientDetrePublie && (
+          <div className="rounded-xl bg-brand-tint px-4 py-3.5 text-sm leading-snug text-brand-dark">
+            Aujourd&apos;hui, ce don sera directement remis à <strong>{associationsAujourdhui[0]}</strong> (planning
+            récurrent).
+          </div>
+        )}
+        {associationsAujourdhui.length > 1 && !vientDetrePublie && (
+          <div className="rounded-xl bg-surface-alt px-4 py-3.5 text-sm leading-snug text-ink-muted">
+            Plusieurs associations sont planifiées aujourd&apos;hui ({associationsAujourdhui.join(", ")}) : le don sera
+            publié pour qu&apos;une d&apos;entre elles se positionne.
+          </div>
+        )}
         {vientDetrePublie && (
           <div className="flex items-start justify-between gap-2.5 rounded-xl bg-brand-tint px-4 py-3.5">
             <p className="text-sm leading-snug text-brand-dark">
-              Don publié ! Il est visible des associations. Un nouveau brouillon a été créé ci-dessous.
+              {assigneA
+                ? `Don enregistré et assigné à ${assigneA}. Le bon d'enlèvement est prêt pour la signature.`
+                : "Don publié ! Il est visible des associations. Un nouveau brouillon a été créé ci-dessous."}
             </p>
             <button
               type="button"
@@ -422,7 +459,7 @@ export default function NouveauDonClient({ don }: { don: Don }) {
           Publier le don
         </button>
       </footer>
-      <BottomTabBar active="dons" donsHref="/" donsLabel="Nouveau don" />
+      <BottomTabBar active="dons" role="ENTREPRISE" />
     </div>
   );
 }
