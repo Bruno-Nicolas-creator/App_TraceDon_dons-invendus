@@ -2,11 +2,13 @@ import Link from "next/link";
 
 type Tab = "dons" | "archives" | "profil";
 
-const TABS: { id: Tab; href: string; label: string }[] = [
-  { id: "dons", href: "/dons", label: "Dons" },
-  { id: "archives", href: "/archives", label: "Archives" },
-  { id: "profil", href: "/profil", label: "Profil" },
-];
+function buildTabs(donsHref: string, donsLabel: string): { id: Tab; href: string; label: string }[] {
+  return [
+    { id: "dons", href: donsHref, label: donsLabel },
+    { id: "archives", href: "/archives", label: "Archives" },
+    { id: "profil", href: "/profil", label: "Profil" },
+  ];
+}
 
 function TabIcon({ id, active }: { id: Tab; active: boolean }) {
   const stroke = active ? "#2E6B4E" : "#6B6459";
@@ -33,13 +35,22 @@ function TabIcon({ id, active }: { id: Tab; active: boolean }) {
   );
 }
 
-export default function BottomTabBar({ active }: { active: Tab }) {
+export default function BottomTabBar({
+  active,
+  donsHref = "/dons",
+  donsLabel = "Dons",
+}: {
+  active: Tab;
+  donsHref?: string;
+  donsLabel?: string;
+}) {
+  const tabs = buildTabs(donsHref, donsLabel);
   return (
     <nav
       aria-label="Navigation principale"
       className="flex shrink-0 border-t border-border bg-surface px-2 pt-2.5 pb-3.5"
     >
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const isActive = tab.id === active;
         return (
           <Link

@@ -8,7 +8,7 @@ type Role = "ENTREPRISE" | "ASSOCIATION" | "COORDINATEUR";
 const ALLOWED_PREFIXES: Record<Role, string[]> = {
   ENTREPRISE: ["/", "/archives", "/profil"],
   ASSOCIATION: ["/dons", "/bon-enlevement", "/archives", "/profil"],
-  COORDINATEUR: ["/coordinateur", "/profil"],
+  COORDINATEUR: ["/coordinateur", "/archives", "/profil"],
 };
 
 const LANDING: Record<Role, string> = {

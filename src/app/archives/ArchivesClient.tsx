@@ -19,7 +19,17 @@ function DocIcon({ variant }: { variant: "bon" | "attestation" }) {
   );
 }
 
-export default function ArchivesClient({ bons, attestations }: { bons: BonArchive[]; attestations: AttestationArchive[] }) {
+export default function ArchivesClient({
+  bons,
+  attestations,
+  donsHref,
+  donsLabel,
+}: {
+  bons: BonArchive[];
+  attestations: AttestationArchive[];
+  donsHref?: string;
+  donsLabel?: string;
+}) {
   const [onglet, setOnglet] = useState<Onglet>("bons");
 
   return (
@@ -99,7 +109,7 @@ export default function ArchivesClient({ bons, attestations }: { bons: BonArchiv
         )}
       </main>
 
-      <BottomTabBar active="archives" />
+      <BottomTabBar active="archives" donsHref={donsHref} donsLabel={donsLabel} />
     </div>
   );
 }

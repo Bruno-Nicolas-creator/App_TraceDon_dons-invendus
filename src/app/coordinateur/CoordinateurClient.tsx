@@ -27,7 +27,14 @@ const RESCRIT_STYLES: Record<AssociationLigne["rescritVariant"], string> = {
   absent: "bg-accent-tint text-accent",
 };
 
-const NAV_ITEMS = ["Tableau de bord", "Entreprises", "Associations", "Dons", "Réseaux"];
+const NAV_ITEMS: { label: string; href?: string }[] = [
+  { label: "Tableau de bord", href: "/coordinateur" },
+  { label: "Entreprises" },
+  { label: "Associations" },
+  { label: "Dons" },
+  { label: "Archives", href: "/archives" },
+  { label: "Réseaux" },
+];
 
 export default function CoordinateurClient({
   associations,
@@ -77,11 +84,23 @@ export default function CoordinateurClient({
           <span className="font-display text-base font-semibold text-white">DonSolidaire</span>
         </div>
         <nav className="flex flex-col gap-0.5">
-          {NAV_ITEMS.map((item, i) => (
-            <div key={item} className={`rounded-lg px-3 py-2.5 text-[13.5px] ${i === 0 ? "bg-white/10 font-semibold text-white" : "text-white/70"}`}>
-              {item}
-            </div>
-          ))}
+          {NAV_ITEMS.map((item, i) =>
+            item.href ? (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={`rounded-lg px-3 py-2.5 text-[13.5px] transition-colors hover:bg-white/10 ${
+                  i === 0 ? "bg-white/10 font-semibold text-white" : "text-white/70"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ) : (
+              <div key={item.label} className="rounded-lg px-3 py-2.5 text-[13.5px] text-white/70">
+                {item.label}
+              </div>
+            )
+          )}
         </nav>
         <div className="flex-1" />
         <Link href="/profil" className="flex items-center gap-2.5 border-t border-white/15 px-2 pt-2.5">
@@ -100,9 +119,21 @@ export default function CoordinateurClient({
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-tint font-display text-sm font-bold text-brand-dark">D</div>
           <span className="font-display text-sm font-semibold text-white">DonSolidaire</span>
         </div>
-        <Link href="/profil" className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-tint text-xs font-bold text-brand-dark">
-          {nomCoordinateur.slice(0, 1).toUpperCase()}
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/archives"
+            aria-label="Archives"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 text-white/80"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M4 10H20" stroke="currentColor" strokeWidth="1.8" />
+            </svg>
+          </Link>
+          <Link href="/profil" className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-tint text-xs font-bold text-brand-dark">
+            {nomCoordinateur.slice(0, 1).toUpperCase()}
+          </Link>
+        </div>
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col">

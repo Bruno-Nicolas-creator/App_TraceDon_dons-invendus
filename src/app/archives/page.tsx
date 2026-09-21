@@ -11,10 +11,13 @@ const formatDate = (date: Date) =>
 export default async function ArchivesPage() {
   const session = await getSession();
   if (!session) redirect("/connexion");
-  if (session.role === "COORDINATEUR") redirect("/coordinateur");
 
   const bonWhere =
-    session.role === "ENTREPRISE" ? { entrepriseId: session.entrepriseId! } : { associationId: session.associationId! };
+    session.role === "ENTREPRISE"
+      ? { entrepriseId: session.entrepriseId! }
+      : session.role === "ASSOCIATION"
+        ? { associationId: session.associationId! }
+        : {};
   const attestationWhere = bonWhere;
 
   const [bons, attestations] = await Promise.all([
@@ -30,8 +33,11 @@ export default async function ArchivesPage() {
     }),
   ]);
 
-  const nomPartenaire = (partenaires: { entreprise: { raisonSociale: string }; association: { denomination: string } }) =>
-    session.role === "ENTREPRISE" ? partenaires.association.denomination : partenaires.entreprise.raisonSociale;
+  const nomPartenaire = (partenaires: { entreprise: { raisonSociale: string }; association: { denomination: string } }) => {
+    if (session.role === "ENTREPRISE") return partenaires.association.denomination;
+    if (session.role === "ASSOCIATION") return partenaires.entreprise.raisonSociale;
+    return `${partenaires.entreprise.raisonSociale} → ${partenaires.association.denomination}`;
+  };
 
   const bonsAffiches: BonArchive[] = bons.map((bon) => ({
     id: bon.id,
@@ -47,5 +53,11 @@ export default async function ArchivesPage() {
     montant: `${att.montantCalcule.toLocaleString("fr-FR")} €`,
   }));
 
-  return <ArchivesClient bons={bonsAffiches} attestations={attestationsAffichees} />;
+  const donsHref = session.role === "ENTREPRISE" ? "/" : session.role === "COORDINATEUR" ? "/coordinateur" : "/dons";
+  const donsLabel =
+    session.role === "ENTREPRISE" ? "Nouveau don" : session.role === "COORDINATEUR" ? "Tableau de bord" : "Dons";
+
+  return (
+    <ArchivesClient bons={bonsAffiches} attestations={attestationsAffichees} donsHref={donsHref} donsLabel={donsLabel} />
+  );
 }

@@ -10,6 +10,7 @@ import {
   retirerArticle,
 } from "@/app/actions";
 import BarcodeScanner from "@/components/BarcodeScanner";
+import BottomTabBar from "@/components/BottomTabBar";
 import PointsChargement from "@/components/PointsChargement";
 import TogglePill from "@/components/TogglePill";
 
@@ -421,6 +422,7 @@ export default function NouveauDonClient({ don }: { don: Don }) {
           Publier le don
         </button>
       </footer>
+      <BottomTabBar active="dons" donsHref="/" donsLabel="Nouveau don" />
     </div>
   );
 }
