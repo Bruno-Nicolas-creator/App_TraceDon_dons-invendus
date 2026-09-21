@@ -65,15 +65,15 @@ export default async function CoordinateurDashboardPage() {
   const poidsMois = bonsConfirmes.reduce((t, b) => t + (b.poidsTotalRetenu ?? 0), 0);
   const totalArticles = articles.length;
   const totalRefuses = articles.filter((a) => a.statut === "REFUSE").length;
-  const tauxRefus = totalArticles > 0 ? ((totalRefuses / totalArticles) * 100).toFixed(1).replace(".", ",") : "0";
+  const tauxRefus = totalArticles > 0 ? (totalRefuses / totalArticles) * 100 : 0;
 
   return (
     <CoordinateurClient
       associations={associationsAffichees}
       donsNonAssignes={donsAffiches}
-      poidsMois={`${poidsMois.toLocaleString("fr-FR")} kg`}
+      poidsMois={poidsMois}
       nombreDons={bonsConfirmes.length}
-      tauxRefus={`${tauxRefus}%`}
+      tauxRefus={tauxRefus}
       nomCoordinateur={session.nom}
     />
   );

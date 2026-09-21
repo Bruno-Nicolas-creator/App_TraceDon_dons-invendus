@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import BottomTabBar from "@/components/BottomTabBar";
+import CompteurAnime from "@/components/CompteurAnime";
 import { calculerImpactCarbone } from "@/lib/impactCo2";
 import { deconnexionAction } from "./actions";
 
@@ -53,7 +54,10 @@ export default async function ProfilPage() {
         </div>
       )}
       <form action={deconnexionAction}>
-        <button type="submit" className="w-full rounded-full border border-border py-3 text-sm font-semibold text-accent">
+        <button
+          type="submit"
+          className="w-full rounded-full border border-border py-3 text-sm font-semibold text-accent transition-transform active:scale-[0.98]"
+        >
           Se déconnecter
         </button>
       </form>
@@ -77,20 +81,21 @@ export default async function ProfilPage() {
       <main className="flex-1 space-y-4 px-5 pb-4">
         {carte}
         {impactCumule && (
-          <div className="rounded-2xl bg-brand-tint p-4">
+          <div className="animate-fade-slide-in rounded-2xl bg-brand-tint p-4" style={{ animationDelay: "100ms" }}>
             <div className="mb-1 text-xs font-semibold uppercase text-brand-dark">Impact cumulé</div>
             <div className="mb-1 text-2xl font-bold text-brand-dark">
-              {impactCumule.co2EviteKg.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} kg de CO2 évités 🌱
+              <CompteurAnime valeur={impactCumule.co2EviteKg} suffixe=" kg de CO2 évités" duree={1000} />{" "}
+              <span className="animate-pop-rebond">🌱</span>
             </div>
             <p className="text-xs leading-relaxed text-brand-dark">
-              Grâce à {impactCumule.poidsTotalKg.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} kg de dons
-              non jetés
+              Grâce à <CompteurAnime valeur={impactCumule.poidsTotalKg} suffixe=" kg" duree={1000} /> de dons non
+              jetés
               {impactCumule.equivalenceKm != null && (
                 <>
                   {" "}
                   — soit l&apos;équivalent de{" "}
                   <span className="font-semibold">
-                    {impactCumule.equivalenceKm.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} km
+                    <CompteurAnime valeur={impactCumule.equivalenceKm} suffixe=" km" duree={1000} />
                   </span>{" "}
                   en voiture 🚗
                 </>

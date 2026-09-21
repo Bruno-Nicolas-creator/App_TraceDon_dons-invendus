@@ -5,6 +5,8 @@ import Link from "next/link";
 import { inscriptionAction, rechercherOrganismeAction, rechercherAdresseAction } from "./actions";
 import type { SuggestionOrganisme } from "@/lib/rechercheEntreprises";
 import type { SuggestionAdresse } from "@/lib/ignAdresse";
+import PointsChargement from "@/components/PointsChargement";
+import TogglePill from "@/components/TogglePill";
 
 type TypeCompte = "ENTREPRISE" | "ASSOCIATION";
 
@@ -131,26 +133,14 @@ export default function InscriptionForm({
 
       <div>
         <span className="mb-1.5 block text-xs font-medium text-ink-muted">Type de compte</span>
-        <div className="flex gap-1 rounded-xl bg-surface-alt p-1">
-          <button
-            type="button"
-            onClick={() => changerType("ENTREPRISE")}
-            className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${
-              type === "ENTREPRISE" ? "bg-brand text-white" : "text-ink-muted"
-            }`}
-          >
-            Entreprise
-          </button>
-          <button
-            type="button"
-            onClick={() => changerType("ASSOCIATION")}
-            className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${
-              type === "ASSOCIATION" ? "bg-brand text-white" : "text-ink-muted"
-            }`}
-          >
-            Association
-          </button>
-        </div>
+        <TogglePill
+          valeur={type}
+          onChange={changerType}
+          options={[
+            { valeur: "ENTREPRISE", label: "Entreprise" },
+            { valeur: "ASSOCIATION", label: "Association" },
+          ]}
+        />
         <input type="hidden" name="type" value={type} />
       </div>
 
@@ -290,7 +280,7 @@ export default function InscriptionForm({
         </div>
       </div>
 
-      <button type="submit" className="w-full rounded-full bg-brand py-3 text-sm font-bold text-white">
+      <button type="submit" className="w-full rounded-full bg-brand py-3 text-sm font-bold text-white transition-transform active:scale-[0.98]">
         Créer mon compte
       </button>
 
@@ -369,9 +359,11 @@ function SuggestionsDropdown({
   if (!visible || (!enCours && suggestions.length === 0)) return null;
 
   return (
-    <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-border bg-surface shadow-lg">
+    <ul className="animate-fade-slide-in absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-border bg-surface shadow-lg">
       {enCours && suggestions.length === 0 ? (
-        <li className="px-3 py-2 text-xs text-ink-muted">Recherche…</li>
+        <li className="flex items-center gap-2 px-3 py-2 text-xs text-ink-muted">
+          Recherche <PointsChargement />
+        </li>
       ) : (
         suggestions.map((s, i) => (
           <li key={`${s.siret ?? s.rna ?? s.nom}-${i}`}>
@@ -379,7 +371,7 @@ function SuggestionsDropdown({
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => onChoisir(s)}
-              className="block w-full px-3 py-2 text-left text-xs hover:bg-surface-alt"
+              className="block w-full px-3 py-2 text-left text-xs transition-colors hover:bg-surface-alt active:bg-surface-alt"
             >
               <span className="block font-semibold text-ink">{s.nom}</span>
               <span className="block text-ink-muted">{s.adresse}</span>
@@ -405,9 +397,11 @@ function SuggestionsAdresseDropdown({
   if (!visible || (!enCours && suggestions.length === 0)) return null;
 
   return (
-    <ul className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-border bg-surface shadow-lg">
+    <ul className="animate-fade-slide-in absolute z-10 mt-1 w-full overflow-hidden rounded-lg border border-border bg-surface shadow-lg">
       {enCours && suggestions.length === 0 ? (
-        <li className="px-3 py-2 text-xs text-ink-muted">Recherche…</li>
+        <li className="flex items-center gap-2 px-3 py-2 text-xs text-ink-muted">
+          Recherche <PointsChargement />
+        </li>
       ) : (
         suggestions.map((s, i) => (
           <li key={`${s.adresse}-${i}`}>
@@ -415,7 +409,7 @@ function SuggestionsAdresseDropdown({
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => onChoisir(s)}
-              className="block w-full px-3 py-2 text-left text-xs hover:bg-surface-alt"
+              className="block w-full px-3 py-2 text-left text-xs transition-colors hover:bg-surface-alt active:bg-surface-alt"
             >
               {s.adresse}
             </button>

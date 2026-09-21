@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { confirmerBon, refuserArticle, validerArticle } from "@/app/actions";
 import { demarrerSignatureDocuSign } from "./docusign-actions";
+import CompteurAnime from "@/components/CompteurAnime";
 
 type Statut = "EN_ATTENTE" | "VALIDE" | "REFUSE";
 
@@ -108,7 +109,14 @@ export default function BonEnlevementClient({
         <main className="flex flex-1 flex-col items-center gap-4 px-6 pt-6 text-center">
           <div className="mt-6 flex h-18 w-18 items-center justify-center rounded-full bg-brand-tint">
             <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M5 13L9.5 17.5L19 7" stroke="#1E4B36" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                className="animate-trait-check"
+                d="M5 13L9.5 17.5L19 7"
+                stroke="#1E4B36"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </div>
           <div>
@@ -137,15 +145,16 @@ export default function BonEnlevementClient({
           </div>
 
           {impact && (
-            <div className="w-full rounded-2xl bg-brand-tint p-4 text-left">
+            <div className="w-full animate-fade-slide-in rounded-2xl bg-brand-tint p-4 text-left" style={{ animationDelay: "150ms" }}>
               <div className="mb-1 text-sm font-semibold text-brand-dark">
-                🌱 {impact.co2EviteKg.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} kg de CO2 évités
+                <span className="animate-pop-rebond">🌱</span>{" "}
+                <CompteurAnime valeur={impact.co2EviteKg} decimales={1} suffixe=" kg de CO2 évités" />
               </div>
               {impact.equivalenceKm != null && (
                 <p className="text-xs leading-relaxed text-brand-dark">
                   Soit l&apos;équivalent de{" "}
                   <span className="font-semibold">
-                    {impact.equivalenceKm.toLocaleString("fr-FR", { maximumFractionDigits: 0 })} km
+                    <CompteurAnime valeur={impact.equivalenceKm} suffixe=" km" />
                   </span>{" "}
                   parcourus en voiture 🚗
                 </p>
@@ -198,11 +207,15 @@ export default function BonEnlevementClient({
 
       <main className="flex-1 space-y-5 overflow-y-auto px-5 pb-4">
         <ul className="space-y-2.5">
-          {articles.map((article) => {
+          {articles.map((article, i) => {
             const estRefuse = article.statut === "REFUSE";
             const estValide = article.statut === "VALIDE";
             return (
-              <li key={article.id} className={`space-y-2.5 rounded-2xl border bg-surface p-3.5 ${estRefuse ? "border-[#E7C4AE]" : "border-border"}`}>
+              <li
+                key={article.id}
+                style={{ animationDelay: `${i * 50}ms` }}
+                className={`animate-fade-slide-in space-y-2.5 rounded-2xl border bg-surface p-3.5 ${estRefuse ? "border-[#E7C4AE]" : "border-border"}`}
+              >
                 <div className="flex justify-between gap-2">
                   <div className="text-sm font-semibold">{article.nom}</div>
                   <span className={`whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${article.bloque ? "bg-accent-tint text-accent" : "bg-brand-tint text-brand-dark"}`}>
@@ -233,7 +246,7 @@ export default function BonEnlevementClient({
                     type="button"
                     onClick={() => valider(article)}
                     disabled={article.bloque}
-                    className={`flex-1 rounded-full border-[1.5px] py-2 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50 ${
+                    className={`flex-1 rounded-full border-[1.5px] py-2 text-xs font-bold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
                       estValide ? "border-brand bg-brand text-white" : "border-border bg-surface text-ink-muted"
                     }`}
                   >
@@ -242,7 +255,7 @@ export default function BonEnlevementClient({
                   <button
                     type="button"
                     onClick={() => refuser(article)}
-                    className={`flex-1 rounded-full border-[1.5px] py-2 text-xs font-bold ${
+                    className={`flex-1 rounded-full border-[1.5px] py-2 text-xs font-bold transition-transform active:scale-95 ${
                       estRefuse ? "border-accent bg-accent text-white" : "border-border bg-surface text-ink-muted"
                     }`}
                   >
@@ -301,7 +314,7 @@ export default function BonEnlevementClient({
               type="button"
               onClick={() => demarrerSignature("DONATEUR")}
               disabled={donateurSigne || !docusignConfigure || signatureEnCours !== null}
-              className={`flex-1 rounded-xl border-[1.5px] border-dashed border-[#C7C1B0] py-3.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${
+              className={`flex-1 rounded-xl border-[1.5px] border-dashed border-[#C7C1B0] py-3.5 text-xs font-semibold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
                 donateurSigne ? "bg-brand-tint text-brand-dark" : "bg-surface"
               }`}
             >
@@ -311,7 +324,7 @@ export default function BonEnlevementClient({
               type="button"
               onClick={() => demarrerSignature("ASSOCIATION")}
               disabled={associationSigne || !docusignConfigure || signatureEnCours !== null}
-              className={`flex-1 rounded-xl border-[1.5px] border-dashed border-[#C7C1B0] py-3.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${
+              className={`flex-1 rounded-xl border-[1.5px] border-dashed border-[#C7C1B0] py-3.5 text-xs font-semibold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
                 associationSigne ? "bg-brand-tint text-brand-dark" : "bg-surface"
               }`}
             >
@@ -329,7 +342,7 @@ export default function BonEnlevementClient({
         {erreurSignature && (
           <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreurSignature}</div>
         )}
-        <button type="button" onClick={confirmer} className="w-full rounded-full bg-brand py-3.5 text-[15px] font-bold text-white">
+        <button type="button" onClick={confirmer} className="w-full rounded-full bg-brand py-3.5 text-[15px] font-bold text-white transition-transform active:scale-[0.98]">
           Confirmer l&apos;enlèvement
         </button>
       </footer>

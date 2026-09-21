@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import BottomTabBar from "@/components/BottomTabBar";
 import GoogleMap from "@/components/GoogleMap";
+import TogglePill from "@/components/TogglePill";
 import { sePositionner } from "@/app/actions";
 
 type Vue = "carte" | "liste";
@@ -53,22 +54,14 @@ export default function DonsDisponiblesClient({
             </svg>
           </button>
         </div>
-        <div className="flex gap-1 rounded-xl bg-surface-alt p-1">
-          <button
-            type="button"
-            onClick={() => setVue("carte")}
-            className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${vue === "carte" ? "bg-brand text-white" : "text-ink-muted"}`}
-          >
-            Carte
-          </button>
-          <button
-            type="button"
-            onClick={() => setVue("liste")}
-            className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${vue === "liste" ? "bg-brand text-white" : "text-ink-muted"}`}
-          >
-            Liste
-          </button>
-        </div>
+        <TogglePill
+          valeur={vue}
+          onChange={setVue}
+          options={[
+            { valeur: "carte", label: "Carte" },
+            { valeur: "liste", label: "Liste" },
+          ]}
+        />
       </header>
 
       <main className="flex-1 space-y-4 px-5 pb-4">
@@ -99,10 +92,14 @@ export default function DonsDisponiblesClient({
         )}
 
         <ul className="space-y-3">
-          {dons.map((don) => {
+          {dons.map((don, i) => {
             const positionne = don.positionne || !!positionnesLocal[don.id];
             return (
-              <li key={don.id} className="rounded-2xl border border-border bg-surface p-4">
+              <li
+                key={don.id}
+                style={{ animationDelay: `${i * 50}ms` }}
+                className="animate-fade-slide-in rounded-2xl border border-border bg-surface p-4"
+              >
                 <div className="mb-2.5 flex items-start justify-between gap-2.5">
                   <div>
                     <div className="text-sm font-semibold">{don.nom}</div>
@@ -126,7 +123,7 @@ export default function DonsDisponiblesClient({
                     type="button"
                     onClick={() => positionner(don.id)}
                     disabled={isPending}
-                    className="w-full rounded-full bg-brand py-2.5 text-sm font-bold text-white disabled:opacity-50"
+                    className="w-full rounded-full bg-brand py-2.5 text-sm font-bold text-white transition-transform active:scale-95 disabled:opacity-50"
                   >
                     Se positionner
                   </button>

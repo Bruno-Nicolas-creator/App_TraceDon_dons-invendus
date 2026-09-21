@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, type FormEvent } from "react";
+import { useState, useTransition, type CSSProperties, type FormEvent } from "react";
 import {
   ajouterArticleManuel,
   ajouterArticleScanne,
@@ -10,6 +10,8 @@ import {
   retirerArticle,
 } from "@/app/actions";
 import BarcodeScanner from "@/components/BarcodeScanner";
+import PointsChargement from "@/components/PointsChargement";
+import TogglePill from "@/components/TogglePill";
 
 type Article = {
   id: string;
@@ -44,6 +46,7 @@ export default function NouveauDonClient({ don }: { don: Don }) {
   } | null>(null);
   const [nombreUnites, setNombreUnites] = useState("1");
   const [erreurScan, setErreurScan] = useState<string | null>(null);
+  const [idsEnSortie, setIdsEnSortie] = useState<Set<string>>(new Set());
 
   const changerDeMode = (nouveauMode: typeof mode) => {
     setMode(nouveauMode);
@@ -53,10 +56,18 @@ export default function NouveauDonClient({ don }: { don: Don }) {
   };
 
   const retirer = (id: string) => {
-    setArticles((prev) => prev.filter((a) => a.id !== id));
+    setIdsEnSortie((prev) => new Set(prev).add(id));
     startTransition(() => {
       void retirerArticle(id);
     });
+    setTimeout(() => {
+      setArticles((prev) => prev.filter((a) => a.id !== id));
+      setIdsEnSortie((prev) => {
+        const suivant = new Set(prev);
+        suivant.delete(id);
+        return suivant;
+      });
+    }, 200);
   };
 
   const ajouter = (event: FormEvent) => {
@@ -164,26 +175,14 @@ export default function NouveauDonClient({ don }: { don: Don }) {
       </header>
 
       <div className="px-5 pb-4">
-        <div className="flex gap-1 rounded-xl bg-surface-alt p-1">
-          <button
-            type="button"
-            onClick={() => changerDeMode("BORDEREAU_OUVERT")}
-            className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${
-              mode === "BORDEREAU_OUVERT" ? "bg-brand text-white" : "text-ink-muted"
-            }`}
-          >
-            Bordereau ouvert
-          </button>
-          <button
-            type="button"
-            onClick={() => changerDeMode("LISTE_PREALABLE")}
-            className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${
-              mode === "LISTE_PREALABLE" ? "bg-brand text-white" : "text-ink-muted"
-            }`}
-          >
-            Liste à l&apos;avance
-          </button>
-        </div>
+        <TogglePill
+          valeur={mode}
+          onChange={changerDeMode}
+          options={[
+            { valeur: "BORDEREAU_OUVERT", label: "Bordereau ouvert" },
+            { valeur: "LISTE_PREALABLE", label: "Liste à l'avance" },
+          ]}
+        />
       </div>
 
       <main className="flex-1 space-y-5 px-5 pb-4">
@@ -222,8 +221,14 @@ export default function NouveauDonClient({ don }: { don: Don }) {
           </div>
 
           <ul className="space-y-2.5">
-            {articles.map((article) => (
-              <li key={article.id} className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3.5">
+            {articles.map((article, i) => (
+              <li
+                key={article.id}
+                style={{ "--espace-sortie": "0.625rem", animationDelay: idsEnSortie.has(article.id) ? undefined : `${i * 40}ms` } as CSSProperties}
+                className={`flex items-center gap-3 rounded-xl border border-border bg-surface p-3.5 ${
+                  idsEnSortie.has(article.id) ? "animate-fade-out-collapse" : "animate-fade-slide-in"
+                }`}
+              >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-alt">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M4 7L12 3L20 7V17L12 21L4 17V7Z" stroke="#6B6459" strokeWidth="1.6" strokeLinejoin="round" />
@@ -239,7 +244,7 @@ export default function NouveauDonClient({ don }: { don: Don }) {
                   type="button"
                   onClick={() => retirer(article.id)}
                   aria-label={`Retirer ${article.designation}`}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bg"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bg transition-transform active:scale-90"
                 >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M6 6L18 18M18 6L6 18" stroke="#6B6459" strokeWidth="2" strokeLinecap="round" />
@@ -265,7 +270,7 @@ export default function NouveauDonClient({ don }: { don: Don }) {
                 setErreurScan(null);
                 setAfficherScanner(true);
               }}
-              className="flex flex-1 flex-col items-center gap-1.5 rounded-xl bg-brand px-2.5 py-3.5 text-xs font-semibold text-white"
+              className="flex flex-1 flex-col items-center gap-1.5 rounded-xl bg-brand px-2.5 py-3.5 text-xs font-semibold text-white transition-transform active:scale-95"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path
@@ -286,7 +291,7 @@ export default function NouveauDonClient({ don }: { don: Don }) {
                 setArticleScanne(null);
                 setAfficherFormulaireManuel((v) => !v);
               }}
-              className="flex flex-1 flex-col items-center gap-1.5 rounded-xl border border-border bg-surface px-2.5 py-3.5 text-xs font-semibold"
+              className="flex flex-1 flex-col items-center gap-1.5 rounded-xl border border-border bg-surface px-2.5 py-3.5 text-xs font-semibold transition-transform active:scale-95"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M12 5V19M5 12H19" stroke="#201F1B" strokeWidth="1.8" strokeLinecap="round" />
@@ -325,15 +330,15 @@ export default function NouveauDonClient({ don }: { don: Don }) {
                   className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
                 />
               </div>
-              <button type="submit" disabled={isPending} className="self-start rounded-full bg-ink px-4.5 py-2 text-sm font-semibold text-white disabled:opacity-50">
+              <button type="submit" disabled={isPending} className="self-start rounded-full bg-ink px-4.5 py-2 text-sm font-semibold text-white transition-transform active:scale-95 disabled:opacity-50">
                 Ajouter à la liste
               </button>
             </form>
           )}
 
           {scanEnCours && (
-            <div className="mt-2.5 rounded-xl border border-border bg-surface p-3.5 text-center text-xs text-ink-muted">
-              Recherche du produit…
+            <div className="mt-2.5 flex animate-fade-slide-in items-center justify-center gap-2 rounded-xl border border-border bg-surface p-3.5 text-center text-xs text-ink-muted">
+              Recherche du produit <PointsChargement />
             </div>
           )}
 
@@ -388,10 +393,10 @@ export default function NouveauDonClient({ don }: { don: Don }) {
                 Poids total : {poidsTotalScanne.toLocaleString("fr-FR")} kg
               </div>
               <div className="flex gap-2.5">
-                <button type="submit" disabled={isPending} className="rounded-full bg-ink px-4.5 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                <button type="submit" disabled={isPending} className="rounded-full bg-ink px-4.5 py-2 text-sm font-semibold text-white transition-transform active:scale-95 disabled:opacity-50">
                   Ajouter à la liste
                 </button>
-                <button type="button" onClick={() => setArticleScanne(null)} className="rounded-full px-4.5 py-2 text-sm font-semibold text-ink-muted">
+                <button type="button" onClick={() => setArticleScanne(null)} className="rounded-full px-4.5 py-2 text-sm font-semibold text-ink-muted transition-transform active:scale-95">
                   Annuler
                 </button>
               </div>
@@ -411,7 +416,7 @@ export default function NouveauDonClient({ don }: { don: Don }) {
           type="button"
           onClick={publier}
           disabled={articles.length === 0 || isPending}
-          className="w-full rounded-full bg-brand py-3.5 text-base font-bold text-white disabled:opacity-50"
+          className="w-full rounded-full bg-brand py-3.5 text-base font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
         >
           Publier le don
         </button>

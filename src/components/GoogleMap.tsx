@@ -36,6 +36,7 @@ export default function GoogleMap({
 }) {
   const conteneurRef = useRef<HTMLDivElement>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const minuteriesRef = useRef<number[]>([]);
 
   useEffect(() => {
     const cle = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -57,6 +58,7 @@ export default function GoogleMap({
         position: center,
         map: carte,
         title: "Votre association",
+        animation: google.maps.Animation.DROP,
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
           scale: 8,
@@ -69,10 +71,16 @@ export default function GoogleMap({
 
       const bounds = new google.maps.LatLngBounds();
       bounds.extend(center);
-      marqueurs.forEach((m) => {
+      marqueurs.forEach((m, i) => {
         const position = { lat: m.lat, lng: m.lng };
-        new google.maps.Marker({ position, map: carte, label: { text: m.label, fontSize: "11px" } });
+        const marqueur = new google.maps.Marker({ position, label: { text: m.label, fontSize: "11px" } });
         bounds.extend(position);
+        minuteriesRef.current.push(
+          window.setTimeout(() => {
+            marqueur.setMap(carte);
+            marqueur.setAnimation(google.maps.Animation.DROP);
+          }, 120 + i * 90)
+        );
       });
       const ajusterCarte = () => {
         google.maps.event.trigger(carte, "resize");
@@ -89,6 +97,8 @@ export default function GoogleMap({
     return () => {
       annule = true;
       resizeObserverRef.current?.disconnect();
+      minuteriesRef.current.forEach((id) => window.clearTimeout(id));
+      minuteriesRef.current = [];
     };
   }, [center, marqueurs]);
 

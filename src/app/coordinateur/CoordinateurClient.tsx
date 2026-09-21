@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { assignerDon, verifierAssociation } from "@/app/actions";
+import CompteurAnime from "@/components/CompteurAnime";
 
 export type AssociationLigne = {
   id: string;
@@ -38,9 +39,9 @@ export default function CoordinateurClient({
 }: {
   associations: AssociationLigne[];
   donsNonAssignes: DonNonAssigne[];
-  poidsMois: string;
+  poidsMois: number;
   nombreDons: number;
-  tauxRefus: string;
+  tauxRefus: number;
   nomCoordinateur: string;
 }) {
   const [verifieesLocal, setVerifieesLocal] = useState<Record<string, boolean>>({});
@@ -126,22 +127,30 @@ export default function CoordinateurClient({
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
             <div className="rounded-2xl border border-border bg-surface p-3.5 lg:p-4.5">
               <div className="mb-2 text-xs text-ink-muted">Poids donné ce mois</div>
-              <div className="font-display text-xl font-bold lg:text-[26px]">{poidsMois}</div>
+              <div className="font-display text-xl font-bold lg:text-[26px]">
+                <CompteurAnime valeur={poidsMois} decimales={1} suffixe=" kg" />
+              </div>
               <div className="mt-1 text-xs text-brand-dark">Cumul des bons confirmés</div>
             </div>
             <div className="rounded-2xl border border-border bg-surface p-3.5 lg:p-4.5">
               <div className="mb-2 text-xs text-ink-muted">Dons réalisés</div>
-              <div className="font-display text-xl font-bold lg:text-[26px]">{nombreDons}</div>
+              <div className="font-display text-xl font-bold lg:text-[26px]">
+                <CompteurAnime valeur={nombreDons} />
+              </div>
               <div className="mt-1 text-xs text-ink-muted">Bons d&apos;enlèvement confirmés</div>
             </div>
             <div className="rounded-2xl border border-border bg-surface p-3.5 lg:p-4.5">
               <div className="mb-2 text-xs text-ink-muted">Taux de refus</div>
-              <div className="font-display text-xl font-bold lg:text-[26px]">{tauxRefus}</div>
+              <div className="font-display text-xl font-bold lg:text-[26px]">
+                <CompteurAnime valeur={tauxRefus} decimales={1} suffixe="%" />
+              </div>
               <div className="mt-1 text-xs text-ink-muted">Articles refusés / total</div>
             </div>
             <div className="rounded-2xl border border-border bg-surface p-3.5 lg:p-4.5">
               <div className="mb-2 text-xs text-ink-muted">Associations à vérifier</div>
-              <div className="font-display text-xl font-bold text-accent lg:text-[26px]">{enAttente}</div>
+              <div className="font-display text-xl font-bold text-accent lg:text-[26px]">
+                <CompteurAnime valeur={enAttente} />
+              </div>
               <div className="mt-1 text-xs text-ink-muted">Vérification manuelle requise</div>
             </div>
           </div>
@@ -163,10 +172,10 @@ export default function CoordinateurClient({
                     </tr>
                   </thead>
                   <tbody>
-                    {associations.map((asso) => {
+                    {associations.map((asso, i) => {
                       const verifiee = verifieesLocal[asso.id] ?? asso.verifiee;
                       return (
-                        <tr key={asso.id}>
+                        <tr key={asso.id} className="animate-fade-slide-in" style={{ animationDelay: `${i * 40}ms` }}>
                           <td className="border-b border-surface-alt py-3 text-[13px] font-semibold">{asso.nom}</td>
                           <td className="border-b border-surface-alt py-3 text-[13px] text-ink-muted">{asso.rna}</td>
                           <td className="border-b border-surface-alt py-3">
@@ -176,7 +185,7 @@ export default function CoordinateurClient({
                             <button
                               type="button"
                               onClick={() => toggleVerifie(asso.id, verifiee)}
-                              className={`rounded-full border border-border px-3.5 py-1.5 text-xs font-semibold ${verifiee ? "bg-brand-tint text-brand-dark" : "bg-surface"}`}
+                              className={`rounded-full border border-border px-3.5 py-1.5 text-xs font-semibold transition-transform active:scale-95 ${verifiee ? "bg-brand-tint text-brand-dark" : "bg-surface"}`}
                             >
                               {verifiee ? "Vérifiée" : "Vérifier"}
                             </button>
@@ -192,10 +201,14 @@ export default function CoordinateurClient({
             <div className="rounded-2xl border border-border bg-surface p-4 lg:flex-1 lg:p-5">
               <h2 className="mb-3.5 text-[15px] font-semibold">Dons sans association</h2>
               <div className="space-y-2.5">
-                {donsNonAssignes.map((don) => {
+                {donsNonAssignes.map((don, i) => {
                   const nomAssigne = assignesLocal[don.id];
                   return (
-                    <div key={don.id} className="rounded-xl border border-border p-3">
+                    <div
+                      key={don.id}
+                      style={{ animationDelay: `${i * 40}ms` }}
+                      className="animate-fade-slide-in rounded-xl border border-border p-3"
+                    >
                       <div className="text-[13px] font-semibold">{don.nom}</div>
                       <div className="my-1.5 text-xs text-ink-muted">{don.poids} · publié {don.depuis}</div>
                       {nomAssigne ? (
@@ -218,7 +231,7 @@ export default function CoordinateurClient({
                           <button
                             type="button"
                             onClick={() => assigner(don.id)}
-                            className="shrink-0 rounded-full bg-brand px-3.5 py-2 text-xs font-bold text-white"
+                            className="shrink-0 rounded-full bg-brand px-3.5 py-2 text-xs font-bold text-white transition-transform active:scale-95"
                           >
                             Assigner
                           </button>
