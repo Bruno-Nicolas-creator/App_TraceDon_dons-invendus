@@ -86,6 +86,8 @@ model Entreprise {
   adresse          String
   secteurActivite  String?
   coutRevientKg    Float    @default(0)
+  latitude         Float?
+  longitude        Float?
   enseigneId       String?
   enseigne         Enseigne? @relation(fields: [enseigneId], references: [id])
   users            User[]
@@ -116,6 +118,8 @@ model Association {
   verifiee                  Boolean       @default(false)
   verifieeLe                DateTime?
   verifieePar               String?
+  latitude                  Float?
+  longitude                 Float?
   reseauId                  String?
   reseau                    Reseau?       @relation(fields: [reseauId], references: [id])
   users                     User[]

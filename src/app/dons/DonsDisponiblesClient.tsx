@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import BottomTabBar from "@/components/BottomTabBar";
+import GoogleMap from "@/components/GoogleMap";
 import { sePositionner } from "@/app/actions";
 
 type Vue = "carte" | "liste";
@@ -15,10 +16,22 @@ export type DonAffiche = {
   categorie: string;
   poids: string;
   positionne: boolean;
+  latitude: number | null;
+  longitude: number | null;
 };
 
-export default function DonsDisponiblesClient({ dons }: { dons: DonAffiche[] }) {
+export default function DonsDisponiblesClient({
+  dons,
+  centreCarte,
+}: {
+  dons: DonAffiche[];
+  centreCarte: { lat: number; lng: number } | null;
+}) {
   const [vue, setVue] = useState<Vue>("carte");
+  const carteConfiguree = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) && centreCarte !== null;
+  const marqueurs = dons
+    .filter((d) => d.latitude != null && d.longitude != null)
+    .map((d) => ({ id: d.id, lat: d.latitude as number, lng: d.longitude as number, label: `${d.nom} · ${d.distance}` }));
   const [positionnesLocal, setPositionnesLocal] = useState<Record<string, boolean>>({});
   const [isPending, startTransition] = useTransition();
 
@@ -60,25 +73,29 @@ export default function DonsDisponiblesClient({ dons }: { dons: DonAffiche[] }) 
 
       <main className="flex-1 space-y-4 px-5 pb-4">
         {vue === "carte" && (
-          <div className="relative h-80 w-full overflow-hidden rounded-2xl bg-surface-alt">
-            <svg width="100%" height="100%" viewBox="0 0 350 320" preserveAspectRatio="none" aria-hidden="true">
-              <rect width="350" height="320" fill="#E7E3D6" />
-              <path d="M0 60 H350 M0 140 H350 M0 220 H350" stroke="#DAD5C4" strokeWidth="2" />
-              <path d="M70 0 V320 M180 0 V320 M280 0 V320" stroke="#DAD5C4" strokeWidth="2" />
-              <rect x="20" y="90" width="60" height="40" fill="#D5D0BF" />
-              <rect x="200" y="180" width="80" height="50" fill="#D5D0BF" />
-            </svg>
-            <div className="absolute left-[50%] top-[50%] h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-white bg-brand shadow-[0_0_0_4px_rgba(46,107,78,0.2)]" />
-            {dons.map((don, i) => (
-              <div
-                key={don.id}
-                className="absolute -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-full bg-ink px-2.5 py-1 text-[11px] font-semibold text-white"
-                style={{ left: `${30 + i * 25}%`, top: `${28 + i * 22}%` }}
-              >
-                {don.nom} · {don.distance}
-              </div>
-            ))}
-          </div>
+          carteConfiguree && centreCarte ? (
+            <GoogleMap center={centreCarte} marqueurs={marqueurs} />
+          ) : (
+            <div className="relative h-80 w-full overflow-hidden rounded-2xl bg-surface-alt">
+              <svg width="100%" height="100%" viewBox="0 0 350 320" preserveAspectRatio="none" aria-hidden="true">
+                <rect width="350" height="320" fill="#E7E3D6" />
+                <path d="M0 60 H350 M0 140 H350 M0 220 H350" stroke="#DAD5C4" strokeWidth="2" />
+                <path d="M70 0 V320 M180 0 V320 M280 0 V320" stroke="#DAD5C4" strokeWidth="2" />
+                <rect x="20" y="90" width="60" height="40" fill="#D5D0BF" />
+                <rect x="200" y="180" width="80" height="50" fill="#D5D0BF" />
+              </svg>
+              <div className="absolute left-[50%] top-[50%] h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-white bg-brand shadow-[0_0_0_4px_rgba(46,107,78,0.2)]" />
+              {dons.map((don, i) => (
+                <div
+                  key={don.id}
+                  className="absolute -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-full bg-ink px-2.5 py-1 text-[11px] font-semibold text-white"
+                  style={{ left: `${30 + i * 25}%`, top: `${28 + i * 22}%` }}
+                >
+                  {don.nom} · {don.distance}
+                </div>
+              ))}
+            </div>
+          )
         )}
 
         <ul className="space-y-3">
