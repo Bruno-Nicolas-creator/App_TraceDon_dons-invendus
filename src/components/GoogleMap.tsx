@@ -17,7 +17,7 @@ function chargerScriptGoogleMaps(cle: string): Promise<void> {
   if (!scriptPromise) {
     scriptPromise = new Promise((resolve, reject) => {
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${cle}&loading=async`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${cle}`;
       script.async = true;
       script.onload = () => resolve();
       script.onerror = () => reject(new Error("Échec du chargement de Google Maps"));
@@ -35,6 +35,7 @@ export default function GoogleMap({
   marqueurs: Marqueur[];
 }) {
   const conteneurRef = useRef<HTMLDivElement>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
   useEffect(() => {
     const cle = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -73,11 +74,21 @@ export default function GoogleMap({
         new google.maps.Marker({ position, map: carte, label: { text: m.label, fontSize: "11px" } });
         bounds.extend(position);
       });
-      if (marqueurs.length > 0) carte.fitBounds(bounds, 60);
+      const ajusterCarte = () => {
+        google.maps.event.trigger(carte, "resize");
+        if (marqueurs.length > 0) carte.fitBounds(bounds, 60);
+        else carte.setCenter(center);
+      };
+      ajusterCarte();
+
+      const observateur = new ResizeObserver(ajusterCarte);
+      if (conteneurRef.current) observateur.observe(conteneurRef.current);
+      resizeObserverRef.current = observateur;
     });
 
     return () => {
       annule = true;
+      resizeObserverRef.current?.disconnect();
     };
   }, [center, marqueurs]);
 

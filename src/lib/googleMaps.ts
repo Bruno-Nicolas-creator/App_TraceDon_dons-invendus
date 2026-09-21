@@ -37,6 +37,7 @@ export async function calculerDistances(
   url.searchParams.set("origins", formatPoint(origine));
   url.searchParams.set("destinations", destinations.map(formatPoint).join("|"));
   url.searchParams.set("units", "metric");
+  url.searchParams.set("language", "fr");
   url.searchParams.set("key", cle);
 
   const reponse = await fetch(url, { cache: "no-store" }).catch(() => null);
