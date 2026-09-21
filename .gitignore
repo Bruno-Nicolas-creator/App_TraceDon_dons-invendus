@@ -41,6 +41,9 @@ yarn-error.log*
 /prisma/dev.db
 /prisma/dev.db-journal
 
+# backup local (non versionné)
+/.archive
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
