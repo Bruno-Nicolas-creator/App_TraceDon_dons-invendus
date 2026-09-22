@@ -39,10 +39,12 @@ export default function BonEnlevementClient({
   bon,
   docusignConfigure,
   impact,
+  role,
 }: {
   bon: BonAffiche;
   docusignConfigure: boolean;
   impact: ImpactCarbone | null;
+  role: "ENTREPRISE" | "ASSOCIATION";
 }) {
   const [ecran, setEcran] = useState<"revue" | "succes">(bon.confirme ? "succes" : "revue");
   const [articles, setArticles] = useState(bon.articles);
@@ -51,6 +53,7 @@ export default function BonEnlevementClient({
   );
   const donateurSigne = bon.donateurSigne;
   const associationSigne = bon.associationSigne;
+  const peutControlerArticles = role === "ASSOCIATION";
   const [erreurSignature, setErreurSignature] = useState<string | null>(null);
   const [signatureEnCours, setSignatureEnCours] = useState<"DONATEUR" | "ASSOCIATION" | null>(null);
   const [, startTransition] = useTransition();
@@ -171,8 +174,11 @@ export default function BonEnlevementClient({
           >
             Voir le PDF
           </a>
-          <Link href="/dons" className="block w-full rounded-full border border-border bg-surface py-3.5 text-center text-sm font-semibold">
-            Retour aux dons disponibles
+          <Link
+            href={role === "ENTREPRISE" ? "/" : "/dons"}
+            className="block w-full rounded-full border border-border bg-surface py-3.5 text-center text-sm font-semibold"
+          >
+            {role === "ENTREPRISE" ? "Retour à mes dons" : "Retour aux dons disponibles"}
           </Link>
         </footer>
       </div>
@@ -183,7 +189,11 @@ export default function BonEnlevementClient({
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg">
       <header className="px-5 pt-5 pb-3">
         <div className="mb-2.5 flex items-center gap-3">
-          <Link href="/dons" aria-label="Retour" className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-full border border-border bg-surface">
+          <Link
+            href={role === "ENTREPRISE" ? "/" : "/dons"}
+            aria-label="Retour"
+            className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-full border border-border bg-surface"
+          >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path d="M15 18L9 12L15 6" stroke="#201F1B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -241,36 +251,51 @@ export default function BonEnlevementClient({
                     DLC dépassée : le refus est obligatoire, la validation est désactivée.
                   </div>
                 )}
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => valider(article)}
-                    disabled={article.bloque}
-                    className={`flex-1 rounded-full border-[1.5px] py-2 text-xs font-bold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
-                      estValide ? "border-brand bg-brand text-white" : "border-border bg-surface text-ink-muted"
-                    }`}
-                  >
-                    Valider
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => refuser(article)}
-                    className={`flex-1 rounded-full border-[1.5px] py-2 text-xs font-bold transition-transform active:scale-95 ${
-                      estRefuse ? "border-accent bg-accent text-white" : "border-border bg-surface text-ink-muted"
-                    }`}
-                  >
-                    Refuser
-                  </button>
-                </div>
-                {estRefuse && (
-                  <input
-                    type="text"
-                    value={motifs[article.id] ?? ""}
-                    onChange={(e) => setMotifs((prev) => ({ ...prev, [article.id]: e.target.value }))}
-                    onBlur={() => startTransition(() => void refuserArticle(article.id, motifs[article.id] ?? ""))}
-                    placeholder="Motif du refus (ex. DLC dépassée)"
-                    className="w-full rounded-lg border border-[#E7C4AE] bg-accent-tint/40 px-2.5 py-2 text-xs"
-                  />
+                {peutControlerArticles ? (
+                  <>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => valider(article)}
+                        disabled={article.bloque}
+                        className={`flex-1 rounded-full border-[1.5px] py-2 text-xs font-bold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 ${
+                          estValide ? "border-brand bg-brand text-white" : "border-border bg-surface text-ink-muted"
+                        }`}
+                      >
+                        Valider
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => refuser(article)}
+                        className={`flex-1 rounded-full border-[1.5px] py-2 text-xs font-bold transition-transform active:scale-95 ${
+                          estRefuse ? "border-accent bg-accent text-white" : "border-border bg-surface text-ink-muted"
+                        }`}
+                      >
+                        Refuser
+                      </button>
+                    </div>
+                    {estRefuse && (
+                      <input
+                        type="text"
+                        value={motifs[article.id] ?? ""}
+                        onChange={(e) => setMotifs((prev) => ({ ...prev, [article.id]: e.target.value }))}
+                        onBlur={() => startTransition(() => void refuserArticle(article.id, motifs[article.id] ?? ""))}
+                        placeholder="Motif du refus (ex. DLC dépassée)"
+                        className="w-full rounded-lg border border-[#E7C4AE] bg-accent-tint/40 px-2.5 py-2 text-xs"
+                      />
+                    )}
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        estValide ? "bg-brand-tint text-brand-dark" : estRefuse ? "bg-accent-tint text-accent" : "bg-surface-alt text-ink-muted"
+                      }`}
+                    >
+                      {estValide ? "Validé par l'association" : estRefuse ? "Refusé par l'association" : "En attente de contrôle"}
+                    </span>
+                    {estRefuse && article.motifRefus && <span className="text-[11px] text-ink-muted">{article.motifRefus}</span>}
+                  </div>
                 )}
               </li>
             );
@@ -310,29 +335,49 @@ export default function BonEnlevementClient({
           )}
 
           <div className="flex gap-2.5">
-            <button
-              type="button"
-              onClick={() => demarrerSignature("DONATEUR")}
-              disabled={donateurSigne || !docusignConfigure || signatureEnCours !== null}
-              className={`flex-1 rounded-xl border-[1.5px] border-dashed border-[#C7C1B0] py-3.5 text-xs font-semibold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
-                donateurSigne ? "bg-brand-tint text-brand-dark" : "bg-surface"
-              }`}
-            >
-              {donateurSigne ? "Donateur signé" : signatureEnCours === "DONATEUR" ? "Ouverture…" : "Signer (donateur)"}
-            </button>
-            <button
-              type="button"
-              onClick={() => demarrerSignature("ASSOCIATION")}
-              disabled={associationSigne || !docusignConfigure || signatureEnCours !== null}
-              className={`flex-1 rounded-xl border-[1.5px] border-dashed border-[#C7C1B0] py-3.5 text-xs font-semibold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
-                associationSigne ? "bg-brand-tint text-brand-dark" : "bg-surface"
-              }`}
-            >
-              {associationSigne ? "Association signé" : signatureEnCours === "ASSOCIATION" ? "Ouverture…" : "Signer (association)"}
-            </button>
+            {role === "ENTREPRISE" ? (
+              <button
+                type="button"
+                onClick={() => demarrerSignature("DONATEUR")}
+                disabled={donateurSigne || !docusignConfigure || signatureEnCours !== null}
+                className={`flex-1 rounded-xl border-[1.5px] border-dashed border-[#C7C1B0] py-3.5 text-xs font-semibold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
+                  donateurSigne ? "bg-brand-tint text-brand-dark" : "bg-surface"
+                }`}
+              >
+                {donateurSigne ? "Donateur signé" : signatureEnCours === "DONATEUR" ? "Ouverture…" : "Signer (donateur)"}
+              </button>
+            ) : (
+              <div
+                className={`flex flex-1 items-center justify-center rounded-xl border-[1.5px] border-dashed border-[#C7C1B0] py-3.5 text-xs font-semibold ${
+                  donateurSigne ? "bg-brand-tint text-brand-dark" : "bg-surface-alt text-ink-muted"
+                }`}
+              >
+                {donateurSigne ? "Donateur signé" : "Donateur : en attente"}
+              </div>
+            )}
+            {role === "ASSOCIATION" ? (
+              <button
+                type="button"
+                onClick={() => demarrerSignature("ASSOCIATION")}
+                disabled={associationSigne || !docusignConfigure || signatureEnCours !== null}
+                className={`flex-1 rounded-xl border-[1.5px] border-dashed border-[#C7C1B0] py-3.5 text-xs font-semibold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
+                  associationSigne ? "bg-brand-tint text-brand-dark" : "bg-surface"
+                }`}
+              >
+                {associationSigne ? "Association signé" : signatureEnCours === "ASSOCIATION" ? "Ouverture…" : "Signer (association)"}
+              </button>
+            ) : (
+              <div
+                className={`flex flex-1 items-center justify-center rounded-xl border-[1.5px] border-dashed border-[#C7C1B0] py-3.5 text-xs font-semibold ${
+                  associationSigne ? "bg-brand-tint text-brand-dark" : "bg-surface-alt text-ink-muted"
+                }`}
+              >
+                {associationSigne ? "Association signé" : "Association : en attente"}
+              </div>
+            )}
           </div>
           <p className="text-[11px] text-ink-muted">
-            Chaque signature ouvre la cérémonie de signature électronique qualifiée DocuSign, directement dans
+            Votre signature ouvre la cérémonie de signature électronique qualifiée DocuSign, directement dans
             l&apos;application.
           </p>
         </div>

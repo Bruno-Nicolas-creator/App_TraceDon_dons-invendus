@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { rechercherProduitParCodeBarre, type ProduitScanne } from "@/lib/openFoodFacts";
 import { jourSemaineDuJour } from "@/lib/planning";
+import { conventionEstSignee, obtenirOuCreerConvention } from "@/lib/convention";
+import { associationHabilitee, estGrandeSurface } from "@/lib/conformite";
 
 async function requireSession() {
   const session = await getSession();
@@ -90,6 +92,17 @@ export async function publierDon(donId: string) {
   const don = await prisma.don.findUniqueOrThrow({ where: { id: donId } });
   if (don.entrepriseId !== session.entrepriseId) throw new Error("Don non autorisé.");
 
+  const kbis = await prisma.document.findUnique({
+    where: { entrepriseId_type: { entrepriseId: session.entrepriseId, type: "KBIS" } },
+  });
+  if (!kbis) {
+    return {
+      ok: false as const,
+      error: "Votre extrait Kbis doit être déposé dans votre coffre-fort documentaire avant de publier un don.",
+      manqueKbis: true,
+    };
+  }
+
   // Planning récurrent : si une seule association est attendue aujourd'hui, le don lui est
   // assigné directement (bon d'enlèvement créé tout de suite) plutôt que publié sur la
   // place de marché — cf. le fonctionnement réel des grandes surfaces (association fixe par jour).
@@ -127,12 +140,41 @@ export async function publierDon(donId: string) {
     data: { entrepriseId: session.entrepriseId },
     include: { articles: true },
   });
-  return { id: nouveauBrouillon.id, mode: nouveauBrouillon.mode, articles: nouveauBrouillon.articles, assigneA };
+  return { ok: true as const, id: nouveauBrouillon.id, mode: nouveauBrouillon.mode, articles: nouveauBrouillon.articles, assigneA };
 }
 
-export async function sePositionner(donId: string) {
+export async function sePositionner(
+  donId: string,
+  forcerMalgreAvertissement: boolean = false
+): Promise<{ ok: true } | { ok: false; error: string; conventionId?: string; avertissementHabilitation?: boolean }> {
   const session = await requireSession();
   if (session.role !== "ASSOCIATION" || !session.associationId) throw new Error("Action réservée aux associations.");
+
+  const donCible = await prisma.don.findUniqueOrThrow({ where: { id: donId } });
+
+  if (!(await conventionEstSignee(donCible.entrepriseId, session.associationId))) {
+    const convention = await obtenirOuCreerConvention(donCible.entrepriseId, session.associationId);
+    return {
+      ok: false,
+      error: "Une convention de don doit être signée avec cette entreprise avant de vous positionner.",
+      conventionId: convention.id,
+    };
+  }
+
+  if (!forcerMalgreAvertissement) {
+    const [entreprise, association] = await Promise.all([
+      prisma.entreprise.findUniqueOrThrow({ where: { id: donCible.entrepriseId } }),
+      prisma.association.findUniqueOrThrow({ where: { id: session.associationId } }),
+    ]);
+    if (estGrandeSurface(entreprise.surfaceVenteM2) && !associationHabilitee(association.habilitationStatut)) {
+      return {
+        ok: false,
+        avertissementHabilitation: true,
+        error:
+          "Ce commerce dépasse 400 m² de surface de vente : la loi Garot impose que ses invendus soient cédés à une association habilitée. Votre association n'est pas déclarée habilitée.",
+      };
+    }
+  }
 
   const don = await prisma.don.update({
     where: { id: donId },
@@ -151,18 +193,27 @@ export async function sePositionner(donId: string) {
     });
   }
   revalidatePath("/dons");
+  return { ok: true };
+}
+
+async function requireControleAssociation(articleId: string) {
+  const session = await requireSession();
+  const article = await prisma.article.findUniqueOrThrow({ where: { id: articleId }, include: { don: true } });
+  if (session.role !== "ASSOCIATION" || article.don.associationAssigneeId !== session.associationId) {
+    throw new Error("Action réservée à l'association destinataire de ce don.");
+  }
+  return article;
 }
 
 export async function validerArticle(articleId: string) {
-  await requireSession();
-  const article = await prisma.article.findUniqueOrThrow({ where: { id: articleId } });
+  const article = await requireControleAssociation(articleId);
   if (article.dlcDepassee) return; // le refus est obligatoire, cf. cahier des charges
   await prisma.article.update({ where: { id: articleId }, data: { statut: "VALIDE", motifRefus: null } });
   revalidatePath("/bon-enlevement");
 }
 
 export async function refuserArticle(articleId: string, motif: string) {
-  await requireSession();
+  await requireControleAssociation(articleId);
   await prisma.article.update({
     where: { id: articleId },
     data: { statut: "REFUSE", motifRefus: motif || null },
@@ -171,11 +222,15 @@ export async function refuserArticle(articleId: string, motif: string) {
 }
 
 export async function confirmerBon(bonId: string) {
-  await requireSession();
+  const session = await requireSession();
   const bon = await prisma.bonEnlevement.findUniqueOrThrow({
     where: { id: bonId },
     include: { don: { include: { articles: true } } },
   });
+  const autorise =
+    (session.role === "ENTREPRISE" && bon.entrepriseId === session.entrepriseId) ||
+    (session.role === "ASSOCIATION" && bon.associationId === session.associationId);
+  if (!autorise) throw new Error("Bon non autorisé.");
   if (!bon.signatureDonateurLe || !bon.signatureAssociationLe) {
     return { ok: false, error: "Les deux signatures sont requises avant de confirmer l'enlèvement." };
   }
@@ -209,9 +264,18 @@ export async function verifierAssociation(associationId: string, verifiee: boole
 export async function assignerDon(donId: string, associationId: string) {
   const session = await requireSession();
   if (session.role !== "COORDINATEUR") throw new Error("Action réservée au coordinateur.");
-  await prisma.don.update({
+
+  const don = await prisma.don.update({
     where: { id: donId },
     data: { statut: "PRIS_EN_CHARGE", associationAssigneeId: associationId },
   });
+
+  const bonExistant = await prisma.bonEnlevement.findUnique({ where: { donId } });
+  if (!bonExistant) {
+    await prisma.bonEnlevement.create({
+      data: { numero: await genererNumeroBon(), donId, entrepriseId: don.entrepriseId, associationId },
+    });
+  }
+
   revalidatePath("/coordinateur");
 }

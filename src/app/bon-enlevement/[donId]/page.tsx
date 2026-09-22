@@ -38,6 +38,8 @@ export default async function BonEnlevementPage({
 
   if (!bon) notFound();
   if (session.role === "ASSOCIATION" && bon.associationId !== session.associationId) notFound();
+  if (session.role === "ENTREPRISE" && bon.entrepriseId !== session.entrepriseId) notFound();
+  if (session.role === "COORDINATEUR") notFound();
 
   const articles: ArticleAffiche[] = bon.don.articles.map((a) => ({
     id: a.id,
@@ -67,5 +69,12 @@ export default async function BonEnlevementPage({
     poidsTotalRetenu: bon.poidsTotalRetenu,
   };
 
-  return <BonEnlevementClient bon={bonAffiche} docusignConfigure={isDocuSignConfigured()} impact={impact} />;
+  return (
+    <BonEnlevementClient
+      bon={bonAffiche}
+      docusignConfigure={isDocuSignConfigured()}
+      impact={impact}
+      role={session.role === "ENTREPRISE" ? "ENTREPRISE" : "ASSOCIATION"}
+    />
+  );
 }

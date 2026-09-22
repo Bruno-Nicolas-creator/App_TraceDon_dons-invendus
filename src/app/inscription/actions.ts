@@ -5,10 +5,32 @@ import { prisma } from "@/lib/prisma";
 import { createSessionCookie, hashPassword, landingPathForRole } from "@/lib/auth";
 import { rechercherOrganismes, type SuggestionOrganisme } from "@/lib/rechercheEntreprises";
 import { rechercherAdresses, type SuggestionAdresse } from "@/lib/ignAdresse";
+import { TAILLE_MAX_DOCUMENT_OCTETS } from "@/lib/documents";
 
 function echec(code: string, email: string, type: string): never {
   const params = new URLSearchParams({ erreur: code, email, type });
   redirect(`/inscription?${params.toString()}`);
+}
+
+async function lireFichierObligatoire(
+  formData: FormData,
+  champ: string,
+  email: string,
+  type: string
+): Promise<{ nomFichier: string; contentType: string; contenu: Buffer; tailleOctets: number }> {
+  const fichier = formData.get(champ);
+  if (!(fichier instanceof File) || fichier.size === 0) {
+    echec("champs_manquants", email, type);
+  }
+  if (fichier.size > TAILLE_MAX_DOCUMENT_OCTETS) {
+    echec("fichier_trop_volumineux", email, type);
+  }
+  return {
+    nomFichier: fichier.name,
+    contentType: fichier.type || "application/octet-stream",
+    contenu: Buffer.from(new Uint8Array(await fichier.arrayBuffer())),
+    tailleOctets: fichier.size,
+  };
 }
 
 export async function rechercherOrganismeAction(
@@ -95,10 +117,17 @@ export async function inscriptionAction(formData: FormData) {
     const adresse = String(formData.get("adresse") ?? "").trim();
     const categorieEligibilite = String(formData.get("categorieEligibilite") ?? "").trim();
     const declarationInteretGeneral = formData.get("declarationInteretGeneral") === "on";
+    const rescritDemande = formData.get("rescritDemande") === "on";
 
     if (!denomination || !rna || !adresse) {
       echec("champs_manquants", email, type);
     }
+
+    const recepisseRna = await lireFichierObligatoire(formData, "recepisseRna", email, type);
+    const statutsSignes = await lireFichierObligatoire(formData, "statutsSignes", email, type);
+    const preuveRescritFiscal = rescritDemande
+      ? await lireFichierObligatoire(formData, "preuveRescritFiscal", email, type)
+      : null;
 
     const association = await prisma.association.create({
       data: {
@@ -107,8 +136,27 @@ export async function inscriptionAction(formData: FormData) {
         adresse,
         categorieEligibilite: categorieEligibilite || null,
         declarationInteretGeneral,
+        rescritStatut: rescritDemande ? "EN_ATTENTE" : "NON_DEPOSE",
+        rescritDateDepot: rescritDemande ? new Date() : null,
         ...coordonneesAdresse,
       },
+    });
+
+    await prisma.document.createMany({
+      data: [
+        { associationId: association.id, type: "RECEPISSE_RNA", ...recepisseRna, contenu: recepisseRna.contenu as unknown as never },
+        { associationId: association.id, type: "STATUTS_SIGNES", ...statutsSignes, contenu: statutsSignes.contenu as unknown as never },
+        ...(preuveRescritFiscal
+          ? [
+              {
+                associationId: association.id,
+                type: "PREUVE_RESCRIT_FISCAL" as const,
+                ...preuveRescritFiscal,
+                contenu: preuveRescritFiscal.contenu as unknown as never,
+              },
+            ]
+          : []),
+      ],
     });
 
     const utilisateur = await prisma.user.create({

@@ -7,6 +7,7 @@ import type { SuggestionOrganisme } from "@/lib/rechercheEntreprises";
 import type { SuggestionAdresse } from "@/lib/ignAdresse";
 import PointsChargement from "@/components/PointsChargement";
 import TogglePill from "@/components/TogglePill";
+import InfoBulle from "@/components/InfoBulle";
 
 type TypeCompte = "ENTREPRISE" | "ASSOCIATION";
 
@@ -14,8 +15,9 @@ const MESSAGES_ERREUR: Record<string, string> = {
   email_pris: "Un compte existe déjà avec cet email.",
   mdp_court: "Le mot de passe doit contenir au moins 8 caractères.",
   mdp_different: "Les deux mots de passe ne correspondent pas.",
-  champs_manquants: "Merci de renseigner tous les champs obligatoires.",
+  champs_manquants: "Merci de renseigner tous les champs obligatoires (y compris les documents requis).",
   type_invalide: "Merci de choisir un type de compte.",
+  fichier_trop_volumineux: "Un des documents dépasse la taille maximale autorisée (5 Mo).",
 };
 
 export default function InscriptionForm({
@@ -28,6 +30,7 @@ export default function InscriptionForm({
   typePrecedent?: string;
 }) {
   const [type, setType] = useState<TypeCompte>(typePrecedent === "ASSOCIATION" ? "ASSOCIATION" : "ENTREPRISE");
+  const [rescritDemande, setRescritDemande] = useState(false);
 
   const [nomOrganisme, setNomOrganisme] = useState("");
   const [siret, setSiret] = useState("");
@@ -256,9 +259,46 @@ export default function InscriptionForm({
             <input type="hidden" name="adresseLongitude" value={adresseLng ?? ""} />
             <label htmlFor="declarationInteretGeneral" className="flex items-start gap-2.5 text-xs text-ink-muted">
               <input id="declarationInteretGeneral" name="declarationInteretGeneral" type="checkbox" className="mt-0.5" />
-              Nous déclarons agir en tant qu&apos;organisme d&apos;intérêt général (déclaration auto-déclarative ; un
-              justificatif de rescrit fiscal pourra être ajouté ensuite).
+              Nous déclarons agir en tant qu&apos;organisme d&apos;intérêt général (déclaration auto-déclarative).
             </label>
+
+            <div className="space-y-3 rounded-xl border border-dashed border-border p-3.5">
+              <FichierRequis
+                id="recepisseRna"
+                name="recepisseRna"
+                label="Récépissé RNA"
+                aide="Le récépissé remis par la préfecture lors de la déclaration de votre association, avec son numéro RNA. Obligatoire pour créer votre profil."
+                required
+              />
+              <FichierRequis
+                id="statutsSignes"
+                name="statutsSignes"
+                label="Statuts de l'association (signés)"
+                aide="Les statuts signés définissant l'objet et le fonctionnement de votre association. Obligatoires pour créer votre profil."
+                required
+              />
+
+              <label htmlFor="rescritDemande" className="flex items-start gap-2.5 text-xs text-ink-muted">
+                <input
+                  id="rescritDemande"
+                  name="rescritDemande"
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={rescritDemande}
+                  onChange={(e) => setRescritDemande(e.target.checked)}
+                />
+                Nous avons déjà déposé une demande de rescrit fiscal auprès de l&apos;administration.
+              </label>
+              {rescritDemande && (
+                <FichierRequis
+                  id="preuveRescritFiscal"
+                  name="preuveRescritFiscal"
+                  label="Preuve de dépôt du rescrit"
+                  aide="L'accusé de dépôt ou la réponse de l'administration à votre demande de rescrit mécénat."
+                  required
+                />
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -340,6 +380,38 @@ function Champ({
         onFocus={onFocus}
         onBlur={onBlur}
         className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
+      />
+    </div>
+  );
+}
+
+function FichierRequis({
+  id,
+  name,
+  label,
+  aide,
+  required,
+}: {
+  id: string;
+  name: string;
+  label: string;
+  aide: string;
+  required?: boolean;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className="mb-1 flex items-center gap-1.5 text-xs text-ink-muted">
+        {label}
+        {required && " *"}
+        <InfoBulle texte={aide} />
+      </label>
+      <input
+        id={id}
+        name={name}
+        type="file"
+        accept="application/pdf,image/*"
+        required={required}
+        className="w-full text-xs text-ink-muted file:mr-2 file:rounded-full file:border-0 file:bg-ink file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white"
       />
     </div>
   );

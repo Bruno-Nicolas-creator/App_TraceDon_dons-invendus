@@ -4,6 +4,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import QRCode from "qrcode";
 import { prisma } from "@/lib/prisma";
 import BonEnlevementDocument, { type ArticlePdf } from "@/lib/pdf/BonEnlevementDocument";
+import ConventionDocument, { type ConventionPdfData } from "@/lib/pdf/ConventionDocument";
 
 export type RoleSignataire = "DONATEUR" | "ASSOCIATION";
 
@@ -261,6 +262,192 @@ export async function verifierEtEnregistrerSignature(bonId: string, role: RoleSi
       data: { bonEnlevementId: bonId, role, horodatage, referenceDocuSign: bon.docusignEnvelopeId },
     }),
   ]);
+
+  return true;
+}
+
+export async function genererPdfConvention(conventionId: string): Promise<Buffer> {
+  const convention = await prisma.convention.findUniqueOrThrow({
+    where: { id: conventionId },
+    include: { entreprise: true, association: true },
+  });
+
+  const [representantEntreprise, representantAssociation] = await Promise.all([
+    prisma.user.findFirst({ where: { entrepriseId: convention.entrepriseId } }),
+    prisma.user.findFirst({ where: { associationId: convention.associationId } }),
+  ]);
+
+  const data: ConventionPdfData = {
+    dureeAns: convention.dureeAns,
+    entreprise: {
+      raisonSociale: convention.entreprise.raisonSociale,
+      formeJuridique: convention.entreprise.formeJuridique,
+      adresse: convention.entreprise.adresse,
+      siret: convention.entreprise.siret,
+      secteurActivite: convention.entreprise.secteurActivite,
+    },
+    association: {
+      denomination: convention.association.denomination,
+      adresse: convention.association.adresse,
+      rna: convention.association.rna,
+      categorieEligibilite: convention.association.categorieEligibilite,
+    },
+    representantEntreprise: representantEntreprise?.nom ?? convention.entreprise.raisonSociale,
+    representantAssociation: representantAssociation?.nom ?? convention.association.denomination,
+  };
+
+  return renderToBuffer(<ConventionDocument data={data} />);
+}
+
+/** Crée l'enveloppe DocuSign de la convention (deux signataires, envoi séquentiel) si elle n'existe pas déjà. */
+async function assurerEnveloppeConvention(conventionId: string): Promise<string> {
+  const convention = await prisma.convention.findUniqueOrThrow({
+    where: { id: conventionId },
+    include: { entreprise: true, association: true },
+  });
+  if (convention.docusignEnvelopeId) return convention.docusignEnvelopeId;
+
+  const [accessToken, pdfBuffer, emailDonateur, emailAssociation] = await Promise.all([
+    obtenirAccessToken(),
+    genererPdfConvention(conventionId),
+    emailContact(convention.entrepriseId, null),
+    emailContact(null, convention.associationId),
+  ]);
+  const accountId = requireEnv("DOCUSIGN_ACCOUNT_ID");
+
+  const enveloppe = {
+    emailSubject: `Convention de don — signature requise`,
+    documents: [
+      {
+        documentBase64: pdfBuffer.toString("base64"),
+        name: "Convention de don",
+        fileExtension: "pdf",
+        documentId: "1",
+      },
+    ],
+    recipients: {
+      signers: [
+        {
+          email: emailDonateur,
+          name: convention.entreprise.raisonSociale,
+          recipientId: "1",
+          routingOrder: "1",
+          clientUserId: clientUserId(convention.id, "DONATEUR"),
+          tabs: {
+            signHereTabs: [
+              { documentId: "1", anchorString: "Pour le DONATEUR,", anchorUnits: "pixels", anchorXOffset: "0", anchorYOffset: "36" },
+            ],
+          },
+        },
+        {
+          email: emailAssociation,
+          name: convention.association.denomination,
+          recipientId: "2",
+          routingOrder: "2",
+          clientUserId: clientUserId(convention.id, "ASSOCIATION"),
+          tabs: {
+            signHereTabs: [
+              { documentId: "1", anchorString: "Pour l'ASSOCIATION,", anchorUnits: "pixels", anchorXOffset: "0", anchorYOffset: "36" },
+            ],
+          },
+        },
+      ],
+    },
+    status: "sent",
+  };
+
+  const res = await fetch(`${BASE_PATH}/v2.1/accounts/${accountId}/envelopes`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify(enveloppe),
+  });
+  if (!res.ok) {
+    throw new Error(`Création de l'enveloppe DocuSign échouée (${res.status}) : ${await res.text()}`);
+  }
+  const data = (await res.json()) as { envelopeId: string };
+
+  await prisma.convention.update({
+    where: { id: conventionId },
+    data: { docusignEnvelopeId: data.envelopeId, statut: "ENVOYEE" },
+  });
+  return data.envelopeId;
+}
+
+/** Ouvre une session de signature intégrée (dans l'appli) pour la convention, pour le rôle demandé. */
+export async function obtenirUrlSignatureEmbarqueeConvention(
+  conventionId: string,
+  role: RoleSignataire,
+  origin: string
+): Promise<string> {
+  const envelopeId = await assurerEnveloppeConvention(conventionId);
+  const convention = await prisma.convention.findUniqueOrThrow({
+    where: { id: conventionId },
+    include: { entreprise: true, association: true },
+  });
+
+  const accessToken = await obtenirAccessToken();
+  const accountId = requireEnv("DOCUSIGN_ACCOUNT_ID");
+
+  const estDonateur = role === "DONATEUR";
+  const email = await emailContact(
+    estDonateur ? convention.entrepriseId : null,
+    estDonateur ? null : convention.associationId
+  );
+  const nom = estDonateur ? convention.entreprise.raisonSociale : convention.association.denomination;
+  const recipientId = estDonateur ? "1" : "2";
+  const returnUrl = `${origin}/convention/${convention.id}?docusignRole=${role}`;
+
+  const res = await fetch(`${BASE_PATH}/v2.1/accounts/${accountId}/envelopes/${envelopeId}/views/recipient`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      returnUrl,
+      authenticationMethod: "none",
+      email,
+      userName: nom,
+      recipientId,
+      clientUserId: clientUserId(convention.id, role),
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Ouverture de la signature DocuSign échouée (${res.status}) : ${await res.text()}`);
+  }
+  const data = (await res.json()) as { url: string };
+  return data.url;
+}
+
+/** À appeler au retour depuis DocuSign : vérifie auprès de DocuSign puis enregistre la signature de la convention. */
+export async function verifierEtEnregistrerSignatureConvention(
+  conventionId: string,
+  role: RoleSignataire
+): Promise<boolean> {
+  const convention = await prisma.convention.findUniqueOrThrow({ where: { id: conventionId } });
+  if (!convention.docusignEnvelopeId) return false;
+
+  const dejaEnregistree = role === "DONATEUR" ? convention.signatureEntrepriseLe : convention.signatureAssociationLe;
+  if (dejaEnregistree) return true;
+
+  const accessToken = await obtenirAccessToken();
+  const accountId = requireEnv("DOCUSIGN_ACCOUNT_ID");
+  const recipientId = role === "DONATEUR" ? "1" : "2";
+
+  const res = await fetch(
+    `${BASE_PATH}/v2.1/accounts/${accountId}/envelopes/${convention.docusignEnvelopeId}/recipients`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  if (!res.ok) return false;
+
+  const data = (await res.json()) as { signers?: { recipientId: string; status: string; signedDateTime?: string }[] };
+  const signataire = data.signers?.find((s) => s.recipientId === recipientId);
+  if (signataire?.status !== "completed") return false;
+
+  const champ = role === "DONATEUR" ? "signatureEntrepriseLe" : "signatureAssociationLe";
+  const horodatage = signataire.signedDateTime ? new Date(signataire.signedDateTime) : new Date();
+
+  const conventionMaj = await prisma.convention.update({ where: { id: conventionId }, data: { [champ]: horodatage } });
+  if (conventionMaj.signatureEntrepriseLe && conventionMaj.signatureAssociationLe) {
+    await prisma.convention.update({ where: { id: conventionId }, data: { statut: "SIGNEE" } });
+  }
 
   return true;
 }

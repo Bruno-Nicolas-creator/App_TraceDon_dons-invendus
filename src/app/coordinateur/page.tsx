@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import CoordinateurClient, { type AssociationLigne, type DonNonAssigne } from "./CoordinateurClient";
+import { associationHabilitee, libelleHabilitation } from "@/lib/conformite";
+import CoordinateurClient, { type AssociationLigne, type DonNonAssigne, type EntrepriseLigne } from "./CoordinateurClient";
 
 export const dynamic = "force-dynamic";
 
@@ -39,8 +40,12 @@ export default async function CoordinateurDashboardPage() {
   const session = await getSession();
   if (!session || session.role !== "COORDINATEUR") redirect("/connexion");
 
-  const [associations, donsNonAssignes, bonsConfirmes, articles] = await Promise.all([
+  const [associations, entreprises, donsNonAssignes, bonsConfirmes, articles] = await Promise.all([
     prisma.association.findMany({ orderBy: { denomination: "asc" } }),
+    prisma.entreprise.findMany({
+      orderBy: { raisonSociale: "asc" },
+      include: { documents: { where: { type: "KBIS" } } },
+    }),
     prisma.don.findMany({
       where: { statut: "PUBLIE" },
       include: { entreprise: true, articles: true },
@@ -52,8 +57,24 @@ export default async function CoordinateurDashboardPage() {
 
   const associationsAffichees: AssociationLigne[] = associations.map((a) => {
     const rescrit = ligneRescrit(a);
-    return { id: a.id, nom: a.denomination, rna: a.rna, rescrit: rescrit.label, rescritVariant: rescrit.variant, verifiee: a.verifiee };
+    return {
+      id: a.id,
+      nom: a.denomination,
+      rna: a.rna,
+      rescrit: rescrit.label,
+      rescritVariant: rescrit.variant,
+      habilitation: libelleHabilitation(a.habilitationStatut),
+      habilitationVariant: associationHabilitee(a.habilitationStatut) ? "habilitee" : "absente",
+      verifiee: a.verifiee,
+    };
   });
+
+  const entreprisesAffichees: EntrepriseLigne[] = entreprises.map((e) => ({
+    id: e.id,
+    nom: e.raisonSociale,
+    siret: e.siret,
+    kbisFourni: e.documents.length > 0,
+  }));
 
   const donsAffiches: DonNonAssigne[] = donsNonAssignes.map((don) => ({
     id: don.id,
@@ -70,6 +91,7 @@ export default async function CoordinateurDashboardPage() {
   return (
     <CoordinateurClient
       associations={associationsAffichees}
+      entreprises={entreprisesAffichees}
       donsNonAssignes={donsAffiches}
       poidsMois={poidsMois}
       nombreDons={bonsConfirmes.length}

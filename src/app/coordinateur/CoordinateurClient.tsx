@@ -11,7 +11,16 @@ export type AssociationLigne = {
   rna: string;
   rescrit: string;
   rescritVariant: "attente" | "tacite" | "absent";
+  habilitation: string;
+  habilitationVariant: "habilitee" | "absente";
   verifiee: boolean;
+};
+
+export type EntrepriseLigne = {
+  id: string;
+  nom: string;
+  siret: string;
+  kbisFourni: boolean;
 };
 
 export type DonNonAssigne = {
@@ -27,6 +36,11 @@ const RESCRIT_STYLES: Record<AssociationLigne["rescritVariant"], string> = {
   absent: "bg-accent-tint text-accent",
 };
 
+const HABILITATION_STYLES: Record<AssociationLigne["habilitationVariant"], string> = {
+  habilitee: "bg-brand-tint text-brand-dark",
+  absente: "bg-accent-tint text-accent",
+};
+
 const NAV_ITEMS: { label: string; href?: string }[] = [
   { label: "Tableau de bord", href: "/coordinateur" },
   { label: "Entreprises" },
@@ -38,6 +52,7 @@ const NAV_ITEMS: { label: string; href?: string }[] = [
 
 export default function CoordinateurClient({
   associations,
+  entreprises,
   donsNonAssignes,
   poidsMois,
   nombreDons,
@@ -45,6 +60,7 @@ export default function CoordinateurClient({
   nomCoordinateur,
 }: {
   associations: AssociationLigne[];
+  entreprises: EntrepriseLigne[];
   donsNonAssignes: DonNonAssigne[];
   poidsMois: number;
   nombreDons: number;
@@ -193,12 +209,14 @@ export default function CoordinateurClient({
                 <span className="text-xs text-ink-muted">{enAttente} en attente</span>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[480px] border-collapse">
+                <table className="w-full min-w-[680px] border-collapse">
                   <thead>
                     <tr className="text-left">
                       <th className="border-b border-border pb-2 pr-3 text-[11px] font-semibold uppercase text-ink-muted">Association</th>
                       <th className="border-b border-border pb-2 pr-3 text-[11px] font-semibold uppercase text-ink-muted">RNA</th>
                       <th className="border-b border-border pb-2 pr-3 text-[11px] font-semibold uppercase text-ink-muted">Rescrit fiscal</th>
+                      <th className="border-b border-border pb-2 pr-3 text-[11px] font-semibold uppercase text-ink-muted">Habilitation</th>
+                      <th className="border-b border-border pb-2" />
                       <th className="border-b border-border pb-2" />
                     </tr>
                   </thead>
@@ -211,6 +229,17 @@ export default function CoordinateurClient({
                           <td className="border-b border-surface-alt py-3 text-[13px] text-ink-muted">{asso.rna}</td>
                           <td className="border-b border-surface-alt py-3">
                             <span className={`rounded-full px-2.5 py-1 text-xs ${RESCRIT_STYLES[asso.rescritVariant]}`}>{asso.rescrit}</span>
+                          </td>
+                          <td className="border-b border-surface-alt py-3">
+                            <span className={`rounded-full px-2.5 py-1 text-xs ${HABILITATION_STYLES[asso.habilitationVariant]}`}>{asso.habilitation}</span>
+                          </td>
+                          <td className="border-b border-surface-alt py-3 text-right">
+                            <Link
+                              href={`/coordinateur/documents/association/${asso.id}`}
+                              className="rounded-full border border-border px-3.5 py-1.5 text-xs font-semibold transition-transform active:scale-95"
+                            >
+                              Documents
+                            </Link>
                           </td>
                           <td className="border-b border-surface-alt py-3 text-right">
                             <button
@@ -275,6 +304,47 @@ export default function CoordinateurClient({
                   <div className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-ink-muted">Tous les dons sont assignés.</div>
                 )}
               </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-surface p-4 lg:p-5">
+            <h2 className="mb-3.5 text-[15px] font-semibold">Entreprises</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[480px] border-collapse">
+                <thead>
+                  <tr className="text-left">
+                    <th className="border-b border-border pb-2 pr-3 text-[11px] font-semibold uppercase text-ink-muted">Entreprise</th>
+                    <th className="border-b border-border pb-2 pr-3 text-[11px] font-semibold uppercase text-ink-muted">SIRET</th>
+                    <th className="border-b border-border pb-2 pr-3 text-[11px] font-semibold uppercase text-ink-muted">Kbis</th>
+                    <th className="border-b border-border pb-2" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {entreprises.map((ent, i) => (
+                    <tr key={ent.id} className="animate-fade-slide-in" style={{ animationDelay: `${i * 40}ms` }}>
+                      <td className="border-b border-surface-alt py-3 text-[13px] font-semibold">{ent.nom}</td>
+                      <td className="border-b border-surface-alt py-3 text-[13px] text-ink-muted">{ent.siret}</td>
+                      <td className="border-b border-surface-alt py-3">
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs ${
+                            ent.kbisFourni ? "bg-brand-tint text-brand-dark" : "bg-accent-tint text-accent"
+                          }`}
+                        >
+                          {ent.kbisFourni ? "Fourni" : "Non fourni"}
+                        </span>
+                      </td>
+                      <td className="border-b border-surface-alt py-3 text-right">
+                        <Link
+                          href={`/coordinateur/documents/entreprise/${ent.id}`}
+                          className="rounded-full border border-border px-3.5 py-1.5 text-xs font-semibold transition-transform active:scale-95"
+                        >
+                          Documents
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </main>

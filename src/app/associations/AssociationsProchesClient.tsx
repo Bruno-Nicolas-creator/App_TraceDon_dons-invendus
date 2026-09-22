@@ -8,12 +8,21 @@ import TogglePill from "@/components/TogglePill";
 
 type Vue = "carte" | "liste";
 
+function lienItineraire(association: Pick<AssociationAffichee, "adresse" | "latitude" | "longitude">): string {
+  const destination =
+    association.latitude != null && association.longitude != null
+      ? `${association.latitude},${association.longitude}`
+      : association.adresse;
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+}
+
 export type AssociationAffichee = {
   id: string;
   nom: string;
   adresse: string;
   distance: string;
   categorie: string;
+  habilitee: boolean;
   latitude: number | null;
   longitude: number | null;
 };
@@ -21,9 +30,11 @@ export type AssociationAffichee = {
 export default function AssociationsProchesClient({
   associations,
   centreCarte,
+  entrepriseGrandeSurface,
 }: {
   associations: AssociationAffichee[];
   centreCarte: { lat: number; lng: number } | null;
+  entrepriseGrandeSurface: boolean;
 }) {
   const [vue, setVue] = useState<Vue>("carte");
   const carteConfiguree = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) && centreCarte !== null;
@@ -53,6 +64,17 @@ export default function AssociationsProchesClient({
       </header>
 
       <main className="flex-1 space-y-3 px-5 pb-4">
+        {entrepriseGrandeSurface && (
+          <div className="flex gap-3 rounded-2xl bg-accent-tint p-4">
+            <span aria-hidden="true" className="text-lg leading-none">⚠️</span>
+            <p className="text-xs leading-relaxed text-ink">
+              Votre surface de vente dépasse 400 m² : la loi Garot vous impose de céder vos invendus à une
+              association <strong>habilitée</strong>. Le statut d&apos;habilitation de chaque association est
+              indiqué ci-dessous.
+            </p>
+          </div>
+        )}
+
         {vue === "carte" &&
           (carteConfiguree && centreCarte ? (
             <GoogleMap center={centreCarte} marqueurs={marqueurs} />
@@ -72,13 +94,36 @@ export default function AssociationsProchesClient({
               <div className="mb-2 flex items-start justify-between gap-2.5">
                 <div>
                   <div className="text-sm font-semibold">{association.nom}</div>
-                  <div className="mt-0.5 text-xs text-ink-muted">{association.adresse}</div>
+                  <a
+                    href={lienItineraire(association)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-0.5 flex items-center gap-1 text-xs text-ink-muted underline decoration-dotted underline-offset-2"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="shrink-0">
+                      <path d="M12 22s7-7.5 7-12.5A7 7 0 0 0 5 9.5C5 14.5 12 22 12 22Z" stroke="#6B6459" strokeWidth="1.8" strokeLinejoin="round" />
+                      <circle cx="12" cy="9.5" r="2.2" stroke="#6B6459" strokeWidth="1.8" />
+                    </svg>
+                    {association.adresse}
+                  </a>
                 </div>
                 <span className="whitespace-nowrap rounded-full bg-brand-tint px-2.5 py-1 text-xs font-semibold text-brand-dark">
                   {association.distance}
                 </span>
               </div>
-              <span className="rounded-full bg-surface-alt px-2.5 py-1 text-xs text-ink-muted">{association.categorie}</span>
+              <div className="flex flex-wrap gap-1.5">
+                <span className="rounded-full bg-surface-alt px-2.5 py-1 text-xs text-ink-muted">{association.categorie}</span>
+                {entrepriseGrandeSurface && (
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      association.habilitee ? "bg-brand-tint text-brand-dark" : "bg-accent-tint text-accent"
+                    }`}
+                  >
+                    {association.habilitee ? "Habilitée" : "Non habilitée"}
+                  </span>
+                )}
+              </div>
             </li>
           ))}
           {associations.length === 0 && (

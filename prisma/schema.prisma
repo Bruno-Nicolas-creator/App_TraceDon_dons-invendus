@@ -44,6 +44,18 @@ enum RoleSignataire {
   ASSOCIATION
 }
 
+enum StatutConvention {
+  BROUILLON
+  ENVOYEE
+  SIGNEE
+}
+
+enum StatutHabilitation {
+  NON_HABILITEE
+  REGIONALE
+  NATIONALE
+}
+
 model User {
   id            String   @id @default(cuid())
   email         String   @unique
@@ -79,16 +91,19 @@ model Abonnement {
 }
 
 model Entreprise {
-  id               String   @id @default(cuid())
-  raisonSociale    String
-  formeJuridique   String?
-  siret            String
-  adresse          String
-  secteurActivite  String?
-  coutRevientKg    Float    @default(0)
-  latitude         Float?
-  longitude        Float?
-  enseigneId       String?
+  id                    String   @id @default(cuid())
+  raisonSociale         String
+  formeJuridique        String?
+  siret                 String
+  adresse               String
+  secteurActivite       String?
+  coutRevientKg         Float    @default(0)
+  surfaceVenteM2        Float?
+  referentDonNom        String?
+  referentDonTelephone  String?
+  latitude              Float?
+  longitude             Float?
+  enseigneId            String?
   enseigne         Enseigne? @relation(fields: [enseigneId], references: [id])
   users            User[]
   dons             Don[]
@@ -96,6 +111,7 @@ model Entreprise {
   attestations     AttestationFiscale[]
   conventions      Convention[]
   assignationsRecurrentes AssignationRecurrente[]
+  documents        Document[]
   createdAt        DateTime @default(now())
 }
 
@@ -115,10 +131,15 @@ model Association {
   declarationInteretGeneral Boolean       @default(false)
   rescritStatut             StatutRescrit @default(NON_DEPOSE)
   rescritDateDepot          DateTime?
-  rescritPreuveUrl          String?
   verifiee                  Boolean       @default(false)
   verifieeLe                DateTime?
   verifieePar               String?
+  habilitationStatut        StatutHabilitation @default(NON_HABILITEE)
+  habilitationDateFin       DateTime?
+  declarationDdpp           Boolean       @default(false)
+  declarationDdppDate       DateTime?
+  referentDonNom            String?
+  referentDonTelephone      String?
   latitude                  Float?
   longitude                 Float?
   reseauId                  String?
@@ -129,7 +150,45 @@ model Association {
   attestations              AttestationFiscale[]
   conventions               Convention[]
   assignationsRecurrentes   AssignationRecurrente[]
+  benevoles                 Benevole[]
+  documents                 Document[]
   createdAt                 DateTime      @default(now())
+}
+
+model Benevole {
+  id            String      @id @default(cuid())
+  associationId String
+  association   Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  nom           String
+  telephone     String?
+  createdAt     DateTime    @default(now())
+}
+
+enum TypeDocument {
+  KBIS
+  RECEPISSE_RNA
+  ATTESTATION_ASSURANCE
+  STATUTS_SIGNES
+  PREUVE_RESCRIT_FISCAL
+  HABILITATION_AIDE_ALIMENTAIRE
+  DECLARATION_DDPP
+}
+
+model Document {
+  id            String        @id @default(cuid())
+  type          TypeDocument
+  nomFichier    String
+  contentType   String
+  contenu       Bytes
+  tailleOctets  Int
+  entrepriseId  String?
+  entreprise    Entreprise?   @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  associationId String?
+  association   Association?  @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  createdAt     DateTime      @default(now())
+
+  @@unique([entrepriseId, type])
+  @@unique([associationId, type])
 }
 
 // Planning hebdomadaire : association(s) attendue(s) chaque jour de la semaine
@@ -149,14 +208,19 @@ model AssignationRecurrente {
 }
 
 model Convention {
-  id            String      @id @default(cuid())
-  entrepriseId  String
-  entreprise    Entreprise  @relation(fields: [entrepriseId], references: [id])
-  associationId String
-  association   Association @relation(fields: [associationId], references: [id])
-  dateSignature DateTime    @default(now())
-  dureeAns      Int         @default(1)
-  statut        String      @default("active")
+  id                     String           @id @default(cuid())
+  entrepriseId           String
+  entreprise             Entreprise       @relation(fields: [entrepriseId], references: [id])
+  associationId          String
+  association            Association      @relation(fields: [associationId], references: [id])
+  statut                 StatutConvention @default(BROUILLON)
+  dureeAns               Int              @default(1)
+  docusignEnvelopeId     String?
+  signatureEntrepriseLe  DateTime?
+  signatureAssociationLe DateTime?
+  createdAt              DateTime         @default(now())
+
+  @@unique([entrepriseId, associationId])
 }
 
 model Don {

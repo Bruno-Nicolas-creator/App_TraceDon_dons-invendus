@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import BottomTabBar from "@/components/BottomTabBar";
 import { LIBELLES_JOURS } from "@/lib/planning";
 import { definirAssignation, retirerAssignation } from "./actions";
@@ -23,21 +24,36 @@ export default function PlanningClient({
 }) {
   const [liste, setListe] = useState(assignations);
   const [selection, setSelection] = useState<Record<number, string>>({});
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [avertissement, setAvertissement] = useState<{ jour: number; associationId: string; message: string } | null>(null);
   const [, startTransition] = useTransition();
+  const router = useRouter();
 
-  const ajouter = (jour: number) => {
+  const ajouter = (jour: number, forcer: boolean = false) => {
     const associationId = selection[jour] ?? associations.find((a) => !liste.some((x) => x.jourSemaine === jour && x.associationId === a.id))?.id;
     if (!associationId) return;
     const association = associations.find((a) => a.id === associationId);
     if (!association) return;
     if (liste.some((a) => a.jourSemaine === jour && a.associationId === associationId)) return;
 
-    setListe((prev) => [
-      ...prev,
-      { id: `temp-${Date.now()}`, jourSemaine: jour, associationId, associationNom: association.nom },
-    ]);
-    startTransition(() => {
-      void definirAssignation(jour, associationId);
+    setErreur(null);
+    setAvertissement(null);
+    const idTemporaire = `temp-${jour}-${associationId}`;
+    setListe((prev) => [...prev, { id: idTemporaire, jourSemaine: jour, associationId, associationNom: association.nom }]);
+    startTransition(async () => {
+      const resultat = await definirAssignation(jour, associationId, forcer);
+      if (!resultat.ok) {
+        setListe((prev) => prev.filter((a) => a.id !== idTemporaire));
+        if (resultat.conventionId) {
+          router.push(`/convention/${resultat.conventionId}?retour=/planning`);
+          return;
+        }
+        if (resultat.avertissementHabilitation) {
+          setAvertissement({ jour, associationId, message: resultat.error });
+          return;
+        }
+        setErreur(resultat.error);
+      }
     });
   };
 
@@ -61,6 +77,30 @@ export default function PlanningClient({
       </header>
 
       <main className="flex-1 space-y-3 px-5 pb-4">
+        {erreur && <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreur}</div>}
+
+        {avertissement && (
+          <div className="animate-fade-slide-in space-y-2.5 rounded-2xl bg-accent-tint p-4">
+            <p className="text-xs leading-relaxed text-accent">{avertissement.message}</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setAvertissement(null)}
+                className="flex-1 rounded-full border border-border bg-surface py-2 text-xs font-semibold transition-transform active:scale-95"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={() => ajouter(avertissement.jour, true)}
+                className="flex-1 rounded-full bg-ink py-2 text-xs font-semibold text-white transition-transform active:scale-95"
+              >
+                Ajouter quand même
+              </button>
+            </div>
+          </div>
+        )}
+
         {LIBELLES_JOURS.map((libelle, jour) => {
           const associationsDuJour = liste.filter((a) => a.jourSemaine === jour);
           const disponibles = associations.filter(

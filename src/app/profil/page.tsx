@@ -4,7 +4,16 @@ import { prisma } from "@/lib/prisma";
 import BottomTabBar from "@/components/BottomTabBar";
 import CompteurAnime from "@/components/CompteurAnime";
 import { calculerImpactCarbone } from "@/lib/impactCo2";
-import { deconnexionAction } from "./actions";
+import { associationHabilitee, estGrandeSurface, SEUIL_GRANDE_SURFACE_M2 } from "@/lib/conformite";
+import CoffreFort, { type ConventionSignee, type DocumentExistant } from "./CoffreFort";
+import {
+  ajouterBenevoleAction,
+  deconnexionAction,
+  definirConformiteAssociationAction,
+  definirReferentDonAction,
+  definirSurfaceVenteAction,
+  retirerBenevoleAction,
+} from "./actions";
 
 const LABEL_ROLE: Record<string, string> = {
   ENTREPRISE: "Entreprise donatrice",
@@ -17,13 +26,65 @@ export default async function ProfilPage() {
   if (!session) redirect("/connexion");
 
   let organisation: string | null = null;
+  let rescritNonDepose = false;
+  let referentDonNom = "";
+  let referentDonTelephone = "";
+  let benevoles: { id: string; nom: string; telephone: string | null }[] = [];
+  let surfaceVenteM2: number | null = null;
+  let habilitationStatut = "NON_HABILITEE";
+  let habilitationDateFin: Date | null = null;
+  let declarationDdpp = false;
+  let declarationDdppDate: Date | null = null;
+  let documents: DocumentExistant[] = [];
+  let conventionsSignees: ConventionSignee[] = [];
   if (session.entrepriseId) {
-    const entreprise = await prisma.entreprise.findUnique({ where: { id: session.entrepriseId } });
+    const entreprise = await prisma.entreprise.findUnique({
+      where: { id: session.entrepriseId },
+      include: {
+        documents: true,
+        conventions: { where: { statut: "SIGNEE" }, include: { association: true } },
+      },
+    });
     organisation = entreprise?.raisonSociale ?? null;
+    referentDonNom = entreprise?.referentDonNom ?? "";
+    referentDonTelephone = entreprise?.referentDonTelephone ?? "";
+    surfaceVenteM2 = entreprise?.surfaceVenteM2 ?? null;
+    documents = entreprise?.documents ?? [];
+    conventionsSignees = (entreprise?.conventions ?? []).map((c) => ({
+      id: c.id,
+      autrePartieNom: c.association.denomination,
+      signatureLe: c.signatureAssociationLe ?? c.signatureEntrepriseLe ?? c.createdAt,
+    }));
   } else if (session.associationId) {
-    const association = await prisma.association.findUnique({ where: { id: session.associationId } });
+    const association = await prisma.association.findUnique({
+      where: { id: session.associationId },
+      include: {
+        benevoles: { orderBy: { createdAt: "asc" } },
+        documents: true,
+        conventions: { where: { statut: "SIGNEE" }, include: { entreprise: true } },
+      },
+    });
     organisation = association?.denomination ?? null;
+    rescritNonDepose = association?.rescritStatut === "NON_DEPOSE";
+    referentDonNom = association?.referentDonNom ?? "";
+    referentDonTelephone = association?.referentDonTelephone ?? "";
+    benevoles = association?.benevoles ?? [];
+    habilitationStatut = association?.habilitationStatut ?? "NON_HABILITEE";
+    habilitationDateFin = association?.habilitationDateFin ?? null;
+    declarationDdpp = association?.declarationDdpp ?? false;
+    declarationDdppDate = association?.declarationDdppDate ?? null;
+    documents = association?.documents ?? [];
+    conventionsSignees = (association?.conventions ?? []).map((c) => ({
+      id: c.id,
+      autrePartieNom: c.entreprise.raisonSociale,
+      signatureLe: c.signatureAssociationLe ?? c.signatureEntrepriseLe ?? c.createdAt,
+    }));
   }
+
+  const grandeSurface = estGrandeSurface(surfaceVenteM2);
+  const habilitationManquante = session.role === "ASSOCIATION" && !associationHabilitee(habilitationStatut);
+  const ddppNonDeclaree = session.role === "ASSOCIATION" && !declarationDdpp;
+  const dateInputValue = (date: Date | null) => (date ? date.toISOString().slice(0, 10) : "");
 
   let impactCumule: { co2EviteKg: number; equivalenceKm: number | null; poidsTotalKg: number } | null = null;
   if (session.role === "ENTREPRISE" && session.entrepriseId) {
@@ -80,6 +141,242 @@ export default async function ProfilPage() {
       </header>
       <main className="flex-1 space-y-4 px-5 pb-4">
         {carte}
+
+        <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4">
+          <div>
+            <h2 className="text-sm font-semibold">Référent don</h2>
+            <p className="mt-0.5 text-xs text-ink-muted">
+              La personne à contacter pour organiser les enlèvements.
+            </p>
+          </div>
+          <form action={definirReferentDonAction} className="space-y-2.5">
+            <input
+              type="text"
+              name="referentDonNom"
+              defaultValue={referentDonNom}
+              placeholder="Nom du référent"
+              className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+            />
+            <input
+              type="tel"
+              name="referentDonTelephone"
+              defaultValue={referentDonTelephone}
+              placeholder="Téléphone"
+              className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+            />
+            <button
+              type="submit"
+              className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+            >
+              Enregistrer
+            </button>
+          </form>
+        </div>
+
+        <CoffreFort role={session.role === "ENTREPRISE" ? "ENTREPRISE" : "ASSOCIATION"} documents={documents} conventionsSignees={conventionsSignees} />
+
+        {session.role === "ENTREPRISE" && (
+          <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4" style={{ animationDelay: "50ms" }}>
+            <div>
+              <h2 className="text-sm font-semibold">Surface de vente</h2>
+              <p className="mt-0.5 text-xs text-ink-muted">
+                Détermine si vous êtes soumis à l&apos;obligation légale de don (loi Garot, au-delà de{" "}
+                {SEUIL_GRANDE_SURFACE_M2} m²).
+              </p>
+            </div>
+            <form action={definirSurfaceVenteAction} className="flex gap-2.5">
+              <input
+                type="number"
+                name="surfaceVenteM2"
+                min="0"
+                step="1"
+                defaultValue={surfaceVenteM2 ?? ""}
+                placeholder="Surface en m²"
+                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+              />
+              <button
+                type="submit"
+                className="shrink-0 rounded-full bg-ink px-4 py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+              >
+                Enregistrer
+              </button>
+            </form>
+          </div>
+        )}
+
+        {session.role === "ENTREPRISE" && grandeSurface && (
+          <div className="animate-fade-slide-in flex gap-3 rounded-2xl bg-accent-tint p-4" style={{ animationDelay: "75ms" }}>
+            <span aria-hidden="true" className="text-lg leading-none">⚠️</span>
+            <p className="text-xs leading-relaxed text-ink">
+              <span className="font-semibold text-accent">Surface &gt; {SEUIL_GRANDE_SURFACE_M2} m² : obligation légale de don.</span>{" "}
+              La loi Garot (art. L. 541-15-5 du code de l&apos;environnement, décret n° 2016-1962) vous interdit de
+              détruire des denrées encore consommables et vous impose de proposer une convention de don à une
+              association d&apos;aide alimentaire <strong>habilitée</strong>. Vérifiez le statut d&apos;habilitation
+              de vos associations partenaires dans votre{" "}
+              <a href="/planning" className="font-semibold underline">
+                planning
+              </a>
+              .
+            </p>
+          </div>
+        )}
+
+        {session.role === "ASSOCIATION" && (
+          <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4" style={{ animationDelay: "50ms" }}>
+            <div>
+              <h2 className="text-sm font-semibold">Bénévoles qui se déplacent</h2>
+              <p className="mt-0.5 text-xs text-ink-muted">
+                Les personnes susceptibles d&apos;effectuer les enlèvements chez les donateurs.
+              </p>
+            </div>
+
+            {benevoles.length > 0 && (
+              <ul className="space-y-1.5">
+                {benevoles.map((benevole) => (
+                  <li
+                    key={benevole.id}
+                    className="flex items-center justify-between gap-2 rounded-xl bg-surface-alt px-3.5 py-2.5 text-sm"
+                  >
+                    <div>
+                      <div className="font-medium">{benevole.nom}</div>
+                      {benevole.telephone && <div className="text-xs text-ink-muted">{benevole.telephone}</div>}
+                    </div>
+                    <form action={retirerBenevoleAction.bind(null, benevole.id)}>
+                      <button
+                        type="submit"
+                        aria-label={`Retirer ${benevole.nom}`}
+                        className="text-ink-muted/70 transition-transform active:scale-90"
+                      >
+                        &times;
+                      </button>
+                    </form>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <form action={ajouterBenevoleAction} className="space-y-2.5">
+              <input
+                type="text"
+                name="benevoleNom"
+                placeholder="Nom du bénévole"
+                required
+                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+              />
+              <input
+                type="tel"
+                name="benevoleTelephone"
+                placeholder="Téléphone (optionnel)"
+                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+              />
+              <button
+                type="submit"
+                className="w-full rounded-full border border-border py-2.5 text-sm font-semibold transition-transform active:scale-[0.98]"
+              >
+                + Ajouter un bénévole
+              </button>
+            </form>
+          </div>
+        )}
+
+        {session.role === "ASSOCIATION" && (
+          <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4" style={{ animationDelay: "75ms" }}>
+            <div>
+              <h2 className="text-sm font-semibold">Habilitation &amp; conformité sanitaire</h2>
+              <p className="mt-0.5 text-xs text-ink-muted">
+                Habilitation aide alimentaire (art. L. 266-2 du code de l&apos;action sociale et des familles) et
+                déclaration d&apos;activité auprès de la DDPP.
+              </p>
+            </div>
+            <form action={definirConformiteAssociationAction} className="space-y-2.5">
+              <select
+                name="habilitationStatut"
+                defaultValue={habilitationStatut}
+                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+              >
+                <option value="NON_HABILITEE">Non habilitée</option>
+                <option value="REGIONALE">Habilitation régionale (DREETS)</option>
+                <option value="NATIONALE">Habilitation nationale</option>
+              </select>
+              <label className="block text-xs text-ink-muted">
+                Fin de validité de l&apos;habilitation
+                <input
+                  type="date"
+                  name="habilitationDateFin"
+                  defaultValue={dateInputValue(habilitationDateFin)}
+                  className="mt-1 w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm text-ink"
+                />
+              </label>
+
+              <label className="flex items-center gap-2.5 text-xs text-ink-muted">
+                <input type="checkbox" name="declarationDdpp" defaultChecked={declarationDdpp} />
+                Déclaration d&apos;activité (denrées d&apos;origine animale ou végétale) déposée auprès de la DDPP
+              </label>
+              <label className="block text-xs text-ink-muted">
+                Date de déclaration
+                <input
+                  type="date"
+                  name="declarationDdppDate"
+                  defaultValue={dateInputValue(declarationDdppDate)}
+                  className="mt-1 w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm text-ink"
+                />
+              </label>
+
+              <button
+                type="submit"
+                className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+              >
+                Enregistrer
+              </button>
+            </form>
+          </div>
+        )}
+
+        {habilitationManquante && (
+          <div className="animate-fade-slide-in flex gap-3 rounded-2xl bg-accent-tint p-4" style={{ animationDelay: "100ms" }}>
+            <span aria-hidden="true" className="text-lg leading-none">ℹ️</span>
+            <p className="text-xs leading-relaxed text-ink">
+              <span className="font-semibold text-accent">Aucune habilitation aide alimentaire déclarée.</span> Elle
+              est nécessaire pour recevoir des financements publics, et c&apos;est aussi la condition légale pour
+              qu&apos;un commerce de plus de {SEUIL_GRANDE_SURFACE_M2} m² puisse valablement vous céder ses invendus
+              dans le cadre de son obligation de don (art. L. 266-2 du code de l&apos;action sociale et des
+              familles).
+            </p>
+          </div>
+        )}
+
+        {ddppNonDeclaree && (
+          <div className="animate-fade-slide-in flex gap-3 rounded-2xl bg-accent-tint p-4" style={{ animationDelay: "125ms" }}>
+            <span aria-hidden="true" className="text-lg leading-none">ℹ️</span>
+            <p className="text-xs leading-relaxed text-ink">
+              <span className="font-semibold text-accent">Aucune déclaration DDPP enregistrée.</span> Toute
+              association qui manipule, entrepose ou distribue des denrées d&apos;origine animale — même à titre
+              gratuit — doit préalablement se déclarer auprès de la Direction départementale de la protection des
+              populations (DDPP).
+            </p>
+          </div>
+        )}
+
+        {rescritNonDepose && (
+          <div className="animate-fade-slide-in flex gap-3 rounded-2xl bg-accent-tint p-4" style={{ animationDelay: "100ms" }}>
+            <span aria-hidden="true" className="text-lg leading-none">ℹ️</span>
+            <p className="text-xs leading-relaxed text-ink">
+              <span className="font-semibold text-accent">Aucune demande de rescrit fiscal déposée.</span> Vos
+              reçus fiscaux reposent pour l&apos;instant sur votre seule auto-déclaration d&apos;intérêt général.
+              Sans confirmation de l&apos;administration, un contrôle peut les remettre en cause a posteriori.
+              Il est recommandé de déposer un rescrit &laquo;&nbsp;mécénat&nbsp;&raquo; sur{" "}
+              <a
+                href="https://demarche.numerique.gouv.fr/commencer/d996ffa8-c0a9-45fb-82bf-23431d5b125f"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold underline"
+              >
+                demarche.numerique.gouv.fr
+              </a>
+              .
+            </p>
+          </div>
+        )}
         {impactCumule && (
           <div className="animate-fade-slide-in rounded-2xl bg-brand-tint p-4" style={{ animationDelay: "100ms" }}>
             <div className="mb-1 text-xs font-semibold uppercase text-brand-dark">Impact cumulé</div>

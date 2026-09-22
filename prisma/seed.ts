@@ -4,8 +4,71 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 const MOT_DE_PASSE_DEMO = "demo1234";
 
+/**
+ * Génère un PDF minimal (une page, quelques lignes de texte) sans dépendance externe :
+ * @react-pdf/renderer échoue au chargement depuis un script tsx autonome (résolution ESM
+ * stricte de node_modules/@react-pdf/hyphenate), alors qu'il fonctionne dans l'app Next.js.
+ */
+function normaliserPourPdf(texte: string): string {
+  return texte
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[()\\]/g, "");
+}
+
+function genererPdfBrut(titre: string, sousTitre: string, lignes: string[]): Buffer {
+  const toutesLignes = [titre, sousTitre, "", ...lignes].map(normaliserPourPdf);
+  const contenuTexte = toutesLignes
+    .map((ligne, i) => (i === 0 ? `(${ligne}) Tj` : `0 -16 Td (${ligne}) Tj`))
+    .join("\n");
+  const stream = `BT /F1 12 Tf 50 780 Td\n${contenuTexte}\nET`;
+
+  const objets = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 4 0 R >> >> /MediaBox [0 0 595 842] /Contents 5 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    `<< /Length ${Buffer.byteLength(stream, "latin1")} >>\nstream\n${stream}\nendstream`,
+  ];
+
+  let pdf = "%PDF-1.4\n";
+  const offsets: number[] = [];
+  objets.forEach((obj, i) => {
+    offsets.push(Buffer.byteLength(pdf, "latin1"));
+    pdf += `${i + 1} 0 obj\n${obj}\nendobj\n`;
+  });
+  const xrefStart = Buffer.byteLength(pdf, "latin1");
+  pdf += `xref\n0 ${objets.length + 1}\n0000000000 65535 f \n`;
+  for (const off of offsets) pdf += `${off.toString().padStart(10, "0")} 00000 n \n`;
+  pdf += `trailer\n<< /Size ${objets.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+
+  return Buffer.from(pdf, "latin1");
+}
+
+async function creerDocument(
+  proprietaire: { entrepriseId: string } | { associationId: string },
+  type: string,
+  titre: string,
+  sousTitre: string,
+  lignes: string[]
+) {
+  const buffer = genererPdfBrut(titre, sousTitre, lignes);
+  await prisma.document.create({
+    data: {
+      ...proprietaire,
+      type: type as never,
+      nomFichier: `${normaliserPourPdf(titre).toLowerCase().replace(/[^a-z0-9]+/g, "-")}.pdf`,
+      contentType: "application/pdf",
+      contenu: buffer as unknown as never,
+      tailleOctets: buffer.length,
+    },
+  });
+}
+
 async function main() {
+  await prisma.document.deleteMany();
   await prisma.assignationRecurrente.deleteMany();
+  await prisma.benevole.deleteMany();
   await prisma.signature.deleteMany();
   await prisma.article.deleteMany();
   await prisma.bonEnlevement.deleteMany();
@@ -46,6 +109,9 @@ async function main() {
       longitude: 7.268397,
       secteurActivite: "Commerce de détail alimentaire",
       coutRevientKg: 2.8,
+      surfaceVenteM2: 650,
+      referentDonNom: "Cécile Dubois",
+      referentDonTelephone: "06 12 34 56 78",
       enseigneId: enseigneCarrefour.id,
     },
   });
@@ -61,6 +127,7 @@ async function main() {
       longitude: 7.264117,
       secteurActivite: "Boulangerie-pâtisserie",
       coutRevientKg: 3.5,
+      surfaceVenteM2: 45,
     },
   });
 
@@ -75,6 +142,7 @@ async function main() {
       longitude: 7.266847,
       secteurActivite: "Commerce de détail alimentaire",
       coutRevientKg: 2.5,
+      surfaceVenteM2: 380,
     },
   });
 
@@ -89,6 +157,7 @@ async function main() {
       longitude: 7.267328,
       secteurActivite: "Commerce non alimentaire",
       coutRevientKg: 4.2,
+      surfaceVenteM2: 220,
     },
   });
 
@@ -102,6 +171,7 @@ async function main() {
       latitude: 43.697291,
       longitude: 7.25631,
       secteurActivite: "Épicerie fine",
+      surfaceVenteM2: 90,
       coutRevientKg: 3.9,
     },
   });
@@ -121,6 +191,12 @@ async function main() {
       verifiee: true,
       verifieeLe: new Date("2026-08-01"),
       verifieePar: "Bruno (coordinateur)",
+      habilitationStatut: "REGIONALE",
+      habilitationDateFin: new Date("2029-08-01"),
+      declarationDdpp: true,
+      declarationDdppDate: new Date("2025-06-10"),
+      referentDonNom: "Karim Haddad",
+      referentDonTelephone: "06 98 76 54 32",
     },
   });
 
@@ -139,7 +215,21 @@ async function main() {
       verifiee: true,
       verifieeLe: new Date("2026-07-15"),
       verifieePar: "Bruno (coordinateur)",
+      habilitationStatut: "NATIONALE",
+      habilitationDateFin: new Date("2028-07-15"),
+      declarationDdpp: true,
+      declarationDdppDate: new Date("2025-05-02"),
+      referentDonNom: "Julie Renard",
+      referentDonTelephone: "06 45 67 89 10",
     },
+  });
+
+  await prisma.benevole.createMany({
+    data: [
+      { associationId: coeurPartage.id, nom: "Amina Bensalem", telephone: "06 11 22 33 44" },
+      { associationId: coeurPartage.id, nom: "Marc Lefèvre", telephone: "06 22 33 44 55" },
+      { associationId: restoSolidaire.id, nom: "Sofia Ricci", telephone: "06 33 44 55 66" },
+    ],
   });
 
   await prisma.association.create({
@@ -188,7 +278,33 @@ async function main() {
       verifiee: true,
       verifieeLe: new Date("2025-12-01"),
       verifieePar: "Bruno (coordinateur)",
+      habilitationStatut: "REGIONALE",
+      habilitationDateFin: new Date("2027-12-01"),
+      declarationDdpp: true,
+      declarationDdppDate: new Date("2025-10-20"),
     },
+  });
+
+  // Conventions déjà signées entre Carrefour et ses deux partenaires historiques
+  // (relation antérieure à la plateforme) : le planning et le positionnement ne sont
+  // bloqués que pour un tout nouveau binôme entreprise/association.
+  await prisma.convention.createMany({
+    data: [
+      {
+        entrepriseId: carrefour.id,
+        associationId: coeurPartage.id,
+        statut: "SIGNEE",
+        signatureEntrepriseLe: new Date("2025-09-01"),
+        signatureAssociationLe: new Date("2025-09-02"),
+      },
+      {
+        entrepriseId: carrefour.id,
+        associationId: restoSolidaire.id,
+        statut: "SIGNEE",
+        signatureEntrepriseLe: new Date("2025-09-01"),
+        signatureAssociationLe: new Date("2025-09-02"),
+      },
+    ],
   });
 
   // Planning récurrent : Carrefour City Nice Masséna reçoit Coeur Partage les jours
@@ -366,6 +482,73 @@ async function main() {
       { email: "bruno@exemple.fr", passwordHash, nom: "Bruno", role: "COORDINATEUR" },
     ],
   });
+
+  // Coffre-fort documentaire : en mode démo, les obligations documentaires sont toujours
+  // déjà remplies, pour ne jamais bloquer les parcours de démonstration.
+  const toutesEntreprises = await prisma.entreprise.findMany();
+  for (const entreprise of toutesEntreprises) {
+    await creerDocument(
+      { entrepriseId: entreprise.id },
+      "KBIS",
+      `Extrait Kbis — ${entreprise.raisonSociale}`,
+      `SIRET ${entreprise.siret}`,
+      ["Document généré automatiquement pour les besoins de la démonstration.", `Siège : ${entreprise.adresse}`]
+    );
+  }
+
+  const toutesAssociations = await prisma.association.findMany();
+  for (const association of toutesAssociations) {
+    await creerDocument(
+      { associationId: association.id },
+      "RECEPISSE_RNA",
+      `Récépissé RNA — ${association.denomination}`,
+      `RNA ${association.rna}`,
+      ["Document généré automatiquement pour les besoins de la démonstration."]
+    );
+    await creerDocument(
+      { associationId: association.id },
+      "STATUTS_SIGNES",
+      `Statuts signés — ${association.denomination}`,
+      "Statuts de l'association",
+      ["Document généré automatiquement pour les besoins de la démonstration."]
+    );
+    if (association.rescritStatut !== "NON_DEPOSE") {
+      await creerDocument(
+        { associationId: association.id },
+        "PREUVE_RESCRIT_FISCAL",
+        `Preuve de rescrit fiscal — ${association.denomination}`,
+        "Accusé de dépôt / réponse de l'administration",
+        ["Document généré automatiquement pour les besoins de la démonstration."]
+      );
+    }
+    if (association.verifiee) {
+      await creerDocument(
+        { associationId: association.id },
+        "ATTESTATION_ASSURANCE",
+        `Attestation d'assurance — ${association.denomination}`,
+        "Responsabilité civile",
+        ["Document généré automatiquement pour les besoins de la démonstration."]
+      );
+    }
+    if (association.habilitationStatut !== "NON_HABILITEE") {
+      await creerDocument(
+        { associationId: association.id },
+        "HABILITATION_AIDE_ALIMENTAIRE",
+        `Habilitation aide alimentaire — ${association.denomination}`,
+        "Art. L. 266-2 du code de l'action sociale et des familles",
+        ["Document généré automatiquement pour les besoins de la démonstration."]
+      );
+    }
+    if (association.declarationDdpp) {
+      await creerDocument(
+        { associationId: association.id },
+        "DECLARATION_DDPP",
+        `Déclaration DDPP — ${association.denomination}`,
+        "Déclaration d'activité de manipulation de denrées",
+        ["Document généré automatiquement pour les besoins de la démonstration."]
+      );
+    }
+  }
 
   console.log("Seed terminé. Comptes de démonstration (mot de passe : demo1234) :");
   console.log("  Entreprise    carrefour@exemple.fr");

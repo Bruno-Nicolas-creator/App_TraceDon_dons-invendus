@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { calculerDistances, geocoderAdresse, isGoogleMapsServerConfigured } from "@/lib/googleMaps";
+import { associationHabilitee, estGrandeSurface } from "@/lib/conformite";
 import AssociationsProchesClient, { type AssociationAffichee } from "./AssociationsProchesClient";
 
 export const dynamic = "force-dynamic";
@@ -66,9 +67,16 @@ export default async function AssociationsProchesPage() {
     adresse: association.adresse,
     distance: distanceKm ?? "—",
     categorie: association.categorieEligibilite ?? "—",
+    habilitee: associationHabilitee(association.habilitationStatut),
     latitude: association.latitude,
     longitude: association.longitude,
   }));
 
-  return <AssociationsProchesClient associations={associationsAffichees} centreCarte={centreCarte} />;
+  return (
+    <AssociationsProchesClient
+      associations={associationsAffichees}
+      centreCarte={centreCarte}
+      entrepriseGrandeSurface={estGrandeSurface(entreprise.surfaceVenteM2)}
+    />
+  );
 }

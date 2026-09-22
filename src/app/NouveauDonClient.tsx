@@ -42,8 +42,11 @@ export default function NouveauDonClient({
   const [designation, setDesignation] = useState("");
   const [poids, setPoids] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
+  const [erreurPublication, setErreurPublication] = useState<string | null>(null);
+  const [manqueKbis, setManqueKbis] = useState(false);
   const [vientDetrePublie, setVientDetrePublie] = useState(false);
   const [assigneA, setAssigneA] = useState<string | null>(null);
+  const [donPublieId, setDonPublieId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const [afficherScanner, setAfficherScanner] = useState(false);
@@ -156,12 +159,21 @@ export default function NouveauDonClient({
   };
 
   const publier = () => {
+    setErreurPublication(null);
+    setManqueKbis(false);
     startTransition(async () => {
-      const nouveauBrouillon = await publierDon(donId);
-      setDonId(nouveauBrouillon.id);
-      setMode(nouveauBrouillon.mode);
-      setArticles(nouveauBrouillon.articles);
-      setAssigneA(nouveauBrouillon.assigneA);
+      const donPublieAvant = donId;
+      const resultat = await publierDon(donId);
+      if (!resultat.ok) {
+        setErreurPublication(resultat.error);
+        setManqueKbis(!!resultat.manqueKbis);
+        return;
+      }
+      setDonId(resultat.id);
+      setMode(resultat.mode as typeof mode);
+      setArticles(resultat.articles);
+      setAssigneA(resultat.assigneA);
+      setDonPublieId(resultat.assigneA ? donPublieAvant : null);
       setVientDetrePublie(true);
     });
   };
@@ -223,20 +235,30 @@ export default function NouveauDonClient({
           </div>
         )}
         {vientDetrePublie && (
-          <div className="flex items-start justify-between gap-2.5 rounded-xl bg-brand-tint px-4 py-3.5">
-            <p className="text-sm leading-snug text-brand-dark">
-              {assigneA
-                ? `Don enregistré et assigné à ${assigneA}. Le bon d'enlèvement est prêt pour la signature.`
-                : "Don publié ! Il est visible des associations. Un nouveau brouillon a été créé ci-dessous."}
-            </p>
-            <button
-              type="button"
-              onClick={() => setVientDetrePublie(false)}
-              aria-label="Fermer"
-              className="shrink-0 text-brand-dark"
-            >
-              &times;
-            </button>
+          <div className="space-y-2 rounded-xl bg-brand-tint px-4 py-3.5">
+            <div className="flex items-start justify-between gap-2.5">
+              <p className="text-sm leading-snug text-brand-dark">
+                {assigneA
+                  ? `Don enregistré et assigné à ${assigneA}. Le bon d'enlèvement est prêt pour la signature.`
+                  : "Don publié ! Il est visible des associations. Un nouveau brouillon a été créé ci-dessous."}
+              </p>
+              <button
+                type="button"
+                onClick={() => setVientDetrePublie(false)}
+                aria-label="Fermer"
+                className="shrink-0 text-brand-dark"
+              >
+                &times;
+              </button>
+            </div>
+            {donPublieId && (
+              <Link
+                href={`/bon-enlevement/${donPublieId}`}
+                className="block w-full rounded-full bg-brand-dark py-2.5 text-center text-xs font-bold text-white transition-transform active:scale-[0.98]"
+              >
+                Voir et signer le bon d&apos;enlèvement
+              </Link>
+            )}
           </div>
         )}
         {mode === "LISTE_PREALABLE" && (
@@ -446,6 +468,19 @@ export default function NouveauDonClient({
       {afficherScanner && <BarcodeScanner onDetected={codeDetecte} onClose={() => setAfficherScanner(false)} />}
 
       <footer className="border-t border-border bg-surface px-5 pt-3.5 pb-5">
+        {erreurPublication && (
+          <div className="mb-3 rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">
+            {erreurPublication}
+            {manqueKbis && (
+              <>
+                {" "}
+                <Link href="/profil" className="font-semibold underline">
+                  Compléter mon coffre-fort
+                </Link>
+              </>
+            )}
+          </div>
+        )}
         <div className="mb-3 flex justify-between text-sm text-ink-muted">
           <span>{articles.length} articles</span>
           <span>Poids estimé : {poidsTotal.toLocaleString("fr-FR")} kg</span>
