@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { clearSessionCookie, getSession } from "@/lib/auth";
 import { calculerDistances, geocoderAdresse, isGoogleMapsServerConfigured } from "@/lib/googleMaps";
 import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
+import { compterMessagesNonLus } from "@/lib/messagerie";
 import DonsDisponiblesClient, { type DonAffiche } from "./DonsDisponiblesClient";
 
 export const dynamic = "force-dynamic";
@@ -87,11 +88,14 @@ export default async function DonsDisponiblesPage() {
     };
   });
 
+  const nonLusMessages = await compterMessagesNonLus(session);
+
   return (
     <DonsDisponiblesClient
       dons={donsAffiches}
       centreCarte={centreCarte}
       congesAssociationJusquau={congesAssociationEnCours ? formaterDateConges(congesAssociationEnCours.fin) : null}
+      nonLusMessages={nonLusMessages}
     />
   );
 }

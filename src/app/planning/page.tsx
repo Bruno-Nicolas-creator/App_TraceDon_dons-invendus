@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { compterMessagesNonLus } from "@/lib/messagerie";
 import PlanningClient, { type AssignationAffichee } from "./PlanningClient";
 
 export const dynamic = "force-dynamic";
@@ -24,10 +25,13 @@ export default async function PlanningPage() {
     associationNom: a.association.denomination,
   }));
 
+  const nonLusMessages = await compterMessagesNonLus(session);
+
   return (
     <PlanningClient
       assignations={assignationsAffichees}
       associations={associations.map((a) => ({ id: a.id, nom: a.denomination }))}
+      nonLusMessages={nonLusMessages}
     />
   );
 }

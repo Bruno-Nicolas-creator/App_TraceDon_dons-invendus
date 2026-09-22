@@ -32,10 +32,12 @@ export default function NouveauDonClient({
   don,
   associationsAujourdhui,
   congesJusquau,
+  nonLusMessages = 0,
 }: {
   don: Don;
   associationsAujourdhui: string[];
   congesJusquau: string | null;
+  nonLusMessages?: number;
 }) {
   const [donId, setDonId] = useState(don.id);
   const [mode, setMode] = useState(don.mode);
@@ -515,7 +517,7 @@ export default function NouveauDonClient({
           Publier le don
         </button>
       </footer>
-      <BottomTabBar active="dons" role="ENTREPRISE" />
+      <BottomTabBar active="dons" role="ENTREPRISE" nonLusMessages={nonLusMessages} />
     </div>
   );
 }

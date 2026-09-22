@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { compterMessagesNonLus } from "@/lib/messagerie";
 import ArchivesClient, { type AttestationArchive, type BonArchive } from "./ArchivesClient";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +12,8 @@ const formatDate = (date: Date) =>
 export default async function ArchivesPage() {
   const session = await getSession();
   if (!session) redirect("/connexion");
+
+  const nonLusMessages = await compterMessagesNonLus(session);
 
   const bonWhere =
     session.role === "ENTREPRISE"
@@ -51,7 +54,15 @@ export default async function ArchivesPage() {
     titre: `Attestation ${att.numeroOrdre} — ${nomPartenaire(att)}`,
     periode: `${formatDate(att.periodeDebut)} – ${formatDate(att.periodeFin)}`,
     montant: `${att.montantCalcule.toLocaleString("fr-FR")} €`,
+    statut: att.statut,
   }));
 
-  return <ArchivesClient bons={bonsAffiches} attestations={attestationsAffichees} role={session.role} />;
+  return (
+    <ArchivesClient
+      bons={bonsAffiches}
+      attestations={attestationsAffichees}
+      role={session.role}
+      nonLusMessages={nonLusMessages}
+    />
+  );
 }

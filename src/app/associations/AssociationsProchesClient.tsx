@@ -26,10 +26,12 @@ export default function AssociationsProchesClient({
   associations,
   centreCarte,
   entrepriseGrandeSurface,
+  nonLusMessages = 0,
 }: {
   associations: AssociationAffichee[];
   centreCarte: { lat: number; lng: number } | null;
   entrepriseGrandeSurface: boolean;
+  nonLusMessages?: number;
 }) {
   const [vue, setVue] = useState<Vue>("carte");
   const carteConfiguree = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) && centreCarte !== null;
@@ -138,7 +140,7 @@ export default function AssociationsProchesClient({
         </Link>
       </main>
 
-      <BottomTabBar active="dons" role="ENTREPRISE" />
+      <BottomTabBar active="dons" role="ENTREPRISE" nonLusMessages={nonLusMessages} />
     </div>
   );
 }

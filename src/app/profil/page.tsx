@@ -6,6 +6,7 @@ import CompteurAnime from "@/components/CompteurAnime";
 import { calculerImpactCarbone } from "@/lib/impactCo2";
 import { associationHabilitee, estGrandeSurface, SEUIL_GRANDE_SURFACE_M2 } from "@/lib/conformite";
 import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
+import { compterMessagesNonLus } from "@/lib/messagerie";
 import CoffreFort, { type ConventionSignee, type DocumentExistant } from "./CoffreFort";
 import {
   ajouterBenevoleAction,
@@ -28,6 +29,8 @@ const LABEL_ROLE: Record<string, string> = {
 export default async function ProfilPage() {
   const session = await getSession();
   if (!session) redirect("/connexion");
+
+  const nonLusMessages = await compterMessagesNonLus(session);
 
   let organisation: string | null = null;
   let rescritNonDepose = false;
@@ -519,7 +522,7 @@ export default async function ProfilPage() {
           </div>
         )}
       </main>
-      <BottomTabBar active="profil" role={session.role} />
+      <BottomTabBar active="profil" role={session.role} nonLusMessages={nonLusMessages} />
     </div>
   );
 }

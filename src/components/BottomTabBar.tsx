@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type Tab = "dons" | "planning" | "archives" | "profil";
+type Tab = "dons" | "planning" | "messages" | "archives" | "profil";
 type Role = "ENTREPRISE" | "ASSOCIATION" | "COORDINATEUR";
 
 function tabsForRole(role: Role): { id: Tab; href: string; label: string }[] {
@@ -9,12 +9,14 @@ function tabsForRole(role: Role): { id: Tab; href: string; label: string }[] {
       return [
         { id: "dons", href: "/", label: "Nouveau don" },
         { id: "planning", href: "/planning", label: "Planning" },
+        { id: "messages", href: "/messages", label: "Messages" },
         { id: "archives", href: "/archives", label: "Archives" },
         { id: "profil", href: "/profil", label: "Profil" },
       ];
     case "COORDINATEUR":
       return [
         { id: "dons", href: "/coordinateur", label: "Tableau de bord" },
+        { id: "messages", href: "/messages", label: "Messages" },
         { id: "archives", href: "/archives", label: "Archives" },
         { id: "profil", href: "/profil", label: "Profil" },
       ];
@@ -22,6 +24,7 @@ function tabsForRole(role: Role): { id: Tab; href: string; label: string }[] {
     default:
       return [
         { id: "dons", href: "/dons", label: "Dons" },
+        { id: "messages", href: "/messages", label: "Messages" },
         { id: "archives", href: "/archives", label: "Archives" },
         { id: "profil", href: "/profil", label: "Profil" },
       ];
@@ -53,6 +56,18 @@ function TabIcon({ id, active }: { id: Tab; active: boolean }) {
       </svg>
     );
   }
+  if (id === "messages") {
+    return (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path
+          d="M4 5H20V16H9L4 20V5Z"
+          stroke={stroke}
+          strokeWidth="1.8"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <circle cx="12" cy="8" r="3.2" stroke={stroke} strokeWidth="1.6" />
@@ -61,7 +76,15 @@ function TabIcon({ id, active }: { id: Tab; active: boolean }) {
   );
 }
 
-export default function BottomTabBar({ active, role }: { active: Tab; role: Role }) {
+export default function BottomTabBar({
+  active,
+  role,
+  nonLusMessages = 0,
+}: {
+  active: Tab;
+  role: Role;
+  nonLusMessages?: number;
+}) {
   const tabs = tabsForRole(role);
   return (
     <nav
@@ -72,7 +95,14 @@ export default function BottomTabBar({ active, role }: { active: Tab; role: Role
         const isActive = tab.id === active;
         return (
           <Link key={tab.id} href={tab.href} className="flex flex-1 flex-col items-center gap-1">
-            <TabIcon id={tab.id} active={isActive} />
+            <span className="relative">
+              <TabIcon id={tab.id} active={isActive} />
+              {tab.id === "messages" && nonLusMessages > 0 && (
+                <span className="absolute -top-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[9px] font-bold text-white">
+                  {nonLusMessages > 99 ? "99+" : nonLusMessages}
+                </span>
+              )}
+            </span>
             <span className={`text-[10px] ${isActive ? "font-semibold text-brand" : "text-ink-muted"}`}>
               {tab.label}
             </span>

@@ -29,10 +29,12 @@ export default function DonsDisponiblesClient({
   dons,
   centreCarte,
   congesAssociationJusquau,
+  nonLusMessages = 0,
 }: {
   dons: DonAffiche[];
   centreCarte: { lat: number; lng: number } | null;
   congesAssociationJusquau: string | null;
+  nonLusMessages?: number;
 }) {
   const [vue, setVue] = useState<Vue>("carte");
   const carteConfiguree = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) && centreCarte !== null;
@@ -222,7 +224,7 @@ export default function DonsDisponiblesClient({
         </ul>
       </main>
 
-      <BottomTabBar active="dons" role="ASSOCIATION" />
+      <BottomTabBar active="dons" role="ASSOCIATION" nonLusMessages={nonLusMessages} />
     </div>
   );
 }

@@ -129,7 +129,8 @@ export default function AttestationFiscaleDocument({ data, montantEnLettres }: {
         </Text>
 
         <Text style={styles.signature}>
-          Fait le {formatDate(new Date())}.{"\n"}Pour l&apos;association : {data.association.denomination}
+          Fait le {formatDate(new Date())}.{"\n"}Pour l&apos;association bénéficiaire,{"\n\n"}
+          {data.association.denomination}
         </Text>
       </Page>
     </Document>

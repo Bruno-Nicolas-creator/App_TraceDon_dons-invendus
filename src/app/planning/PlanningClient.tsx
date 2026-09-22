@@ -18,9 +18,11 @@ type Association = { id: string; nom: string };
 export default function PlanningClient({
   assignations,
   associations,
+  nonLusMessages = 0,
 }: {
   assignations: AssignationAffichee[];
   associations: Association[];
+  nonLusMessages?: number;
 }) {
   const [liste, setListe] = useState(assignations);
   const [selection, setSelection] = useState<Record<number, string>>({});
@@ -162,7 +164,7 @@ export default function PlanningClient({
         })}
       </main>
 
-      <BottomTabBar active="planning" role="ENTREPRISE" />
+      <BottomTabBar active="planning" role="ENTREPRISE" nonLusMessages={nonLusMessages} />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { clearSessionCookie, getSession } from "@/lib/auth";
 import { calculerDistances, geocoderAdresse, isGoogleMapsServerConfigured } from "@/lib/googleMaps";
 import { associationHabilitee, estGrandeSurface } from "@/lib/conformite";
 import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
+import { compterMessagesNonLus } from "@/lib/messagerie";
 import AssociationsProchesClient, { type AssociationAffichee } from "./AssociationsProchesClient";
 
 export const dynamic = "force-dynamic";
@@ -84,11 +85,14 @@ export default async function AssociationsProchesPage() {
     };
   });
 
+  const nonLusMessages = await compterMessagesNonLus(session);
+
   return (
     <AssociationsProchesClient
       associations={associationsAffichees}
       centreCarte={centreCarte}
       entrepriseGrandeSurface={estGrandeSurface(entreprise.surfaceVenteM2)}
+      nonLusMessages={nonLusMessages}
     />
   );
 }

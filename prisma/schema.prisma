@@ -67,6 +67,7 @@ model User {
   entreprise    Entreprise? @relation(fields: [entrepriseId], references: [id])
   associationId String?
   association   Association? @relation(fields: [associationId], references: [id])
+  messages      Message[]
   createdAt     DateTime @default(now())
 }
 
@@ -114,6 +115,7 @@ model Entreprise {
   assignationsRecurrentes AssignationRecurrente[]
   documents        Document[]
   periodesConges   PeriodeConges[]
+  conversations    Conversation[]
   createdAt        DateTime @default(now())
 }
 
@@ -155,6 +157,7 @@ model Association {
   benevoles                 Benevole[]
   documents                 Document[]
   periodesConges            PeriodeConges[]
+  conversations             Conversation[]
   createdAt                 DateTime      @default(now())
 }
 
@@ -181,6 +184,46 @@ model PeriodeConges {
   fin           DateTime
   motif         String?
   createdAt     DateTime     @default(now())
+}
+
+enum PrioriteMessage {
+  NORMALE
+  IMPORTANTE
+  URGENTE
+}
+
+// Messagerie interne organisée par fils de discussion : soit entre une entreprise et une
+// association (partenaires ayant signé une convention), soit entre l'une des deux et le
+// coordinateur de la plateforme (canal support). `avecCoordinateur` distingue les deux cas
+// puisque `entrepriseId`/`associationId` peuvent chacun être seuls renseignés dans les deux.
+model Conversation {
+  id                  String        @id @default(cuid())
+  entrepriseId        String?
+  entreprise          Entreprise?   @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  associationId       String?
+  association         Association?  @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  avecCoordinateur    Boolean       @default(false)
+  luParEntrepriseLe   DateTime?
+  luParAssociationLe  DateTime?
+  luParCoordinateurLe DateTime?
+  messages            Message[]
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+}
+
+model Message {
+  id                      String          @id @default(cuid())
+  conversationId          String
+  conversation            Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  expediteurId            String
+  expediteur              User            @relation(fields: [expediteurId], references: [id])
+  contenu                 String?
+  priorite                PrioriteMessage @default(NORMALE)
+  pieceJointeNomFichier   String?
+  pieceJointeContentType  String?
+  pieceJointeContenu      Bytes?
+  pieceJointeTailleOctets Int?
+  createdAt               DateTime        @default(now())
 }
 
 enum TypeDocument {
@@ -306,16 +349,25 @@ model Signature {
   referenceDocuSign String?
 }
 
+enum StatutAttestation {
+  BROUILLON
+  ENVOYEE
+  SIGNEE
+}
+
 model AttestationFiscale {
-  id               String      @id @default(cuid())
-  numeroOrdre      String      @unique
-  entrepriseId     String
-  entreprise       Entreprise  @relation(fields: [entrepriseId], references: [id])
-  associationId    String
-  association      Association @relation(fields: [associationId], references: [id])
-  periodeDebut     DateTime
-  periodeFin       DateTime
-  montantCalcule   Float
-  bonsEnlevement   BonEnlevement[]
-  createdAt        DateTime    @default(now())
+  id                     String            @id @default(cuid())
+  numeroOrdre            String            @unique
+  entrepriseId           String
+  entreprise             Entreprise        @relation(fields: [entrepriseId], references: [id])
+  associationId          String
+  association            Association       @relation(fields: [associationId], references: [id])
+  periodeDebut           DateTime
+  periodeFin             DateTime
+  montantCalcule         Float
+  statut                 StatutAttestation @default(BROUILLON)
+  docusignEnvelopeId     String?
+  signatureAssociationLe DateTime?
+  bonsEnlevement         BonEnlevement[]
+  createdAt              DateTime          @default(now())
 }
