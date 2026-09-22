@@ -67,6 +67,22 @@ export async function getSession(): Promise<SessionPayload | null> {
   return verifySessionToken(token);
 }
 
+/**
+ * Vrai si la session est autorisée à consulter une ressource partagée entre une entreprise et
+ * une association (bon d'enlèvement, attestation fiscale, convention) : le coordinateur voit
+ * tout, chaque partie ne voit que ce qui la concerne.
+ */
+export function estAutoriseSurRessource(
+  session: SessionPayload,
+  ressource: { entrepriseId: string; associationId: string }
+): boolean {
+  return (
+    session.role === "COORDINATEUR" ||
+    (session.role === "ENTREPRISE" && session.entrepriseId === ressource.entrepriseId) ||
+    (session.role === "ASSOCIATION" && session.associationId === ressource.associationId)
+  );
+}
+
 export function landingPathForRole(role: Role): string {
   switch (role) {
     case "ASSOCIATION":

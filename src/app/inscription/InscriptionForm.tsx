@@ -8,6 +8,7 @@ import type { SuggestionAdresse } from "@/lib/ignAdresse";
 import PointsChargement from "@/components/PointsChargement";
 import TogglePill from "@/components/TogglePill";
 import InfoBulle from "@/components/InfoBulle";
+import SubmitButton from "@/components/SubmitButton";
 
 type TypeCompte = "ENTREPRISE" | "ASSOCIATION";
 
@@ -18,6 +19,10 @@ const MESSAGES_ERREUR: Record<string, string> = {
   champs_manquants: "Merci de renseigner tous les champs obligatoires (y compris les documents requis).",
   type_invalide: "Merci de choisir un type de compte.",
   fichier_trop_volumineux: "Un des documents dépasse la taille maximale autorisée (5 Mo).",
+  fichier_type_invalide: "Un des documents n'est pas dans un format accepté (PDF, JPEG, PNG ou WebP).",
+  champ_trop_long: "Un des champs dépasse la longueur maximale autorisée.",
+  siret_invalide: "Le SIRET doit contenir exactement 14 chiffres.",
+  rna_invalide: "Le numéro RNA doit être au format W suivi de 9 chiffres (ex. W751234567).",
 };
 
 export default function InscriptionForm({
@@ -320,9 +325,12 @@ export default function InscriptionForm({
         </div>
       </div>
 
-      <button type="submit" className="w-full rounded-full bg-brand py-3 text-sm font-bold text-white transition-transform active:scale-[0.98]">
+      <SubmitButton
+        pendingText="Création du compte…"
+        className="w-full rounded-full bg-brand py-3 text-sm font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-60"
+      >
         Créer mon compte
-      </button>
+      </SubmitButton>
 
       <p className="text-center text-xs text-ink-muted">
         Déjà un compte ?{" "}

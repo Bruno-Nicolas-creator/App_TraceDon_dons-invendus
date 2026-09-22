@@ -56,20 +56,33 @@ export default function BonEnlevementClient({
   const peutControlerArticles = role === "ASSOCIATION";
   const [erreurSignature, setErreurSignature] = useState<string | null>(null);
   const [signatureEnCours, setSignatureEnCours] = useState<"DONATEUR" | "ASSOCIATION" | null>(null);
+  const [confirmationEnCours, setConfirmationEnCours] = useState(false);
   const [, startTransition] = useTransition();
 
   const valider = (article: ArticleAffiche) => {
     if (article.bloque) return;
+    const statutPrecedent = article.statut;
     setArticles((prev) => prev.map((a) => (a.id === article.id ? { ...a, statut: "VALIDE" } : a)));
-    startTransition(() => {
-      void validerArticle(article.id);
+    startTransition(async () => {
+      try {
+        await validerArticle(article.id);
+      } catch (e) {
+        setArticles((prev) => prev.map((a) => (a.id === article.id ? { ...a, statut: statutPrecedent } : a)));
+        setErreurSignature(e instanceof Error ? e.message : "Impossible de valider cet article.");
+      }
     });
   };
 
   const refuser = (article: ArticleAffiche) => {
+    const statutPrecedent = article.statut;
     setArticles((prev) => prev.map((a) => (a.id === article.id ? { ...a, statut: "REFUSE" } : a)));
-    startTransition(() => {
-      void refuserArticle(article.id, motifs[article.id] ?? "");
+    startTransition(async () => {
+      try {
+        await refuserArticle(article.id, motifs[article.id] ?? "");
+      } catch (e) {
+        setArticles((prev) => prev.map((a) => (a.id === article.id ? { ...a, statut: statutPrecedent } : a)));
+        setErreurSignature(e instanceof Error ? e.message : "Impossible de refuser cet article.");
+      }
     });
   };
 
@@ -92,10 +105,12 @@ export default function BonEnlevementClient({
   const poidsRetenu = articles.filter((a) => a.statut === "VALIDE").reduce((total, a) => total + a.poidsKg, 0);
 
   const confirmer = () => {
+    setConfirmationEnCours(true);
     startTransition(async () => {
       const resultat = await confirmerBon(bon.id);
       if (!resultat.ok) {
         setErreurSignature(resultat.error ?? "Impossible de confirmer.");
+        setConfirmationEnCours(false);
         return;
       }
       setErreurSignature(null);
@@ -387,8 +402,13 @@ export default function BonEnlevementClient({
         {erreurSignature && (
           <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreurSignature}</div>
         )}
-        <button type="button" onClick={confirmer} className="w-full rounded-full bg-brand py-3.5 text-[15px] font-bold text-white transition-transform active:scale-[0.98]">
-          Confirmer l&apos;enlèvement
+        <button
+          type="button"
+          onClick={confirmer}
+          disabled={confirmationEnCours}
+          className="w-full rounded-full bg-brand py-3.5 text-[15px] font-bold text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {confirmationEnCours ? "Confirmation…" : "Confirmer l'enlèvement"}
         </button>
       </footer>
     </div>

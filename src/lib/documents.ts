@@ -68,4 +68,44 @@ export function definitionDocument(type: TypeDocument): DefinitionDocument {
   return trouve;
 }
 
+/** Vérifie que le type de document demandé appartient bien à la liste autorisée pour ce rôle. */
+export function definitionDocumentPourRole(
+  role: "ENTREPRISE" | "ASSOCIATION",
+  type: string
+): DefinitionDocument {
+  const liste = role === "ENTREPRISE" ? DOCUMENTS_ENTREPRISE : DOCUMENTS_ASSOCIATION;
+  const trouve = liste.find((d) => d.type === type);
+  if (!trouve) throw new Error(`Type de document invalide pour ce profil : ${type}`);
+  return trouve;
+}
+
 export const TAILLE_MAX_DOCUMENT_OCTETS = 5 * 1024 * 1024;
+
+/**
+ * Types MIME acceptés pour un document du coffre-fort. Restreint volontairement à des formats
+ * qui ne s'exécutent jamais comme du contenu actif dans un navigateur (contrairement à
+ * text/html, image/svg+xml, etc.), pour empêcher qu'un fichier téléversé serve de vecteur XSS
+ * lorsqu'il est ensuite resservi avec Content-Disposition: inline.
+ */
+const TYPES_MIME_AUTORISES = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
+export function validerFichierDocument(fichier: File): { ok: true } | { ok: false; error: string } {
+  if (fichier.size === 0) return { ok: false, error: "Aucun fichier sélectionné." };
+  if (fichier.size > TAILLE_MAX_DOCUMENT_OCTETS) return { ok: false, error: "Fichier trop volumineux (5 Mo maximum)." };
+  if (!TYPES_MIME_AUTORISES.has(fichier.type)) {
+    return { ok: false, error: "Format non accepté : seuls les PDF et images (JPEG, PNG, WebP) sont autorisés." };
+  }
+  return { ok: true };
+}
+
+/** Nettoie un nom de fichier fourni par l'utilisateur avant de le stocker/renvoyer dans un en-tête HTTP. */
+export function nomFichierSur(nomOriginal: string): string {
+  const base = nomOriginal.split(/[/\\]/).pop() ?? "document";
+  const nettoye = base.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(-150);
+  return nettoye || "document";
+}

@@ -1,16 +1,9 @@
 "use server";
 
-import { headers } from "next/headers";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { obtenirUrlSignatureEmbarquee, type RoleSignataire } from "@/lib/docusign";
-
-async function origineRequete(): Promise<string> {
-  const en = await headers();
-  const proto = en.get("x-forwarded-proto") ?? "http";
-  const host = en.get("host");
-  return `${proto}://${host}`;
-}
+import { origineRequete } from "@/lib/requestOrigin";
 
 export async function demarrerSignatureDocuSign(
   bonId: string,

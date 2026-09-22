@@ -1,16 +1,10 @@
 "use server";
 
-import { headers } from "next/headers";
 import { getSession } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { obtenirOuCreerConvention } from "@/lib/convention";
 import { obtenirUrlSignatureEmbarqueeConvention, type RoleSignataire } from "@/lib/docusign";
-
-async function origineRequete(): Promise<string> {
-  const en = await headers();
-  const proto = en.get("x-forwarded-proto") ?? "http";
-  const host = en.get("host");
-  return `${proto}://${host}`;
-}
+import { origineRequete } from "@/lib/requestOrigin";
 
 export async function demarrerConventionAction(
   autrePartieId: string
@@ -43,6 +37,13 @@ export async function demarrerSignatureConventionAction(
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   const session = await getSession();
   if (!session) return { ok: false, error: "Non authentifié." };
+
+  const convention = await prisma.convention.findUnique({ where: { id: conventionId } });
+  if (!convention) return { ok: false, error: "Convention introuvable." };
+  const autorise =
+    (role === "DONATEUR" && session.role === "ENTREPRISE" && convention.entrepriseId === session.entrepriseId) ||
+    (role === "ASSOCIATION" && session.role === "ASSOCIATION" && convention.associationId === session.associationId);
+  if (!autorise) return { ok: false, error: "Vous ne pouvez signer que pour votre propre organisation." };
 
   try {
     const origin = await origineRequete();

@@ -1,6 +1,6 @@
 import InfoBulle from "@/components/InfoBulle";
 import { DOCUMENTS_ENTREPRISE, DOCUMENTS_ASSOCIATION, type TypeDocument } from "@/lib/documents";
-import { televerserDocumentAction } from "./actions";
+import DocumentUploadForm from "./DocumentUploadForm";
 
 export type DocumentExistant = {
   id: string;
@@ -69,22 +69,7 @@ export default function CoffreFort({
                 </a>
               )}
 
-              <form action={televerserDocumentAction} className="flex items-center gap-2">
-                <input type="hidden" name="type" value={def.type} />
-                <input
-                  type="file"
-                  name="fichier"
-                  accept="application/pdf,image/*"
-                  required={def.obligatoire && !existant}
-                  className="min-w-0 flex-1 text-[11px] text-ink-muted file:mr-2 file:rounded-full file:border-0 file:bg-ink file:px-2.5 file:py-1.5 file:text-[11px] file:font-semibold file:text-white"
-                />
-                <button
-                  type="submit"
-                  className="shrink-0 rounded-full border border-border bg-surface px-3 py-1.5 text-[11px] font-semibold transition-transform active:scale-95"
-                >
-                  {existant ? "Remplacer" : "Téléverser"}
-                </button>
-              </form>
+              <DocumentUploadForm type={def.type} obligatoire={def.obligatoire} dejaFourni={!!existant} />
             </div>
           );
         })}

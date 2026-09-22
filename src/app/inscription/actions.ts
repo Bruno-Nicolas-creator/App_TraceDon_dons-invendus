@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { createSessionCookie, hashPassword, landingPathForRole } from "@/lib/auth";
 import { rechercherOrganismes, type SuggestionOrganisme } from "@/lib/rechercheEntreprises";
 import { rechercherAdresses, type SuggestionAdresse } from "@/lib/ignAdresse";
-import { TAILLE_MAX_DOCUMENT_OCTETS } from "@/lib/documents";
+import { nomFichierSur, validerFichierDocument } from "@/lib/documents";
+import { champTropLong, LONGUEUR_MAX_ADRESSE, rnaValide, siretValide } from "@/lib/validation";
 
 function echec(code: string, email: string, type: string): never {
   const params = new URLSearchParams({ erreur: code, email, type });
@@ -19,15 +20,14 @@ async function lireFichierObligatoire(
   type: string
 ): Promise<{ nomFichier: string; contentType: string; contenu: Buffer; tailleOctets: number }> {
   const fichier = formData.get(champ);
-  if (!(fichier instanceof File) || fichier.size === 0) {
-    echec("champs_manquants", email, type);
-  }
-  if (fichier.size > TAILLE_MAX_DOCUMENT_OCTETS) {
-    echec("fichier_trop_volumineux", email, type);
+  if (!(fichier instanceof File)) echec("champs_manquants", email, type);
+  const validation = validerFichierDocument(fichier);
+  if (!validation.ok) {
+    echec(fichier.size > 0 && fichier.size <= 5 * 1024 * 1024 ? "fichier_type_invalide" : "fichier_trop_volumineux", email, type);
   }
   return {
-    nomFichier: fichier.name,
-    contentType: fichier.type || "application/octet-stream",
+    nomFichier: nomFichierSur(fichier.name),
+    contentType: fichier.type,
     contenu: Buffer.from(new Uint8Array(await fichier.arrayBuffer())),
     tailleOctets: fichier.size,
   };
@@ -56,6 +56,9 @@ export async function inscriptionAction(formData: FormData) {
   }
   if (!nomContact || !email || !motDePasse) {
     echec("champs_manquants", email, type);
+  }
+  if (champTropLong(nomContact) || champTropLong(email)) {
+    echec("champ_trop_long", email, type);
   }
   if (motDePasse.length < 8) {
     echec("mdp_court", email, type);
@@ -87,6 +90,12 @@ export async function inscriptionAction(formData: FormData) {
 
     if (!raisonSociale || !siret || !adresse) {
       echec("champs_manquants", email, type);
+    }
+    if (champTropLong(raisonSociale) || champTropLong(formeJuridique) || champTropLong(secteurActivite) || champTropLong(adresse, LONGUEUR_MAX_ADRESSE)) {
+      echec("champ_trop_long", email, type);
+    }
+    if (!siretValide(siret)) {
+      echec("siret_invalide", email, type);
     }
 
     const entreprise = await prisma.entreprise.create({
@@ -121,6 +130,12 @@ export async function inscriptionAction(formData: FormData) {
 
     if (!denomination || !rna || !adresse) {
       echec("champs_manquants", email, type);
+    }
+    if (champTropLong(denomination) || champTropLong(categorieEligibilite) || champTropLong(adresse, LONGUEUR_MAX_ADRESSE)) {
+      echec("champ_trop_long", email, type);
+    }
+    if (!rnaValide(rna)) {
+      echec("rna_invalide", email, type);
     }
 
     const recepisseRna = await lireFichierObligatoire(formData, "recepisseRna", email, type);

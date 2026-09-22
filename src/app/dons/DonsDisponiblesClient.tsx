@@ -6,15 +6,11 @@ import { useRouter } from "next/navigation";
 import BottomTabBar from "@/components/BottomTabBar";
 import GoogleMap from "@/components/GoogleMap";
 import TogglePill from "@/components/TogglePill";
+import MapPinIcon from "@/components/MapPinIcon";
+import { lienItineraire } from "@/lib/googleMapsLinks";
 import { sePositionner } from "@/app/actions";
 
 type Vue = "carte" | "liste";
-
-function lienItineraire(don: Pick<DonAffiche, "adresse" | "latitude" | "longitude">): string {
-  const destination =
-    don.latitude != null && don.longitude != null ? `${don.latitude},${don.longitude}` : don.adresse;
-  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
-}
 
 export type DonAffiche = {
   id: string;
@@ -144,10 +140,7 @@ export default function DonsDisponiblesClient({
                       onClick={(e) => e.stopPropagation()}
                       className="mt-0.5 flex items-center gap-1 text-xs text-ink-muted underline decoration-dotted underline-offset-2"
                     >
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="shrink-0">
-                        <path d="M12 22s7-7.5 7-12.5A7 7 0 0 0 5 9.5C5 14.5 12 22 12 22Z" stroke="#6B6459" strokeWidth="1.8" strokeLinejoin="round" />
-                        <circle cx="12" cy="9.5" r="2.2" stroke="#6B6459" strokeWidth="1.8" />
-                      </svg>
+                      <MapPinIcon />
                       {don.adresse}
                     </a>
                   </div>

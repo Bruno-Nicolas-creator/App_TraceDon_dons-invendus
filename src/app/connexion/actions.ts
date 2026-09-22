@@ -3,6 +3,10 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createSessionCookie, landingPathForRole, verifyPassword, type Role } from "@/lib/auth";
+import { tropDeTentatives } from "@/lib/rateLimiter";
+
+const MAX_TENTATIVES_CONNEXION = 10;
+const FENETRE_CONNEXION_MS = 5 * 60 * 1000;
 
 export async function connexionAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
@@ -10,6 +14,10 @@ export async function connexionAction(formData: FormData) {
 
   if (!email || !motDePasse) {
     redirect("/connexion?erreur=1");
+  }
+
+  if (tropDeTentatives(`connexion:${email}`, MAX_TENTATIVES_CONNEXION, FENETRE_CONNEXION_MS)) {
+    redirect("/connexion?erreur=trop_de_tentatives");
   }
 
   const utilisateur = await prisma.user.findUnique({ where: { email } });

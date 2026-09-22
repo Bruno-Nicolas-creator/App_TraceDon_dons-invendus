@@ -142,6 +142,31 @@ export default async function ProfilPage() {
       <main className="flex-1 space-y-4 px-5 pb-4">
         {carte}
 
+        {impactCumule && (
+          <div className="animate-fade-slide-in rounded-2xl bg-brand-tint p-4">
+            <div className="mb-1 text-xs font-semibold uppercase text-brand-dark">Impact cumulé</div>
+            <div className="mb-1 text-2xl font-bold text-brand-dark">
+              <CompteurAnime valeur={impactCumule.co2EviteKg} suffixe=" kg de CO2 évités" duree={1000} />{" "}
+              <span className="animate-pop-rebond">🌱</span>
+            </div>
+            <p className="text-xs leading-relaxed text-brand-dark">
+              Grâce à <CompteurAnime valeur={impactCumule.poidsTotalKg} suffixe=" kg" duree={1000} /> de dons non
+              jetés
+              {impactCumule.equivalenceKm != null && (
+                <>
+                  {" "}
+                  — soit l&apos;équivalent de{" "}
+                  <span className="font-semibold">
+                    <CompteurAnime valeur={impactCumule.equivalenceKm} suffixe=" km" duree={1000} />
+                  </span>{" "}
+                  en voiture 🚗
+                </>
+              )}
+              .
+            </p>
+          </div>
+        )}
+
         <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4">
           <div>
             <h2 className="text-sm font-semibold">Référent don</h2>
@@ -373,30 +398,6 @@ export default async function ProfilPage() {
               >
                 demarche.numerique.gouv.fr
               </a>
-              .
-            </p>
-          </div>
-        )}
-        {impactCumule && (
-          <div className="animate-fade-slide-in rounded-2xl bg-brand-tint p-4" style={{ animationDelay: "100ms" }}>
-            <div className="mb-1 text-xs font-semibold uppercase text-brand-dark">Impact cumulé</div>
-            <div className="mb-1 text-2xl font-bold text-brand-dark">
-              <CompteurAnime valeur={impactCumule.co2EviteKg} suffixe=" kg de CO2 évités" duree={1000} />{" "}
-              <span className="animate-pop-rebond">🌱</span>
-            </div>
-            <p className="text-xs leading-relaxed text-brand-dark">
-              Grâce à <CompteurAnime valeur={impactCumule.poidsTotalKg} suffixe=" kg" duree={1000} /> de dons non
-              jetés
-              {impactCumule.equivalenceKm != null && (
-                <>
-                  {" "}
-                  — soit l&apos;équivalent de{" "}
-                  <span className="font-semibold">
-                    <CompteurAnime valeur={impactCumule.equivalenceKm} suffixe=" km" duree={1000} />
-                  </span>{" "}
-                  en voiture 🚗
-                </>
-              )}
               .
             </p>
           </div>

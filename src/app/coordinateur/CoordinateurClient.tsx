@@ -70,13 +70,24 @@ export default function CoordinateurClient({
   const [verifieesLocal, setVerifieesLocal] = useState<Record<string, boolean>>({});
   const [assignesLocal, setAssignesLocal] = useState<Record<string, string>>({});
   const [selectionAssociation, setSelectionAssociation] = useState<Record<string, string>>({});
-  const [, startTransition] = useTransition();
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const toggleVerifie = (id: string, actuel: boolean) => {
     const prochain = !actuel;
+    setErreur(null);
     setVerifieesLocal((prev) => ({ ...prev, [id]: prochain }));
-    startTransition(() => {
-      void verifierAssociation(id, prochain);
+    startTransition(async () => {
+      try {
+        await verifierAssociation(id, prochain);
+      } catch (e) {
+        setVerifieesLocal((prev) => {
+          const suivant = { ...prev };
+          delete suivant[id];
+          return suivant;
+        });
+        setErreur(e instanceof Error ? e.message : "Impossible de mettre à jour la vérification.");
+      }
     });
   };
 
@@ -84,9 +95,19 @@ export default function CoordinateurClient({
     const associationId = selectionAssociation[donId] ?? associations[0]?.id;
     if (!associationId) return;
     const nomAssociation = associations.find((a) => a.id === associationId)?.nom ?? "";
+    setErreur(null);
     setAssignesLocal((prev) => ({ ...prev, [donId]: nomAssociation }));
-    startTransition(() => {
-      void assignerDon(donId, associationId);
+    startTransition(async () => {
+      try {
+        await assignerDon(donId, associationId);
+      } catch (e) {
+        setAssignesLocal((prev) => {
+          const suivant = { ...prev };
+          delete suivant[donId];
+          return suivant;
+        });
+        setErreur(e instanceof Error ? e.message : "Impossible d'assigner ce don.");
+      }
     });
   };
 
@@ -171,6 +192,8 @@ export default function CoordinateurClient({
             </span>
           </div>
 
+          {erreur && <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreur}</div>}
+
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
             <div className="rounded-2xl border border-border bg-surface p-3.5 lg:p-4.5">
               <div className="mb-2 text-xs text-ink-muted">Poids donné ce mois</div>
@@ -245,7 +268,8 @@ export default function CoordinateurClient({
                             <button
                               type="button"
                               onClick={() => toggleVerifie(asso.id, verifiee)}
-                              className={`rounded-full border border-border px-3.5 py-1.5 text-xs font-semibold transition-transform active:scale-95 ${verifiee ? "bg-brand-tint text-brand-dark" : "bg-surface"}`}
+                              disabled={isPending}
+                              className={`rounded-full border border-border px-3.5 py-1.5 text-xs font-semibold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${verifiee ? "bg-brand-tint text-brand-dark" : "bg-surface"}`}
                             >
                               {verifiee ? "Vérifiée" : "Vérifier"}
                             </button>
@@ -255,6 +279,11 @@ export default function CoordinateurClient({
                     })}
                   </tbody>
                 </table>
+                {associations.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-ink-muted">
+                    Aucune association enregistrée sur la plateforme.
+                  </div>
+                )}
               </div>
             </div>
 
@@ -291,7 +320,8 @@ export default function CoordinateurClient({
                           <button
                             type="button"
                             onClick={() => assigner(don.id)}
-                            className="shrink-0 rounded-full bg-brand px-3.5 py-2 text-xs font-bold text-white transition-transform active:scale-95"
+                            disabled={isPending}
+                            className="shrink-0 rounded-full bg-brand px-3.5 py-2 text-xs font-bold text-white transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             Assigner
                           </button>
@@ -345,6 +375,11 @@ export default function CoordinateurClient({
                   ))}
                 </tbody>
               </table>
+              {entreprises.length === 0 && (
+                <div className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-ink-muted">
+                  Aucune entreprise enregistrée sur la plateforme.
+                </div>
+              )}
             </div>
           </div>
         </main>

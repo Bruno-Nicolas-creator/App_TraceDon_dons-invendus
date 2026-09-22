@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { clearSessionCookie, getSession } from "@/lib/auth";
 import { calculerDistances, geocoderAdresse, isGoogleMapsServerConfigured } from "@/lib/googleMaps";
 import { associationHabilitee, estGrandeSurface } from "@/lib/conformite";
 import AssociationsProchesClient, { type AssociationAffichee } from "./AssociationsProchesClient";
@@ -11,7 +11,11 @@ export default async function AssociationsProchesPage() {
   const session = await getSession();
   if (!session || session.role !== "ENTREPRISE" || !session.entrepriseId) redirect("/connexion");
 
-  const entreprise = await prisma.entreprise.findUniqueOrThrow({ where: { id: session.entrepriseId } });
+  const entreprise = await prisma.entreprise.findUnique({ where: { id: session.entrepriseId } });
+  if (!entreprise) {
+    await clearSessionCookie();
+    redirect("/connexion");
+  }
   const associations = await prisma.association.findMany({ orderBy: { denomination: "asc" } });
 
   let centreCarte: { lat: number; lng: number } | null =

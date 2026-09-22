@@ -68,18 +68,28 @@ export default function NouveauDonClient({
   };
 
   const retirer = (id: string) => {
+    setErreur(null);
     setIdsEnSortie((prev) => new Set(prev).add(id));
-    startTransition(() => {
-      void retirerArticle(id);
+    startTransition(async () => {
+      try {
+        await retirerArticle(id);
+        setTimeout(() => {
+          setArticles((prev) => prev.filter((a) => a.id !== id));
+          setIdsEnSortie((prev) => {
+            const suivant = new Set(prev);
+            suivant.delete(id);
+            return suivant;
+          });
+        }, 200);
+      } catch (e) {
+        setIdsEnSortie((prev) => {
+          const suivant = new Set(prev);
+          suivant.delete(id);
+          return suivant;
+        });
+        setErreur(e instanceof Error ? e.message : "Impossible de retirer cet article.");
+      }
     });
-    setTimeout(() => {
-      setArticles((prev) => prev.filter((a) => a.id !== id));
-      setIdsEnSortie((prev) => {
-        const suivant = new Set(prev);
-        suivant.delete(id);
-        return suivant;
-      });
-    }, 200);
   };
 
   const ajouter = (event: FormEvent) => {

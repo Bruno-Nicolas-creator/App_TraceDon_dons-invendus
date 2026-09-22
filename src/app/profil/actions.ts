@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { clearSessionCookie, getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { definitionDocument, TAILLE_MAX_DOCUMENT_OCTETS, type TypeDocument } from "@/lib/documents";
+import { definitionDocumentPourRole, nomFichierSur, validerFichierDocument, type TypeDocument } from "@/lib/documents";
 
 export async function deconnexionAction() {
   await clearSessionCookie();
@@ -89,26 +89,34 @@ export async function ajouterBenevoleAction(formData: FormData) {
   revalidatePath("/profil");
 }
 
-export async function televerserDocumentAction(formData: FormData) {
+export async function televerserDocumentAction(
+  formData: FormData
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await getSession();
-  if (!session) throw new Error("Non authentifié.");
+  if (!session) return { ok: false, error: "Non authentifié." };
   if (session.role !== "ENTREPRISE" && session.role !== "ASSOCIATION") {
-    throw new Error("Action réservée aux entreprises et associations.");
+    return { ok: false, error: "Action réservée aux entreprises et associations." };
   }
 
   const type = String(formData.get("type") ?? "") as TypeDocument;
   const fichier = formData.get("fichier");
-  if (!(fichier instanceof File) || fichier.size === 0) throw new Error("Aucun fichier sélectionné.");
-  if (fichier.size > TAILLE_MAX_DOCUMENT_OCTETS) throw new Error("Fichier trop volumineux (5 Mo maximum).");
+  if (!(fichier instanceof File)) return { ok: false, error: "Aucun fichier sélectionné." };
 
-  // Valide que le type de document appartient bien au rôle de l'utilisateur.
-  definitionDocument(type);
+  const validation = validerFichierDocument(fichier);
+  if (!validation.ok) return validation;
+
+  try {
+    // Valide que le type de document appartient bien au rôle de l'utilisateur.
+    definitionDocumentPourRole(session.role, type);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Type de document invalide." };
+  }
 
   const contenu = Buffer.from(new Uint8Array(await fichier.arrayBuffer()));
   const donneesCommunes = {
     type,
-    nomFichier: fichier.name,
-    contentType: fichier.type || "application/octet-stream",
+    nomFichier: nomFichierSur(fichier.name),
+    contentType: fichier.type,
     contenu,
     tailleOctets: fichier.size,
   };
@@ -127,6 +135,7 @@ export async function televerserDocumentAction(formData: FormData) {
     });
   }
   revalidatePath("/profil");
+  return { ok: true };
 }
 
 export async function retirerBenevoleAction(benevoleId: string) {

@@ -1,5 +1,10 @@
 import Link from "next/link";
+import SubmitButton from "@/components/SubmitButton";
 import { connexionAction } from "./actions";
+
+const MESSAGES_ERREUR: Record<string, string> = {
+  trop_de_tentatives: "Trop de tentatives de connexion. Merci de réessayer dans quelques minutes.",
+};
 
 export default async function ConnexionPage({
   searchParams,
@@ -21,7 +26,7 @@ export default async function ConnexionPage({
       <form action={connexionAction} className="space-y-4 rounded-2xl border border-border bg-surface p-6">
         {erreur && (
           <div className="rounded-lg bg-accent-tint px-3 py-2 text-sm text-accent">
-            Email ou mot de passe incorrect.
+            {MESSAGES_ERREUR[erreur] ?? "Email ou mot de passe incorrect."}
           </div>
         )}
         <div>
@@ -52,9 +57,9 @@ export default async function ConnexionPage({
             className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
           />
         </div>
-        <button type="submit" className="w-full rounded-full bg-brand py-3 text-sm font-bold text-white">
+        <SubmitButton className="w-full rounded-full bg-brand py-3 text-sm font-bold text-white disabled:opacity-60">
           Se connecter
-        </button>
+        </SubmitButton>
       </form>
 
       <p className="mt-4 text-center text-xs text-ink-muted">

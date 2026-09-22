@@ -66,7 +66,7 @@ export default function BottomTabBar({ active, role }: { active: Tab; role: Role
   return (
     <nav
       aria-label="Navigation principale"
-      className="flex shrink-0 border-t border-border bg-surface px-2 pt-2.5 pb-3.5"
+      className="sticky bottom-0 z-10 flex shrink-0 border-t border-border bg-surface px-2 pt-2.5 pb-3.5"
     >
       {tabs.map((tab) => {
         const isActive = tab.id === active;

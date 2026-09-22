@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import QRCode from "qrcode";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { estAutoriseSurRessource, getSession } from "@/lib/auth";
 import BonEnlevementDocument, { type ArticlePdf } from "@/lib/pdf/BonEnlevementDocument";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ bonId: string }> }) {
@@ -17,11 +17,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   });
   if (!bon) return new NextResponse("Introuvable.", { status: 404 });
 
-  const autorise =
-    session.role === "COORDINATEUR" ||
-    (session.role === "ENTREPRISE" && session.entrepriseId === bon.entrepriseId) ||
-    (session.role === "ASSOCIATION" && session.associationId === bon.associationId);
-  if (!autorise) return new NextResponse("Non autorisé.", { status: 403 });
+  if (!estAutoriseSurRessource(session, bon)) return new NextResponse("Non autorisé.", { status: 403 });
 
   const qrDataUrl = await QRCode.toDataURL(`${request.nextUrl.origin}/bon-enlevement/${bon.donId}`, {
     margin: 1,

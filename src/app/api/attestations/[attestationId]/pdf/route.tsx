@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { estAutoriseSurRessource, getSession } from "@/lib/auth";
 import { montantEnLettres } from "@/lib/nombreEnLettres";
 import AttestationFiscaleDocument from "@/lib/pdf/AttestationFiscaleDocument";
 
@@ -17,11 +17,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   });
   if (!attestation) return new NextResponse("Introuvable.", { status: 404 });
 
-  const autorise =
-    session.role === "COORDINATEUR" ||
-    (session.role === "ENTREPRISE" && session.entrepriseId === attestation.entrepriseId) ||
-    (session.role === "ASSOCIATION" && session.associationId === attestation.associationId);
-  if (!autorise) return new NextResponse("Non autorisé.", { status: 403 });
+  if (!estAutoriseSurRessource(session, attestation)) return new NextResponse("Non autorisé.", { status: 403 });
 
   const buffer = await renderToBuffer(
     <AttestationFiscaleDocument

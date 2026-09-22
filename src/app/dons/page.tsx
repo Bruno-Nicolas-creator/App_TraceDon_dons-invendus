@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { clearSessionCookie, getSession } from "@/lib/auth";
 import { calculerDistances, geocoderAdresse, isGoogleMapsServerConfigured } from "@/lib/googleMaps";
 import DonsDisponiblesClient, { type DonAffiche } from "./DonsDisponiblesClient";
 
@@ -10,7 +10,13 @@ export default async function DonsDisponiblesPage() {
   const session = await getSession();
   if (!session || session.role !== "ASSOCIATION" || !session.associationId) redirect("/connexion");
 
-  const association = await prisma.association.findUniqueOrThrow({ where: { id: session.associationId } });
+  const association = await prisma.association.findUnique({ where: { id: session.associationId } });
+  if (!association) {
+    // Le compte associé à cette session a été supprimé entre-temps : on force une reconnexion
+    // plutôt que de laisser la page planter sur une association introuvable.
+    await clearSessionCookie();
+    redirect("/connexion");
+  }
   const dons = await prisma.don.findMany({
     where: {
       OR: [
