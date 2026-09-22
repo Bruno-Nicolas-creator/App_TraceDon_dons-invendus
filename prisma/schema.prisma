@@ -24,6 +24,7 @@ enum StatutDon {
   PUBLIE
   PRIS_EN_CHARGE
   CLOTURE
+  ANNULE
 }
 
 enum StatutArticle {
@@ -112,6 +113,7 @@ model Entreprise {
   conventions      Convention[]
   assignationsRecurrentes AssignationRecurrente[]
   documents        Document[]
+  periodesConges   PeriodeConges[]
   createdAt        DateTime @default(now())
 }
 
@@ -152,16 +154,33 @@ model Association {
   assignationsRecurrentes   AssignationRecurrente[]
   benevoles                 Benevole[]
   documents                 Document[]
+  periodesConges            PeriodeConges[]
   createdAt                 DateTime      @default(now())
 }
 
 model Benevole {
-  id            String      @id @default(cuid())
-  associationId String
-  association   Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
-  nom           String
-  telephone     String?
-  createdAt     DateTime    @default(now())
+  id                   String      @id @default(cuid())
+  associationId        String
+  association          Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  nom                  String
+  telephone            String?
+  assuranceRcAttestee  Boolean     @default(false)
+  assuranceRcAttesteeLe DateTime?
+  createdAt            DateTime    @default(now())
+}
+
+// Congés / fermeture déclarés par un commerçant ou une association : visibles par l'autre
+// partie et bloquent les dons/validations pendant la période (cf. src/lib/conges.ts).
+model PeriodeConges {
+  id            String       @id @default(cuid())
+  entrepriseId  String?
+  entreprise    Entreprise?  @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  associationId String?
+  association   Association? @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  debut         DateTime
+  fin           DateTime
+  motif         String?
+  createdAt     DateTime     @default(now())
 }
 
 enum TypeDocument {

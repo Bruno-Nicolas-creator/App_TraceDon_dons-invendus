@@ -5,14 +5,18 @@ import BottomTabBar from "@/components/BottomTabBar";
 import CompteurAnime from "@/components/CompteurAnime";
 import { calculerImpactCarbone } from "@/lib/impactCo2";
 import { associationHabilitee, estGrandeSurface, SEUIL_GRANDE_SURFACE_M2 } from "@/lib/conformite";
+import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
 import CoffreFort, { type ConventionSignee, type DocumentExistant } from "./CoffreFort";
 import {
   ajouterBenevoleAction,
+  ajouterPeriodeCongesAction,
+  basculerAssuranceRcBenevoleAction,
   deconnexionAction,
   definirConformiteAssociationAction,
   definirReferentDonAction,
   definirSurfaceVenteAction,
   retirerBenevoleAction,
+  retirerPeriodeCongesAction,
 } from "./actions";
 
 const LABEL_ROLE: Record<string, string> = {
@@ -29,7 +33,7 @@ export default async function ProfilPage() {
   let rescritNonDepose = false;
   let referentDonNom = "";
   let referentDonTelephone = "";
-  let benevoles: { id: string; nom: string; telephone: string | null }[] = [];
+  let benevoles: { id: string; nom: string; telephone: string | null; assuranceRcAttestee: boolean }[] = [];
   let surfaceVenteM2: number | null = null;
   let habilitationStatut = "NON_HABILITEE";
   let habilitationDateFin: Date | null = null;
@@ -37,12 +41,14 @@ export default async function ProfilPage() {
   let declarationDdppDate: Date | null = null;
   let documents: DocumentExistant[] = [];
   let conventionsSignees: ConventionSignee[] = [];
+  let periodesConges: { id: string; debut: Date; fin: Date; motif: string | null }[] = [];
   if (session.entrepriseId) {
     const entreprise = await prisma.entreprise.findUnique({
       where: { id: session.entrepriseId },
       include: {
         documents: true,
         conventions: { where: { statut: "SIGNEE" }, include: { association: true } },
+        periodesConges: { orderBy: { debut: "asc" } },
       },
     });
     organisation = entreprise?.raisonSociale ?? null;
@@ -55,6 +61,7 @@ export default async function ProfilPage() {
       autrePartieNom: c.association.denomination,
       signatureLe: c.signatureAssociationLe ?? c.signatureEntrepriseLe ?? c.createdAt,
     }));
+    periodesConges = entreprise?.periodesConges ?? [];
   } else if (session.associationId) {
     const association = await prisma.association.findUnique({
       where: { id: session.associationId },
@@ -62,6 +69,7 @@ export default async function ProfilPage() {
         benevoles: { orderBy: { createdAt: "asc" } },
         documents: true,
         conventions: { where: { statut: "SIGNEE" }, include: { entreprise: true } },
+        periodesConges: { orderBy: { debut: "asc" } },
       },
     });
     organisation = association?.denomination ?? null;
@@ -79,11 +87,13 @@ export default async function ProfilPage() {
       autrePartieNom: c.entreprise.raisonSociale,
       signatureLe: c.signatureAssociationLe ?? c.signatureEntrepriseLe ?? c.createdAt,
     }));
+    periodesConges = association?.periodesConges ?? [];
   }
 
   const grandeSurface = estGrandeSurface(surfaceVenteM2);
   const habilitationManquante = session.role === "ASSOCIATION" && !associationHabilitee(habilitationStatut);
   const ddppNonDeclaree = session.role === "ASSOCIATION" && !declarationDdpp;
+  const congesEnCours = periodeCongesActive(periodesConges);
   const dateInputValue = (date: Date | null) => (date ? date.toISOString().slice(0, 10) : "");
 
   let impactCumule: { co2EviteKg: number; equivalenceKm: number | null; poidsTotalKg: number } | null = null;
@@ -198,6 +208,90 @@ export default async function ProfilPage() {
           </form>
         </div>
 
+        {congesEnCours && (
+          <div className="animate-fade-slide-in flex gap-3 rounded-2xl bg-accent-tint p-4">
+            <span aria-hidden="true" className="text-lg leading-none">🌴</span>
+            <p className="text-xs leading-relaxed text-ink">
+              <span className="font-semibold text-accent">Vous êtes actuellement en congés</span> jusqu&apos;au{" "}
+              {formaterDateConges(congesEnCours.fin)}.{" "}
+              {session.role === "ENTREPRISE"
+                ? "Vos dons en cours ont été annulés et vous ne pouvez pas en publier de nouveaux pendant cette période."
+                : "Vous ne pouvez pas vous positionner sur des dons ni valider d'articles pendant cette période."}
+            </p>
+          </div>
+        )}
+
+        <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4">
+          <div>
+            <h2 className="text-sm font-semibold">Congés / Fermeture</h2>
+            <p className="mt-0.5 text-xs text-ink-muted">
+              Visible par vos partenaires. Pendant ces périodes,{" "}
+              {session.role === "ENTREPRISE"
+                ? "vos dons en cours sont annulés et vous ne pouvez pas en publier de nouveaux."
+                : "vous ne pouvez ni vous positionner sur un don ni valider d'articles."}
+            </p>
+          </div>
+
+          {periodesConges.length > 0 && (
+            <ul className="space-y-1.5">
+              {periodesConges.map((periode) => (
+                <li
+                  key={periode.id}
+                  className="flex items-center justify-between gap-2 rounded-xl bg-surface-alt px-3.5 py-2.5 text-sm"
+                >
+                  <div>
+                    <div className="font-medium">
+                      Du {formaterDateConges(periode.debut)} au {formaterDateConges(periode.fin)}
+                    </div>
+                    {periode.motif && <div className="text-xs text-ink-muted">{periode.motif}</div>}
+                  </div>
+                  <form action={retirerPeriodeCongesAction.bind(null, periode.id)}>
+                    <button
+                      type="submit"
+                      aria-label="Retirer cette période"
+                      className="text-ink-muted/70 transition-transform active:scale-90"
+                    >
+                      &times;
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <form action={ajouterPeriodeCongesAction} className="space-y-2.5">
+            <div className="flex gap-2.5">
+              <input
+                type="date"
+                name="congesDebut"
+                required
+                aria-label="Date de début"
+                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+              />
+              <input
+                type="date"
+                name="congesFin"
+                required
+                aria-label="Date de fin"
+                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+              />
+            </div>
+            <input
+              type="text"
+              name="congesMotif"
+              placeholder="Motif (optionnel)"
+              maxLength={200}
+              className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+            />
+            <button
+              type="submit"
+              className="w-full rounded-full border border-border py-2.5 text-sm font-semibold transition-transform active:scale-[0.98]"
+            >
+              + Déclarer une période de congés
+            </button>
+          </form>
+        </div>
+
         <CoffreFort role={session.role === "ENTREPRISE" ? "ENTREPRISE" : "ASSOCIATION"} documents={documents} conventionsSignees={conventionsSignees} />
 
         {session.role === "ENTREPRISE" && (
@@ -258,21 +352,34 @@ export default async function ProfilPage() {
             {benevoles.length > 0 && (
               <ul className="space-y-1.5">
                 {benevoles.map((benevole) => (
-                  <li
-                    key={benevole.id}
-                    className="flex items-center justify-between gap-2 rounded-xl bg-surface-alt px-3.5 py-2.5 text-sm"
-                  >
-                    <div>
-                      <div className="font-medium">{benevole.nom}</div>
-                      {benevole.telephone && <div className="text-xs text-ink-muted">{benevole.telephone}</div>}
+                  <li key={benevole.id} className="rounded-xl bg-surface-alt px-3.5 py-2.5 text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <div className="font-medium">{benevole.nom}</div>
+                        {benevole.telephone && <div className="text-xs text-ink-muted">{benevole.telephone}</div>}
+                      </div>
+                      <form action={retirerBenevoleAction.bind(null, benevole.id)}>
+                        <button
+                          type="submit"
+                          aria-label={`Retirer ${benevole.nom}`}
+                          className="text-ink-muted/70 transition-transform active:scale-90"
+                        >
+                          &times;
+                        </button>
+                      </form>
                     </div>
-                    <form action={retirerBenevoleAction.bind(null, benevole.id)}>
+                    <form action={basculerAssuranceRcBenevoleAction.bind(null, benevole.id)} className="mt-2">
                       <button
                         type="submit"
-                        aria-label={`Retirer ${benevole.nom}`}
-                        className="text-ink-muted/70 transition-transform active:scale-90"
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-transform active:scale-95 ${
+                          benevole.assuranceRcAttestee
+                            ? "bg-brand/15 text-brand"
+                            : "bg-amber-500/15 text-amber-700"
+                        }`}
                       >
-                        &times;
+                        {benevole.assuranceRcAttestee
+                          ? "✓ Assurance RC attestée"
+                          : "⚠ Assurance RC non attestée"}
                       </button>
                     </form>
                   </li>
@@ -286,14 +393,23 @@ export default async function ProfilPage() {
                 name="benevoleNom"
                 placeholder="Nom du bénévole"
                 required
+                maxLength={200}
                 className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
               />
               <input
                 type="tel"
                 name="benevoleTelephone"
                 placeholder="Téléphone (optionnel)"
+                maxLength={200}
                 className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
               />
+              <label className="flex items-start gap-2 text-xs text-ink-muted">
+                <input type="checkbox" name="benevoleAssuranceRc" className="mt-0.5" />
+                <span>
+                  J&apos;atteste que ce bénévole dispose d&apos;une assurance responsabilité civile en cours de
+                  validité pour ses déplacements.
+                </span>
+              </label>
               <button
                 type="submit"
                 className="w-full rounded-full border border-border py-2.5 text-sm font-semibold transition-transform active:scale-[0.98]"

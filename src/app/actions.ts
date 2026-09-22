@@ -7,6 +7,7 @@ import { rechercherProduitParCodeBarre, type ProduitScanne } from "@/lib/openFoo
 import { jourSemaineDuJour } from "@/lib/planning";
 import { conventionEstSignee, obtenirOuCreerConvention } from "@/lib/convention";
 import { associationHabilitee, estGrandeSurface } from "@/lib/conformite";
+import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
 
 async function requireSession() {
   const session = await getSession();
@@ -92,6 +93,15 @@ export async function publierDon(donId: string) {
   const don = await prisma.don.findUniqueOrThrow({ where: { id: donId } });
   if (don.entrepriseId !== session.entrepriseId) throw new Error("Don non autorisé.");
 
+  const periodesConges = await prisma.periodeConges.findMany({ where: { entrepriseId: session.entrepriseId } });
+  const congesEnCours = periodeCongesActive(periodesConges);
+  if (congesEnCours) {
+    return {
+      ok: false as const,
+      error: `Vous êtes en congés jusqu'au ${formaterDateConges(congesEnCours.fin)} : impossible de publier un don pendant cette période.`,
+    };
+  }
+
   const kbis = await prisma.document.findUnique({
     where: { entrepriseId_type: { entrepriseId: session.entrepriseId, type: "KBIS" } },
   });
@@ -152,6 +162,17 @@ export async function sePositionner(
 
   const donCible = await prisma.don.findUniqueOrThrow({ where: { id: donId } });
 
+  const periodesCongesAssociation = await prisma.periodeConges.findMany({
+    where: { associationId: session.associationId },
+  });
+  const congesEnCours = periodeCongesActive(periodesCongesAssociation);
+  if (congesEnCours) {
+    return {
+      ok: false,
+      error: `Votre association est en congés jusqu'au ${formaterDateConges(congesEnCours.fin)} : impossible de vous positionner sur un don pendant cette période.`,
+    };
+  }
+
   if (!(await conventionEstSignee(donCible.entrepriseId, session.associationId))) {
     const convention = await obtenirOuCreerConvention(donCible.entrepriseId, session.associationId);
     return {
@@ -207,6 +228,17 @@ async function requireControleAssociation(articleId: string) {
 
 export async function validerArticle(articleId: string) {
   const article = await requireControleAssociation(articleId);
+
+  const periodesCongesAssociation = await prisma.periodeConges.findMany({
+    where: { associationId: article.don.associationAssigneeId as string },
+  });
+  const congesEnCours = periodeCongesActive(periodesCongesAssociation);
+  if (congesEnCours) {
+    throw new Error(
+      `Votre association est en congés jusqu'au ${formaterDateConges(congesEnCours.fin)} : la validation des dons est suspendue pendant cette période.`
+    );
+  }
+
   if (article.dlcDepassee) return; // le refus est obligatoire, cf. cahier des charges
   await prisma.article.update({ where: { id: articleId }, data: { statut: "VALIDE", motifRefus: null } });
   revalidatePath("/bon-enlevement");

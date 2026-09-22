@@ -19,6 +19,7 @@ export type AssociationAffichee = {
   habilitee: boolean;
   latitude: number | null;
   longitude: number | null;
+  congesJusquau: string | null;
 };
 
 export default function AssociationsProchesClient({
@@ -112,6 +113,11 @@ export default function AssociationsProchesClient({
                     }`}
                   >
                     {association.habilitee ? "Habilitée" : "Non habilitée"}
+                  </span>
+                )}
+                {association.congesJusquau && (
+                  <span className="rounded-full bg-accent-tint px-2.5 py-1 text-xs font-semibold text-accent">
+                    🌴 En congés jusqu&apos;au {association.congesJusquau}
                   </span>
                 )}
               </div>

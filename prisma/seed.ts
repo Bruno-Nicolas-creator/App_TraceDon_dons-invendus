@@ -67,6 +67,7 @@ async function creerDocument(
 
 async function main() {
   await prisma.document.deleteMany();
+  await prisma.periodeConges.deleteMany();
   await prisma.assignationRecurrente.deleteMany();
   await prisma.benevole.deleteMany();
   await prisma.signature.deleteMany();
@@ -226,10 +227,33 @@ async function main() {
 
   await prisma.benevole.createMany({
     data: [
-      { associationId: coeurPartage.id, nom: "Amina Bensalem", telephone: "06 11 22 33 44" },
+      {
+        associationId: coeurPartage.id,
+        nom: "Amina Bensalem",
+        telephone: "06 11 22 33 44",
+        assuranceRcAttestee: true,
+        assuranceRcAttesteeLe: new Date(),
+      },
       { associationId: coeurPartage.id, nom: "Marc Lefèvre", telephone: "06 22 33 44 55" },
-      { associationId: restoSolidaire.id, nom: "Sofia Ricci", telephone: "06 33 44 55 66" },
+      {
+        associationId: restoSolidaire.id,
+        nom: "Sofia Ricci",
+        telephone: "06 33 44 55 66",
+        assuranceRcAttestee: true,
+        assuranceRcAttesteeLe: new Date(),
+      },
     ],
+  });
+
+  // Une période de congés à venir, pour démontrer le badge visible par l'autre partie
+  // sans perturber les autres scénarios de démo (positionnement, publication...).
+  await prisma.periodeConges.create({
+    data: {
+      associationId: restoSolidaire.id,
+      debut: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      fin: new Date(Date.now() + 37 * 24 * 60 * 60 * 1000),
+      motif: "Fermeture annuelle",
+    },
   });
 
   await prisma.association.create({

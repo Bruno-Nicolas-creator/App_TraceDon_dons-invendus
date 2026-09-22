@@ -31,9 +31,11 @@ type Don = {
 export default function NouveauDonClient({
   don,
   associationsAujourdhui,
+  congesJusquau,
 }: {
   don: Don;
   associationsAujourdhui: string[];
+  congesJusquau: string | null;
 }) {
   const [donId, setDonId] = useState(don.id);
   const [mode, setMode] = useState(don.mode);
@@ -232,6 +234,15 @@ export default function NouveauDonClient({
       </div>
 
       <main className="flex-1 space-y-5 px-5 pb-4">
+        {congesJusquau && !vientDetrePublie && (
+          <div className="flex gap-3 rounded-xl bg-accent-tint px-4 py-3.5">
+            <span aria-hidden="true" className="text-lg leading-none">🌴</span>
+            <p className="text-xs leading-relaxed text-ink">
+              <span className="font-semibold text-accent">Vous êtes en congés</span> jusqu&apos;au {congesJusquau}.
+              Vous ne pouvez pas publier de don pendant cette période.
+            </p>
+          </div>
+        )}
         {associationsAujourdhui.length === 1 && !vientDetrePublie && (
           <div className="rounded-xl bg-brand-tint px-4 py-3.5 text-sm leading-snug text-brand-dark">
             Aujourd&apos;hui, ce don sera directement remis à <strong>{associationsAujourdhui[0]}</strong> (planning
@@ -498,7 +509,7 @@ export default function NouveauDonClient({
         <button
           type="button"
           onClick={publier}
-          disabled={articles.length === 0 || isPending}
+          disabled={articles.length === 0 || isPending || !!congesJusquau}
           className="w-full rounded-full bg-brand py-3.5 text-base font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
         >
           Publier le don

@@ -22,14 +22,17 @@ export type DonAffiche = {
   positionne: boolean;
   latitude: number | null;
   longitude: number | null;
+  congesJusquau: string | null;
 };
 
 export default function DonsDisponiblesClient({
   dons,
   centreCarte,
+  congesAssociationJusquau,
 }: {
   dons: DonAffiche[];
   centreCarte: { lat: number; lng: number } | null;
+  congesAssociationJusquau: string | null;
 }) {
   const [vue, setVue] = useState<Vue>("carte");
   const carteConfiguree = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) && centreCarte !== null;
@@ -93,6 +96,16 @@ export default function DonsDisponiblesClient({
       </header>
 
       <main className="flex-1 space-y-4 px-5 pb-4">
+        {congesAssociationJusquau && (
+          <div className="flex gap-3 rounded-2xl bg-accent-tint p-4">
+            <span aria-hidden="true" className="text-lg leading-none">🌴</span>
+            <p className="text-xs leading-relaxed text-ink">
+              <span className="font-semibold text-accent">Vous êtes en congés</span> jusqu&apos;au{" "}
+              {congesAssociationJusquau}. Vous ne pouvez pas vous positionner sur des dons pendant cette période.
+            </p>
+          </div>
+        )}
+
         {erreur && <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreur}</div>}
 
         {vue === "carte" && (
@@ -146,9 +159,14 @@ export default function DonsDisponiblesClient({
                   </div>
                   <span className="whitespace-nowrap rounded-full bg-brand-tint px-2.5 py-1 text-xs font-semibold text-brand-dark">{don.distance}</span>
                 </div>
-                <div className="mb-2.5 flex gap-2 text-xs text-ink-muted">
+                <div className="mb-2.5 flex flex-wrap gap-2 text-xs text-ink-muted">
                   <span className="rounded-full bg-surface-alt px-2.5 py-1">{don.categorie}</span>
                   <span className="rounded-full bg-surface-alt px-2.5 py-1">&#8776; {don.poids}</span>
+                  {don.congesJusquau && (
+                    <span className="rounded-full bg-accent-tint px-2.5 py-1 font-semibold text-accent">
+                      🌴 Commerçant en congés jusqu&apos;au {don.congesJusquau}
+                    </span>
+                  )}
                 </div>
                 {positionne ? (
                   <div className="space-y-2">
@@ -187,7 +205,7 @@ export default function DonsDisponiblesClient({
                   <button
                     type="button"
                     onClick={() => positionner(don.id)}
-                    disabled={isPending}
+                    disabled={isPending || !!congesAssociationJusquau}
                     className="w-full rounded-full bg-brand py-2.5 text-sm font-bold text-white transition-transform active:scale-95 disabled:opacity-50"
                   >
                     Se positionner

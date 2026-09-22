@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { jourSemaineDuJour } from "@/lib/planning";
+import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
 import NouveauDonClient from "./NouveauDonClient";
 
 // Cette page peut créer un brouillon en base : elle ne doit jamais être
@@ -33,5 +34,14 @@ export default async function NouveauDonPage() {
   });
   const associationsAujourdhui = assignationsAujourdhui.map((a) => a.association.denomination);
 
-  return <NouveauDonClient don={don} associationsAujourdhui={associationsAujourdhui} />;
+  const periodesConges = await prisma.periodeConges.findMany({ where: { entrepriseId: session.entrepriseId } });
+  const congesEnCours = periodeCongesActive(periodesConges);
+
+  return (
+    <NouveauDonClient
+      don={don}
+      associationsAujourdhui={associationsAujourdhui}
+      congesJusquau={congesEnCours ? formaterDateConges(congesEnCours.fin) : null}
+    />
+  );
 }

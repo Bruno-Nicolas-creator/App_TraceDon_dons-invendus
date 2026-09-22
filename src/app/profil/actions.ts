@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { clearSessionCookie, getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { definitionDocumentPourRole, nomFichierSur, validerFichierDocument, type TypeDocument } from "@/lib/documents";
+import { champTropLong, LONGUEUR_MAX_CHAMP_COURT } from "@/lib/validation";
 
 export async function deconnexionAction() {
   await clearSessionCookie();
@@ -82,9 +83,37 @@ export async function ajouterBenevoleAction(formData: FormData) {
   const nom = String(formData.get("benevoleNom") ?? "").trim();
   const telephone = String(formData.get("benevoleTelephone") ?? "").trim();
   if (!nom) return;
+  if (champTropLong(nom, LONGUEUR_MAX_CHAMP_COURT) || champTropLong(telephone, LONGUEUR_MAX_CHAMP_COURT)) {
+    throw new Error("Champ trop long.");
+  }
+
+  const assuranceRcAttestee = formData.get("benevoleAssuranceRc") === "on";
 
   await prisma.benevole.create({
-    data: { associationId: session.associationId, nom, telephone: telephone || null },
+    data: {
+      associationId: session.associationId,
+      nom,
+      telephone: telephone || null,
+      assuranceRcAttestee,
+      assuranceRcAttesteeLe: assuranceRcAttestee ? new Date() : null,
+    },
+  });
+  revalidatePath("/profil");
+}
+
+export async function basculerAssuranceRcBenevoleAction(benevoleId: string) {
+  const session = await getSession();
+  if (!session || session.role !== "ASSOCIATION" || !session.associationId) {
+    throw new Error("Action réservée aux associations.");
+  }
+
+  const benevole = await prisma.benevole.findUniqueOrThrow({ where: { id: benevoleId } });
+  if (benevole.associationId !== session.associationId) throw new Error("Bénévole non autorisé.");
+
+  const assuranceRcAttestee = !benevole.assuranceRcAttestee;
+  await prisma.benevole.update({
+    where: { id: benevoleId },
+    data: { assuranceRcAttestee, assuranceRcAttesteeLe: assuranceRcAttestee ? new Date() : null },
   });
   revalidatePath("/profil");
 }
@@ -149,4 +178,65 @@ export async function retirerBenevoleAction(benevoleId: string) {
 
   await prisma.benevole.delete({ where: { id: benevoleId } });
   revalidatePath("/profil");
+}
+
+export async function ajouterPeriodeCongesAction(formData: FormData) {
+  const session = await getSession();
+  if (!session || (session.role !== "ENTREPRISE" && session.role !== "ASSOCIATION")) {
+    throw new Error("Action réservée aux entreprises et associations.");
+  }
+
+  const debutBrut = String(formData.get("congesDebut") ?? "").trim();
+  const finBrut = String(formData.get("congesFin") ?? "").trim();
+  const motif = String(formData.get("congesMotif") ?? "").trim();
+  if (!debutBrut || !finBrut) throw new Error("Les dates de début et de fin sont requises.");
+  if (champTropLong(motif, LONGUEUR_MAX_CHAMP_COURT)) throw new Error("Motif trop long.");
+
+  const debut = new Date(debutBrut);
+  const fin = new Date(`${finBrut}T23:59:59`);
+  if (Number.isNaN(debut.getTime()) || Number.isNaN(fin.getTime()) || fin < debut) {
+    throw new Error("Période de congés invalide.");
+  }
+
+  if (session.role === "ENTREPRISE" && session.entrepriseId) {
+    await prisma.periodeConges.create({
+      data: { entrepriseId: session.entrepriseId, debut, fin, motif: motif || null },
+    });
+    // Une fermeture déjà en cours annule immédiatement les dons actifs : l'entreprise ne
+    // sera pas là pour honorer l'enlèvement pendant sa période de congés.
+    if (debut <= new Date()) {
+      await prisma.don.updateMany({
+        where: { entrepriseId: session.entrepriseId, statut: { in: ["PUBLIE", "PRIS_EN_CHARGE"] } },
+        data: { statut: "ANNULE" },
+      });
+    }
+  } else if (session.role === "ASSOCIATION" && session.associationId) {
+    await prisma.periodeConges.create({
+      data: { associationId: session.associationId, debut, fin, motif: motif || null },
+    });
+  }
+
+  revalidatePath("/profil");
+  revalidatePath("/dons");
+  revalidatePath("/associations");
+  revalidatePath("/");
+}
+
+export async function retirerPeriodeCongesAction(periodeId: string) {
+  const session = await getSession();
+  if (!session || (session.role !== "ENTREPRISE" && session.role !== "ASSOCIATION")) {
+    throw new Error("Action réservée aux entreprises et associations.");
+  }
+
+  const periode = await prisma.periodeConges.findUniqueOrThrow({ where: { id: periodeId } });
+  const autorise =
+    (session.role === "ENTREPRISE" && periode.entrepriseId === session.entrepriseId) ||
+    (session.role === "ASSOCIATION" && periode.associationId === session.associationId);
+  if (!autorise) throw new Error("Période non autorisée.");
+
+  await prisma.periodeConges.delete({ where: { id: periodeId } });
+  revalidatePath("/profil");
+  revalidatePath("/dons");
+  revalidatePath("/associations");
+  revalidatePath("/");
 }

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { clearSessionCookie, getSession } from "@/lib/auth";
 import { calculerDistances, geocoderAdresse, isGoogleMapsServerConfigured } from "@/lib/googleMaps";
 import { associationHabilitee, estGrandeSurface } from "@/lib/conformite";
+import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
 import AssociationsProchesClient, { type AssociationAffichee } from "./AssociationsProchesClient";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,10 @@ export default async function AssociationsProchesPage() {
     await clearSessionCookie();
     redirect("/connexion");
   }
-  const associations = await prisma.association.findMany({ orderBy: { denomination: "asc" } });
+  const associations = await prisma.association.findMany({
+    orderBy: { denomination: "asc" },
+    include: { periodesConges: true },
+  });
 
   let centreCarte: { lat: number; lng: number } | null =
     entreprise.latitude != null && entreprise.longitude != null
@@ -65,16 +69,20 @@ export default async function AssociationsProchesPage() {
   const avecDistance = associations.map((association, i) => ({ association, distanceKm: distances[i] }));
   avecDistance.sort((a, b) => distanceEnMetres(a.distanceKm) - distanceEnMetres(b.distanceKm));
 
-  const associationsAffichees: AssociationAffichee[] = avecDistance.map(({ association, distanceKm }) => ({
-    id: association.id,
-    nom: association.denomination,
-    adresse: association.adresse,
-    distance: distanceKm ?? "—",
-    categorie: association.categorieEligibilite ?? "—",
-    habilitee: associationHabilitee(association.habilitationStatut),
-    latitude: association.latitude,
-    longitude: association.longitude,
-  }));
+  const associationsAffichees: AssociationAffichee[] = avecDistance.map(({ association, distanceKm }) => {
+    const congesEnCours = periodeCongesActive(association.periodesConges);
+    return {
+      id: association.id,
+      nom: association.denomination,
+      adresse: association.adresse,
+      distance: distanceKm ?? "—",
+      categorie: association.categorieEligibilite ?? "—",
+      habilitee: associationHabilitee(association.habilitationStatut),
+      latitude: association.latitude,
+      longitude: association.longitude,
+      congesJusquau: congesEnCours ? formaterDateConges(congesEnCours.fin) : null,
+    };
+  });
 
   return (
     <AssociationsProchesClient
