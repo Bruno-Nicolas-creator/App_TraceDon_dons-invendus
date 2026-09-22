@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import BottomTabBar from "@/components/BottomTabBar";
+import IconeArticle from "@/components/IconeArticle";
 import PointsChargement from "@/components/PointsChargement";
 import TogglePill from "@/components/TogglePill";
 
@@ -284,7 +285,7 @@ export default function NouveauDonClient({
             )}
           </div>
         )}
-        {mode === "LISTE_PREALABLE" && (
+        {mode === "LISTE_PREALABLE" && associationsAujourdhui.length !== 1 && !vientDetrePublie && (
           <div className="flex items-start gap-2.5 rounded-xl bg-brand-tint px-4 py-3.5">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0" aria-hidden="true">
               <path d="M12 8V13" stroke="#2E6B4E" strokeWidth="2" strokeLinecap="round" />
@@ -313,9 +314,7 @@ export default function NouveauDonClient({
                 }`}
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-alt">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path d="M4 7L12 3L20 7V17L12 21L4 17V7Z" stroke="#6B6459" strokeWidth="1.6" strokeLinejoin="round" />
-                  </svg>
+                  <IconeArticle designation={article.designation} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-semibold">{article.designation}</div>

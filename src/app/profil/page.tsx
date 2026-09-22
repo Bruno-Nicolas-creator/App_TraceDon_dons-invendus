@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import BottomTabBar from "@/components/BottomTabBar";
 import CompteurAnime from "@/components/CompteurAnime";
+import LienTelephone from "@/components/LienTelephone";
 import { calculerImpactCarbone } from "@/lib/impactCo2";
 import { associationHabilitee, estGrandeSurface, SEUIL_GRANDE_SURFACE_M2 } from "@/lib/conformite";
 import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
@@ -359,7 +360,11 @@ export default async function ProfilPage() {
                     <div className="flex items-center justify-between gap-2">
                       <div>
                         <div className="font-medium">{benevole.nom}</div>
-                        {benevole.telephone && <div className="text-xs text-ink-muted">{benevole.telephone}</div>}
+                        {benevole.telephone && (
+                          <div className="text-xs text-ink-muted">
+                            <LienTelephone numero={benevole.telephone} />
+                          </div>
+                        )}
                       </div>
                       <form action={retirerBenevoleAction.bind(null, benevole.id)}>
                         <button
