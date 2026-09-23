@@ -14,11 +14,6 @@ enum Role {
   COORDINATEUR
 }
 
-enum ModeDon {
-  LISTE_PREALABLE
-  BORDEREAU_OUVERT
-}
-
 enum StatutDon {
   BROUILLON
   PUBLIE
@@ -266,8 +261,7 @@ model Document {
 }
 
 // Planning hebdomadaire : association(s) attendue(s) chaque jour de la semaine
-// pour un enlèvement récurrent (mode "bordereau ouvert" — la liste des
-// articles n'est renseignée qu'au moment de l'enlèvement).
+// pour un enlèvement récurrent.
 model AssignationRecurrente {
   id            String      @id @default(cuid())
   entrepriseId  String
@@ -301,7 +295,6 @@ model Don {
   id                  String       @id @default(cuid())
   entrepriseId        String
   entreprise          Entreprise   @relation(fields: [entrepriseId], references: [id])
-  mode                ModeDon      @default(BORDEREAU_OUVERT)
   statut              StatutDon    @default(BROUILLON)
   categorie           String       @default("Alimentaire")
   distanceLabel       String?

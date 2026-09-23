@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { basculerProfilDevAction } from "@/app/dev/actions";
 
-type CompteDev = { email: string; nom: string; role: string };
+type CompteDev = { kind: "ENTREPRISE" | "ASSOCIATION" | "UTILISATEUR"; id: string; nom: string; role: string };
 
 const LABEL_ROLE: Record<string, string> = {
   ENTREPRISE: "Entreprise",
@@ -12,10 +12,10 @@ const LABEL_ROLE: Record<string, string> = {
 };
 
 export default function DevProfilSwitcher({
-  emailActif,
+  cleActive,
   comptes,
 }: {
-  emailActif: string | null;
+  cleActive: string | null;
   comptes: CompteDev[];
 }) {
   const [ouvert, setOuvert] = useState(false);
@@ -45,9 +45,10 @@ export default function DevProfilSwitcher({
           </div>
           <div className="max-h-72 space-y-1 overflow-y-auto p-1.5">
             {comptesFiltres.map((compte) => {
-              const actif = compte.email === emailActif;
+              const cle = `${compte.kind}:${compte.id}`;
+              const actif = cle === cleActive;
               return (
-                <form key={compte.email} action={basculerProfilDevAction.bind(null, compte.email)}>
+                <form key={cle} action={basculerProfilDevAction.bind(null, compte.kind, compte.id)}>
                   <button
                     type="submit"
                     disabled={actif}

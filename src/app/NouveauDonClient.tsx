@@ -1,24 +1,12 @@
 "use client";
 
-import { useState, useTransition, type CSSProperties } from "react";
-import { changerModeDon, publierDon, retirerArticle } from "@/app/actions";
+import { useState, useTransition } from "react";
+import { publierDon } from "@/app/actions";
 import Link from "next/link";
-import AjouterArticleForm from "@/components/AjouterArticleForm";
 import BottomTabBar from "@/components/BottomTabBar";
-import IconeArticle from "@/components/IconeArticle";
-import TogglePill from "@/components/TogglePill";
-
-type Article = {
-  id: string;
-  designation: string;
-  quantiteDeclaree: string;
-  poidsKg: number;
-};
 
 type Don = {
   id: string;
-  mode: "LISTE_PREALABLE" | "BORDEREAU_OUVERT";
-  articles: Article[];
 };
 
 export default function NouveauDonClient({
@@ -33,48 +21,12 @@ export default function NouveauDonClient({
   nonLusMessages?: number;
 }) {
   const [donId, setDonId] = useState(don.id);
-  const [mode, setMode] = useState(don.mode);
-  const [articles, setArticles] = useState<Article[]>(don.articles);
   const [erreurPublication, setErreurPublication] = useState<string | null>(null);
   const [manqueKbis, setManqueKbis] = useState(false);
   const [vientDetrePublie, setVientDetrePublie] = useState(false);
   const [assigneA, setAssigneA] = useState<string | null>(null);
   const [donPublieId, setDonPublieId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [idsEnSortie, setIdsEnSortie] = useState<Set<string>>(new Set());
-  const [erreurRetrait, setErreurRetrait] = useState<string | null>(null);
-
-  const changerDeMode = (nouveauMode: typeof mode) => {
-    setMode(nouveauMode);
-    startTransition(() => {
-      void changerModeDon(donId, nouveauMode);
-    });
-  };
-
-  const retirer = (id: string) => {
-    setErreurRetrait(null);
-    setIdsEnSortie((prev) => new Set(prev).add(id));
-    startTransition(async () => {
-      try {
-        await retirerArticle(id);
-        setTimeout(() => {
-          setArticles((prev) => prev.filter((a) => a.id !== id));
-          setIdsEnSortie((prev) => {
-            const suivant = new Set(prev);
-            suivant.delete(id);
-            return suivant;
-          });
-        }, 200);
-      } catch (e) {
-        setIdsEnSortie((prev) => {
-          const suivant = new Set(prev);
-          suivant.delete(id);
-          return suivant;
-        });
-        setErreurRetrait(e instanceof Error ? e.message : "Impossible de retirer cet article.");
-      }
-    });
-  };
 
   const publier = () => {
     setErreurPublication(null);
@@ -88,15 +40,11 @@ export default function NouveauDonClient({
         return;
       }
       setDonId(resultat.id);
-      setMode(resultat.mode as typeof mode);
-      setArticles(resultat.articles);
       setAssigneA(resultat.assigneA);
       setDonPublieId(resultat.assigneA ? donPublieAvant : null);
       setVientDetrePublie(true);
     });
   };
-
-  const poidsTotal = articles.reduce((total, a) => total + a.poidsKg, 0);
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg">
@@ -114,15 +62,7 @@ export default function NouveauDonClient({
         <span className="rounded-full border border-border px-2.5 py-1 text-xs text-ink-muted">Brouillon</span>
       </header>
 
-      <div className="space-y-2.5 px-5 pb-4">
-        <TogglePill
-          valeur={mode}
-          onChange={changerDeMode}
-          options={[
-            { valeur: "BORDEREAU_OUVERT", label: "Bordereau ouvert" },
-            { valeur: "LISTE_PREALABLE", label: "Liste à l'avance" },
-          ]}
-        />
+      <div className="px-5 pb-4">
         <Link
           href="/associations"
           className="flex items-center justify-center gap-1.5 rounded-full border border-border bg-surface py-2.5 text-xs font-semibold text-ink transition-transform active:scale-[0.98]"
@@ -188,7 +128,7 @@ export default function NouveauDonClient({
             )}
           </div>
         )}
-        {mode === "LISTE_PREALABLE" && associationsAujourdhui.length !== 1 && !vientDetrePublie && (
+        {associationsAujourdhui.length !== 1 && !vientDetrePublie && (
           <div className="flex items-start gap-2.5 rounded-xl bg-brand-tint px-4 py-3.5">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0" aria-hidden="true">
               <path d="M12 8V13" stroke="#2E6B4E" strokeWidth="2" strokeLinecap="round" />
@@ -201,7 +141,7 @@ export default function NouveauDonClient({
           </div>
         )}
 
-        {mode === "BORDEREAU_OUVERT" ? (
+        {!vientDetrePublie && (
           <div className="flex items-start gap-2.5 rounded-xl bg-surface-alt px-4 py-3.5">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0" aria-hidden="true">
               <path
@@ -212,73 +152,10 @@ export default function NouveauDonClient({
               />
             </svg>
             <p className="text-sm leading-snug text-ink-muted">
-              En mode « Bordereau ouvert », vous n&apos;avez pas besoin de lister les articles maintenant. Vous les
-              scannerez directement sur l&apos;écran du bon d&apos;enlèvement, juste avant le passage de
-              l&apos;association.
+              Vous n&apos;avez pas besoin de lister les articles maintenant. Vous les scannerez directement sur
+              l&apos;écran du bon d&apos;enlèvement, juste avant le passage de l&apos;association.
             </p>
           </div>
-        ) : (
-          <>
-            <section>
-              <div className="mb-2.5 flex items-baseline justify-between">
-                <h2 className="text-sm font-semibold">Articles ajoutés</h2>
-                <span className="text-sm text-ink-muted">{articles.length} articles</span>
-              </div>
-              {erreurRetrait && (
-                <div className="mb-2.5 rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreurRetrait}</div>
-              )}
-
-              <ul className="space-y-2.5">
-                {articles.map((article, i) => (
-                  <li
-                    key={article.id}
-                    style={{ "--espace-sortie": "0.625rem", animationDelay: idsEnSortie.has(article.id) ? undefined : `${i * 40}ms` } as CSSProperties}
-                    className={`flex items-center gap-3 rounded-xl border border-border bg-surface p-3.5 ${
-                      idsEnSortie.has(article.id) ? "animate-fade-out-collapse" : "animate-fade-slide-in"
-                    }`}
-                  >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-alt">
-                      <IconeArticle designation={article.designation} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-semibold">{article.designation}</div>
-                      <div className="mt-0.5 text-xs text-ink-muted">
-                        {article.quantiteDeclaree === `${article.poidsKg.toLocaleString("fr-FR")} kg`
-                          ? article.quantiteDeclaree
-                          : `${article.quantiteDeclaree} · ${article.poidsKg.toLocaleString("fr-FR")} kg`}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => retirer(article.id)}
-                      aria-label={`Retirer ${article.designation}`}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bg transition-transform active:scale-90"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <path d="M6 6L18 18M18 6L6 18" stroke="#6B6459" strokeWidth="2" strokeLinecap="round" />
-                      </svg>
-                    </button>
-                  </li>
-                ))}
-                {articles.length === 0 && (
-                  <li className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-ink-muted">
-                    Aucun article pour l&apos;instant.
-                  </li>
-                )}
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="mb-2.5 text-sm font-semibold">Ajouter un article</h2>
-              <AjouterArticleForm
-                donId={donId}
-                onAjoute={(article) => {
-                  setArticles((prev) => [...prev, article]);
-                  setVientDetrePublie(false);
-                }}
-              />
-            </section>
-          </>
         )}
       </main>
 
@@ -296,14 +173,10 @@ export default function NouveauDonClient({
             )}
           </div>
         )}
-        <div className="mb-3 flex justify-between text-sm text-ink-muted">
-          <span>{articles.length} articles</span>
-          <span>Poids estimé : {poidsTotal.toLocaleString("fr-FR")} kg</span>
-        </div>
         <button
           type="button"
           onClick={publier}
-          disabled={(mode === "LISTE_PREALABLE" && articles.length === 0) || isPending || !!congesJusquau}
+          disabled={isPending || !!congesJusquau}
           className="w-full rounded-full bg-brand py-3.5 text-base font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
         >
           Publier le don

@@ -6,6 +6,7 @@ import { confirmerBon, refuserArticle, retirerArticle, validerArticle } from "@/
 import { demarrerSignatureDocuSign } from "./docusign-actions";
 import AjouterArticleForm from "@/components/AjouterArticleForm";
 import CompteurAnime from "@/components/CompteurAnime";
+import IconeArticle from "@/components/IconeArticle";
 
 type Statut = "EN_ATTENTE" | "VALIDE" | "REFUSE";
 
@@ -283,8 +284,13 @@ export default function BonEnlevementClient({
                 className={`animate-fade-slide-in space-y-2.5 rounded-2xl border bg-surface p-3.5 ${estRefuse ? "border-[#E7C4AE]" : "border-border"}`}
               >
                 <div className="flex justify-between gap-2">
-                  <div className="text-sm font-semibold">{article.nom}</div>
-                  <span className={`whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${article.bloque ? "bg-accent-tint text-accent" : "bg-brand-tint text-brand-dark"}`}>
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-alt">
+                      <IconeArticle designation={article.nom} />
+                    </div>
+                    <div className="truncate text-sm font-semibold">{article.nom}</div>
+                  </div>
+                  <span className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${article.bloque ? "bg-accent-tint text-accent" : "bg-brand-tint text-brand-dark"}`}>
                     {article.dlc}
                   </span>
                 </div>

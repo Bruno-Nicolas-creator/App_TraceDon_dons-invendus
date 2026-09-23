@@ -29,27 +29,31 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
-  let emailActif: string | null = null;
-  let comptes: { email: string; nom: string; role: string }[] = [];
+  let cleActive: string | null = null;
+  let comptes: { kind: "ENTREPRISE" | "ASSOCIATION" | "UTILISATEUR"; id: string; nom: string; role: string }[] = [];
 
   if (process.env.NODE_ENV !== "production") {
-    const [session, utilisateurs] = await Promise.all([
+    const [session, entreprises, associations, coordinateurs] = await Promise.all([
       getSession(),
-      prisma.user.findMany({
-        include: { entreprise: { select: { raisonSociale: true } }, association: { select: { denomination: true } } },
-        orderBy: { nom: "asc" },
-      }),
+      prisma.entreprise.findMany({ select: { id: true, raisonSociale: true }, orderBy: { raisonSociale: "asc" } }),
+      prisma.association.findMany({ select: { id: true, denomination: true }, orderBy: { denomination: "asc" } }),
+      prisma.user.findMany({ where: { role: "COORDINATEUR" }, orderBy: { nom: "asc" } }),
     ]);
 
     if (session) {
-      emailActif = utilisateurs.find((u) => u.id === session.userId)?.email ?? null;
+      cleActive =
+        session.role === "ENTREPRISE" && session.entrepriseId
+          ? `ENTREPRISE:${session.entrepriseId}`
+          : session.role === "ASSOCIATION" && session.associationId
+            ? `ASSOCIATION:${session.associationId}`
+            : `UTILISATEUR:${session.userId}`;
     }
 
-    comptes = utilisateurs.map((u) => ({
-      email: u.email,
-      nom: u.entreprise?.raisonSociale ?? u.association?.denomination ?? u.nom,
-      role: u.role,
-    }));
+    comptes = [
+      ...entreprises.map((e) => ({ kind: "ENTREPRISE" as const, id: e.id, nom: e.raisonSociale, role: "ENTREPRISE" })),
+      ...associations.map((a) => ({ kind: "ASSOCIATION" as const, id: a.id, nom: a.denomination, role: "ASSOCIATION" })),
+      ...coordinateurs.map((u) => ({ kind: "UTILISATEUR" as const, id: u.id, nom: u.nom, role: "COORDINATEUR" })),
+    ];
   }
 
   return (
@@ -59,7 +63,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col font-sans">
         {children}
-        {process.env.NODE_ENV !== "production" && <DevProfilSwitcher emailActif={emailActif} comptes={comptes} />}
+        {process.env.NODE_ENV !== "production" && <DevProfilSwitcher cleActive={cleActive} comptes={comptes} />}
       </body>
     </html>
   );

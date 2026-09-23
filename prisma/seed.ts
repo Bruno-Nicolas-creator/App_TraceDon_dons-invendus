@@ -349,7 +349,6 @@ async function main() {
     data: {
       id: "don_brouillon_carrefour",
       entrepriseId: carrefour.id,
-      mode: "BORDEREAU_OUVERT",
       statut: "BROUILLON",
       articles: {
         create: [
@@ -365,7 +364,6 @@ async function main() {
   await prisma.don.create({
     data: {
       entrepriseId: boulangerie.id,
-      mode: "BORDEREAU_OUVERT",
       statut: "PUBLIE",
       categorie: "Alimentaire",
       distanceLabel: "1 km",
@@ -377,7 +375,6 @@ async function main() {
   await prisma.don.create({
     data: {
       entrepriseId: superette.id,
-      mode: "BORDEREAU_OUVERT",
       statut: "PUBLIE",
       categorie: "Alimentaire",
       distanceLabel: "760 m",
@@ -389,7 +386,6 @@ async function main() {
   await prisma.don.create({
     data: {
       entrepriseId: bioMarche.id,
-      mode: "BORDEREAU_OUVERT",
       statut: "PUBLIE",
       categorie: "Non alimentaire",
       distanceLabel: "740 m",
@@ -401,7 +397,6 @@ async function main() {
   await prisma.don.create({
     data: {
       entrepriseId: epicerie.id,
-      mode: "BORDEREAU_OUVERT",
       statut: "PUBLIE",
       categorie: "Alimentaire",
       distanceLabel: "1,5 km",
@@ -416,7 +411,6 @@ async function main() {
       id: "don_en_cours",
       entrepriseId: carrefour.id,
       associationAssigneeId: coeurPartage.id,
-      mode: "BORDEREAU_OUVERT",
       statut: "PRIS_EN_CHARGE",
       publieLe: new Date(),
       articles: {

@@ -21,10 +21,23 @@ async function genererNumeroBon(): Promise<string> {
   return `${annee}-${String(total + 1).padStart(4, "0")}`;
 }
 
+/**
+ * Une fois le bon d'enlèvement confirmé (signé par les deux parties), la liste des articles
+ * est le registre légal de ce qui a été remis : elle ne doit plus pouvoir être modifiée, même
+ * par l'entreprise propriétaire du don.
+ */
+async function assurerDonModifiable(donId: string) {
+  const bon = await prisma.bonEnlevement.findUnique({ where: { donId }, select: { confirme: true } });
+  if (bon?.confirme) {
+    throw new Error("Le bon d'enlèvement est déjà confirmé : les articles ne peuvent plus être modifiés.");
+  }
+}
+
 export async function ajouterArticleManuel(donId: string, designation: string, poidsBrut: string, uniteBrut: string) {
   const session = await requireSession();
   const don = await prisma.don.findUniqueOrThrow({ where: { id: donId } });
   if (don.entrepriseId !== session.entrepriseId) throw new Error("Don non autorisé.");
+  await assurerDonModifiable(donId);
 
   const poidsKg = Number(poidsBrut.replace(",", "."));
   if (!designation.trim() || Number.isNaN(poidsKg) || poidsKg <= 0) {
@@ -64,6 +77,7 @@ export async function ajouterArticleScanne(
   const session = await requireSession();
   const don = await prisma.don.findUniqueOrThrow({ where: { id: donId } });
   if (don.entrepriseId !== session.entrepriseId) throw new Error("Don non autorisé.");
+  await assurerDonModifiable(donId);
 
   if (!designation.trim() || !Number.isFinite(poidsUnitaireKg) || poidsUnitaireKg <= 0 || !Number.isFinite(nombreUnites) || nombreUnites <= 0) {
     return { ok: false, error: "Poids unitaire ou nombre d'unités invalide." };
@@ -85,17 +99,18 @@ export async function ajouterArticleScanne(
 
 export async function retirerArticle(articleId: string) {
   const session = await requireSession();
-  const article = await prisma.article.findUniqueOrThrow({ where: { id: articleId }, include: { don: true } });
+  const article = await prisma.article.findUniqueOrThrow({
+    where: { id: articleId },
+    include: { don: { include: { bonEnlevement: { select: { confirme: true } } } } },
+  });
   if (article.don.entrepriseId !== session.entrepriseId) throw new Error("Article non autorisé.");
+  if (article.statut !== "EN_ATTENTE") {
+    throw new Error("Cet article a déjà été contrôlé par l'association, il ne peut plus être retiré.");
+  }
+  if (article.don.bonEnlevement?.confirme) {
+    throw new Error("Le bon d'enlèvement est déjà confirmé : les articles ne peuvent plus être modifiés.");
+  }
   await prisma.article.delete({ where: { id: articleId } });
-  revalidatePath("/");
-}
-
-export async function changerModeDon(donId: string, mode: "LISTE_PREALABLE" | "BORDEREAU_OUVERT") {
-  const session = await requireSession();
-  const don = await prisma.don.findUniqueOrThrow({ where: { id: donId } });
-  if (don.entrepriseId !== session.entrepriseId) throw new Error("Don non autorisé.");
-  await prisma.don.update({ where: { id: donId }, data: { mode } });
   revalidatePath("/");
 }
 
@@ -162,7 +177,7 @@ export async function publierDon(donId: string) {
     data: { entrepriseId: session.entrepriseId },
     include: { articles: true },
   });
-  return { ok: true as const, id: nouveauBrouillon.id, mode: nouveauBrouillon.mode, articles: nouveauBrouillon.articles, assigneA };
+  return { ok: true as const, id: nouveauBrouillon.id, articles: nouveauBrouillon.articles, assigneA };
 }
 
 export async function sePositionner(
@@ -231,9 +246,15 @@ export async function sePositionner(
 
 async function requireControleAssociation(articleId: string) {
   const session = await requireSession();
-  const article = await prisma.article.findUniqueOrThrow({ where: { id: articleId }, include: { don: true } });
+  const article = await prisma.article.findUniqueOrThrow({
+    where: { id: articleId },
+    include: { don: { include: { bonEnlevement: { select: { confirme: true } } } } },
+  });
   if (session.role !== "ASSOCIATION" || article.don.associationAssigneeId !== session.associationId) {
     throw new Error("Action réservée à l'association destinataire de ce don.");
+  }
+  if (article.don.bonEnlevement?.confirme) {
+    throw new Error("Le bon d'enlèvement est déjà confirmé : les articles ne peuvent plus être modifiés.");
   }
   return article;
 }
