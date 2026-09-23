@@ -22,6 +22,20 @@ enum StatutDon {
   ANNULE
 }
 
+enum TypeDon {
+  ALIMENTAIRE
+  MATERIEL
+}
+
+// Nature déclarée à l'inscription : détermine quel(s) type(s) de don l'entreprise peut créer
+// (loi AGEC art. 35 / L541-15-8 : obligation de réemploi/don distincte de celle de l'alimentaire,
+// sans exigence de traçabilité DLC — le bon de remise et sa signature restent inchangés).
+enum NatureActiviteEntreprise {
+  ALIMENTAIRE
+  ALIMENTAIRE_ET_NON_ALIMENTAIRE
+  NON_ALIMENTAIRE
+}
+
 enum StatutArticle {
   EN_ATTENTE
   VALIDE
@@ -104,6 +118,7 @@ model Entreprise {
   surfaceVenteM2        Float?
   referentDonNom        String?
   referentDonTelephone  String?
+  natureActivite        NatureActiviteEntreprise @default(ALIMENTAIRE)
   latitude              Float?
   longitude             Float?
   enseigneId            String?
@@ -296,7 +311,10 @@ model Don {
   entrepriseId        String
   entreprise          Entreprise   @relation(fields: [entrepriseId], references: [id])
   statut              StatutDon    @default(BROUILLON)
+  type                TypeDon      @default(ALIMENTAIRE)
   categorie           String       @default("Alimentaire")
+  divisible           Boolean      @default(false)
+  instructionsAcces   String?
   distanceLabel       String?
   associationAssigneeId String?
   associationAssignee Association? @relation(fields: [associationAssigneeId], references: [id])
@@ -320,6 +338,9 @@ model Article {
   dlcDepassee        Boolean       @default(false)
   statut             StatutArticle @default(EN_ATTENTE)
   motifRefus         String?
+  photoNomFichier    String?
+  photoContentType   String?
+  photoContenu       Bytes?
   createdAt          DateTime      @default(now())
 }
 

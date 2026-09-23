@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { jourSemaineDuJour } from "@/lib/planning";
 import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
 import { compterMessagesNonLus } from "@/lib/messagerie";
+import { peutDonnerAlimentaire, peutDonnerMateriel } from "@/lib/activiteEntreprise";
 import NouveauDonClient from "./NouveauDonClient";
 
 // Cette page peut créer un brouillon en base : elle ne doit jamais être
@@ -12,13 +13,13 @@ export const dynamic = "force-dynamic";
 
 async function getOrCreateBrouillon(entrepriseId: string) {
   const existant = await prisma.don.findFirst({
-    where: { entrepriseId, statut: "BROUILLON" },
+    where: { entrepriseId, statut: "BROUILLON", type: "ALIMENTAIRE" },
     include: { articles: { orderBy: { createdAt: "asc" } } },
   });
   if (existant) return existant;
 
   return prisma.don.create({
-    data: { entrepriseId },
+    data: { entrepriseId, type: "ALIMENTAIRE" },
     include: { articles: true },
   });
 }
@@ -26,6 +27,9 @@ async function getOrCreateBrouillon(entrepriseId: string) {
 export default async function NouveauDonPage() {
   const session = await getSession();
   if (!session || session.role !== "ENTREPRISE" || !session.entrepriseId) redirect("/connexion");
+
+  const entreprise = await prisma.entreprise.findUniqueOrThrow({ where: { id: session.entrepriseId } });
+  if (!peutDonnerAlimentaire(entreprise.natureActivite)) redirect("/nouveau-don-materiel");
 
   const don = await getOrCreateBrouillon(session.entrepriseId);
 
@@ -45,6 +49,7 @@ export default async function NouveauDonPage() {
       associationsAujourdhui={associationsAujourdhui}
       congesJusquau={congesEnCours ? formaterDateConges(congesEnCours.fin) : null}
       nonLusMessages={nonLusMessages}
+      peutDonnerMaterielAussi={peutDonnerMateriel(entreprise.natureActivite)}
     />
   );
 }

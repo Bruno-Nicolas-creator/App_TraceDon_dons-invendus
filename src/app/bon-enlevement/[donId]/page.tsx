@@ -52,6 +52,7 @@ export default async function BonEnlevementPage({
     temperatureHorsPlage: a.dlcDepassee,
     statut: a.statut,
     motifRefus: a.motifRefus ?? "",
+    aUnePhoto: !!a.photoContentType,
   }));
 
   const impact =
@@ -68,6 +69,9 @@ export default async function BonEnlevementPage({
     associationSigne: !!bon.signatureAssociationLe,
     confirme: bon.confirme,
     poidsTotalRetenu: bon.poidsTotalRetenu,
+    typeDon: bon.don.type,
+    divisible: bon.don.divisible,
+    instructionsAcces: bon.don.instructionsAcces,
   };
 
   return (

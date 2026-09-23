@@ -8,6 +8,9 @@ import { jourSemaineDuJour } from "@/lib/planning";
 import { conventionEstSignee, obtenirOuCreerConvention } from "@/lib/convention";
 import { associationHabilitee, estGrandeSurface } from "@/lib/conformite";
 import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
+import { validerPhotoArticle } from "@/lib/articlePhoto";
+import { nomFichierSur } from "@/lib/documents";
+import { champTropLong } from "@/lib/validation";
 
 async function requireSession() {
   const session = await getSession();
@@ -26,11 +29,15 @@ async function genererNumeroBon(): Promise<string> {
  * est le registre légal de ce qui a été remis : elle ne doit plus pouvoir être modifiée, même
  * par l'entreprise propriétaire du don.
  */
-async function assurerDonModifiable(donId: string) {
-  const bon = await prisma.bonEnlevement.findUnique({ where: { donId }, select: { confirme: true } });
+function assurerBonNonConfirme(bon: { confirme: boolean } | null | undefined) {
   if (bon?.confirme) {
     throw new Error("Le bon d'enlèvement est déjà confirmé : les articles ne peuvent plus être modifiés.");
   }
+}
+
+async function assurerDonModifiable(donId: string) {
+  const bon = await prisma.bonEnlevement.findUnique({ where: { donId }, select: { confirme: true } });
+  assurerBonNonConfirme(bon);
 }
 
 export async function ajouterArticleManuel(donId: string, designation: string, poidsBrut: string, uniteBrut: string) {
@@ -42,6 +49,9 @@ export async function ajouterArticleManuel(donId: string, designation: string, p
   const poidsKg = Number(poidsBrut.replace(",", "."));
   if (!designation.trim() || Number.isNaN(poidsKg) || poidsKg <= 0) {
     return { ok: false, error: "Désignation ou poids invalide." };
+  }
+  if (champTropLong(designation)) {
+    return { ok: false, error: "Désignation trop longue." };
   }
 
   // La quantité en unités est optionnelle : sans elle, l'article est déclaré au poids (vrac).
@@ -60,6 +70,72 @@ export async function ajouterArticleManuel(donId: string, designation: string, p
   });
   revalidatePath("/");
   return { ok: true, id: article.id, quantiteDeclaree };
+}
+
+/**
+ * Ajout d'un article de don matériel (invendus non alimentaires, loi AGEC art. 35) : pas de
+ * poids fiable à saisir (pas de pesée systématique comme pour l'alimentaire), donc poidsKg
+ * reste à 0 pour l'instant — la quantité et la description font foi. Photo optionnelle.
+ */
+export async function ajouterArticleMateriel(formData: FormData) {
+  const session = await requireSession();
+  const donId = String(formData.get("donId") ?? "");
+  const designation = String(formData.get("designation") ?? "").trim();
+  const quantiteDeclareeBrute = String(formData.get("quantiteDeclaree") ?? "").trim();
+  const codeBarres = String(formData.get("codeBarres") ?? "").trim();
+
+  const don = await prisma.don.findUniqueOrThrow({ where: { id: donId } });
+  if (don.entrepriseId !== session.entrepriseId) throw new Error("Don non autorisé.");
+  await assurerDonModifiable(donId);
+
+  if (!designation) {
+    return { ok: false, error: "Merci de décrire le don (description obligatoire)." };
+  }
+  if (designation.length > 2000) {
+    return { ok: false, error: "Description trop longue (2000 caractères maximum)." };
+  }
+  const quantiteDeclaree = quantiteDeclareeBrute || "1";
+
+  let photo: { photoNomFichier: string; photoContentType: string; photoContenu: Buffer } | null = null;
+  const fichier = formData.get("photo");
+  if (fichier instanceof File && fichier.size > 0) {
+    const validation = validerPhotoArticle(fichier);
+    if (!validation.ok) return { ok: false, error: validation.error };
+    photo = {
+      photoNomFichier: nomFichierSur(fichier.name),
+      photoContentType: fichier.type,
+      photoContenu: Buffer.from(new Uint8Array(await fichier.arrayBuffer())),
+    };
+  }
+
+  const article = await prisma.article.create({
+    data: {
+      donId,
+      designation,
+      quantiteDeclaree,
+      poidsKg: 0,
+      codeBarres: codeBarres || null,
+      photoNomFichier: photo?.photoNomFichier,
+      photoContentType: photo?.photoContentType,
+      photoContenu: photo?.photoContenu as unknown as never,
+    },
+  });
+  revalidatePath("/");
+  return { ok: true, id: article.id, quantiteDeclaree };
+}
+
+export async function definirDetailsDonMaterielAction(donId: string, divisible: boolean, instructionsAcces: string) {
+  const session = await requireSession();
+  const don = await prisma.don.findUniqueOrThrow({ where: { id: donId } });
+  if (don.entrepriseId !== session.entrepriseId) throw new Error("Don non autorisé.");
+  await assurerDonModifiable(donId);
+
+  const instructionsNettoyees = instructionsAcces.trim().slice(0, 2000);
+  await prisma.don.update({
+    where: { id: donId },
+    data: { divisible, instructionsAcces: instructionsNettoyees || null },
+  });
+  revalidatePath("/nouveau-don-materiel");
 }
 
 export async function rechercherProduitAction(codeBarre: string): Promise<ProduitScanne | null> {
@@ -81,6 +157,9 @@ export async function ajouterArticleScanne(
 
   if (!designation.trim() || !Number.isFinite(poidsUnitaireKg) || poidsUnitaireKg <= 0 || !Number.isFinite(nombreUnites) || nombreUnites <= 0) {
     return { ok: false, error: "Poids unitaire ou nombre d'unités invalide." };
+  }
+  if (champTropLong(designation)) {
+    return { ok: false, error: "Désignation trop longue." };
   }
 
   const poidsKg = poidsUnitaireKg * nombreUnites;
@@ -107,9 +186,7 @@ export async function retirerArticle(articleId: string) {
   if (article.statut !== "EN_ATTENTE") {
     throw new Error("Cet article a déjà été contrôlé par l'association, il ne peut plus être retiré.");
   }
-  if (article.don.bonEnlevement?.confirme) {
-    throw new Error("Le bon d'enlèvement est déjà confirmé : les articles ne peuvent plus être modifiés.");
-  }
+  assurerBonNonConfirme(article.don.bonEnlevement);
   await prisma.article.delete({ where: { id: articleId } });
   revalidatePath("/");
 }
@@ -117,8 +194,14 @@ export async function retirerArticle(articleId: string) {
 export async function publierDon(donId: string) {
   const session = await requireSession();
   if (session.role !== "ENTREPRISE" || !session.entrepriseId) throw new Error("Action réservée aux entreprises.");
-  const don = await prisma.don.findUniqueOrThrow({ where: { id: donId } });
+  const don = await prisma.don.findUniqueOrThrow({ where: { id: donId }, include: { articles: true } });
   if (don.entrepriseId !== session.entrepriseId) throw new Error("Don non autorisé.");
+
+  // Le don matériel repose sur une liste établie à l'avance (pas de scan au moment de
+  // l'enlèvement comme pour l'alimentaire) : elle doit donc être renseignée avant publication.
+  if (don.type === "MATERIEL" && don.articles.length === 0) {
+    return { ok: false as const, error: "Ajoutez au moins un article avant de publier ce don." };
+  }
 
   const periodesConges = await prisma.periodeConges.findMany({ where: { entrepriseId: session.entrepriseId } });
   const congesEnCours = periodeCongesActive(periodesConges);
@@ -172,9 +255,9 @@ export async function publierDon(donId: string) {
   revalidatePath("/");
   revalidatePath("/dons");
 
-  // Un nouveau brouillon vide est immédiatement disponible pour le prochain don.
+  // Un nouveau brouillon vide, du même type, est immédiatement disponible pour le prochain don.
   const nouveauBrouillon = await prisma.don.create({
-    data: { entrepriseId: session.entrepriseId },
+    data: { entrepriseId: session.entrepriseId, type: don.type },
     include: { articles: true },
   });
   return { ok: true as const, id: nouveauBrouillon.id, articles: nouveauBrouillon.articles, assigneA };
@@ -253,9 +336,7 @@ async function requireControleAssociation(articleId: string) {
   if (session.role !== "ASSOCIATION" || article.don.associationAssigneeId !== session.associationId) {
     throw new Error("Action réservée à l'association destinataire de ce don.");
   }
-  if (article.don.bonEnlevement?.confirme) {
-    throw new Error("Le bon d'enlèvement est déjà confirmé : les articles ne peuvent plus être modifiés.");
-  }
+  assurerBonNonConfirme(article.don.bonEnlevement);
   return article;
 }
 

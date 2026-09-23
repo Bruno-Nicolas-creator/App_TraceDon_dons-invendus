@@ -1,0 +1,50 @@
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
+import { peutDonnerMateriel } from "@/lib/activiteEntreprise";
+import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
+import { compterMessagesNonLus } from "@/lib/messagerie";
+import NouveauDonMaterielClient from "./NouveauDonMaterielClient";
+
+export const dynamic = "force-dynamic";
+
+async function getOrCreateBrouillonMateriel(entrepriseId: string) {
+  const existant = await prisma.don.findFirst({
+    where: { entrepriseId, statut: "BROUILLON", type: "MATERIEL" },
+    include: { articles: { orderBy: { createdAt: "asc" } } },
+  });
+  if (existant) return existant;
+
+  return prisma.don.create({
+    data: { entrepriseId, type: "MATERIEL", categorie: "Non alimentaire" },
+    include: { articles: true },
+  });
+}
+
+export default async function NouveauDonMaterielPage() {
+  const session = await getSession();
+  if (!session || session.role !== "ENTREPRISE" || !session.entrepriseId) redirect("/connexion");
+
+  const entreprise = await prisma.entreprise.findUniqueOrThrow({ where: { id: session.entrepriseId } });
+  if (!peutDonnerMateriel(entreprise.natureActivite)) redirect("/");
+
+  const don = await getOrCreateBrouillonMateriel(session.entrepriseId);
+
+  const periodesConges = await prisma.periodeConges.findMany({ where: { entrepriseId: session.entrepriseId } });
+  const congesEnCours = periodeCongesActive(periodesConges);
+  const nonLusMessages = await compterMessagesNonLus(session);
+
+  return (
+    <NouveauDonMaterielClient
+      don={{
+        id: don.id,
+        divisible: don.divisible,
+        instructionsAcces: don.instructionsAcces ?? "",
+        articles: don.articles.map((a) => ({ id: a.id, designation: a.designation, quantiteDeclaree: a.quantiteDeclaree, aUnePhoto: !!a.photoContentType })),
+      }}
+      peutDonnerAlimentaireAussi={entreprise.natureActivite === "ALIMENTAIRE_ET_NON_ALIMENTAIRE"}
+      congesJusquau={congesEnCours ? formaterDateConges(congesEnCours.fin) : null}
+      nonLusMessages={nonLusMessages}
+    />
+  );
+}

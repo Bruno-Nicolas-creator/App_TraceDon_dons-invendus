@@ -10,6 +10,8 @@ import TogglePill from "@/components/TogglePill";
 import InfoBulle from "@/components/InfoBulle";
 import SubmitButton from "@/components/SubmitButton";
 import SelecteurCategoriesDon from "@/components/SelecteurCategoriesDon";
+import SelecteurNatureActivite from "@/components/SelecteurNatureActivite";
+import type { NatureActiviteEntrepriseId } from "@/lib/activiteEntreprise";
 
 type TypeCompte = "ENTREPRISE" | "ASSOCIATION";
 
@@ -38,6 +40,7 @@ export default function InscriptionForm({
   const [type, setType] = useState<TypeCompte>(typePrecedent === "ASSOCIATION" ? "ASSOCIATION" : "ENTREPRISE");
   const [rescritDemande, setRescritDemande] = useState(false);
   const [categoriesDon, setCategoriesDon] = useState<string[]>([]);
+  const [natureActivite, setNatureActivite] = useState<NatureActiviteEntrepriseId>("ALIMENTAIRE");
 
   const [nomOrganisme, setNomOrganisme] = useState("");
   const [siret, setSiret] = useState("");
@@ -216,6 +219,7 @@ export default function InscriptionForm({
             <input type="hidden" name="adresseLatitude" value={adresseLat ?? ""} />
             <input type="hidden" name="adresseLongitude" value={adresseLng ?? ""} />
             <Champ id="secteurActivite" name="secteurActivite" label="Secteur d'activité" placeholder="Ex. Commerce de détail alimentaire" />
+            <SelecteurNatureActivite name="natureActivite" valeur={natureActivite} onChange={setNatureActivite} />
           </div>
         ) : (
           <div key="association" className="space-y-4">

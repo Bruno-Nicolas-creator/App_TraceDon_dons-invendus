@@ -8,6 +8,7 @@ import { rechercherAdresses, type SuggestionAdresse } from "@/lib/ignAdresse";
 import { nomFichierSur, validerFichierDocument } from "@/lib/documents";
 import { champTropLong, LONGUEUR_MAX_ADRESSE, rnaValide, siretValide } from "@/lib/validation";
 import { TOUTES_CATEGORIES_DON } from "@/lib/categoriesDon";
+import { natureActiviteValide } from "@/lib/activiteEntreprise";
 
 function echec(code: string, email: string, type: string): never {
   const params = new URLSearchParams({ erreur: code, email, type });
@@ -88,6 +89,7 @@ export async function inscriptionAction(formData: FormData) {
     const adresse = String(formData.get("adresse") ?? "").trim();
     const formeJuridique = String(formData.get("formeJuridique") ?? "").trim();
     const secteurActivite = String(formData.get("secteurActivite") ?? "").trim();
+    const natureActiviteBrute = String(formData.get("natureActivite") ?? "");
 
     if (!raisonSociale || !siret || !adresse) {
       echec("champs_manquants", email, type);
@@ -98,6 +100,9 @@ export async function inscriptionAction(formData: FormData) {
     if (!siretValide(siret)) {
       echec("siret_invalide", email, type);
     }
+    if (!natureActiviteValide(natureActiviteBrute)) {
+      echec("champs_manquants", email, type);
+    }
 
     const entreprise = await prisma.entreprise.create({
       data: {
@@ -106,6 +111,7 @@ export async function inscriptionAction(formData: FormData) {
         adresse,
         formeJuridique: formeJuridique || null,
         secteurActivite: secteurActivite || null,
+        natureActivite: natureActiviteBrute,
         ...coordonneesAdresse,
       },
     });

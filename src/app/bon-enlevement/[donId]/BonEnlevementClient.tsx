@@ -21,6 +21,7 @@ export type ArticleAffiche = {
   temperatureHorsPlage: boolean;
   statut: Statut;
   motifRefus: string;
+  aUnePhoto?: boolean;
 };
 
 export type BonAffiche = {
@@ -34,6 +35,9 @@ export type BonAffiche = {
   associationSigne: boolean;
   confirme: boolean;
   poidsTotalRetenu: number | null;
+  typeDon?: "ALIMENTAIRE" | "MATERIEL";
+  divisible?: boolean;
+  instructionsAcces?: string | null;
 };
 
 type ImpactCarbone = { co2EviteKg: number; equivalenceKm: number | null };
@@ -57,7 +61,9 @@ export default function BonEnlevementClient({
   const donateurSigne = bon.donateurSigne;
   const associationSigne = bon.associationSigne;
   const peutControlerArticles = role === "ASSOCIATION";
-  const peutAjouterArticles = role === "ENTREPRISE" && !bon.confirme;
+  // Le don matériel repose sur une liste établie avant publication : contrairement à
+  // l'alimentaire, il n'y a pas de scan complémentaire à faire au moment de l'enlèvement.
+  const peutAjouterArticles = role === "ENTREPRISE" && !bon.confirme && bon.typeDon !== "MATERIEL";
   const [erreurSignature, setErreurSignature] = useState<string | null>(null);
   const [signatureEnCours, setSignatureEnCours] = useState<"DONATEUR" | "ASSOCIATION" | null>(null);
   const [confirmationEnCours, setConfirmationEnCours] = useState(false);
@@ -240,9 +246,26 @@ export default function BonEnlevementClient({
             <circle cx="12" cy="12" r="9" stroke="#C1622E" strokeWidth="1.8" />
           </svg>
           <span className="text-[11.5px] leading-snug text-accent">
-            Chaîne du froid, DLC/DDM et état des produits : vérifiez chaque ligne avant signature.
+            {bon.typeDon === "MATERIEL"
+              ? "État et quantité des articles : vérifiez chaque ligne avant signature."
+              : "Chaîne du froid, DLC/DDM et état des produits : vérifiez chaque ligne avant signature."}
           </span>
         </div>
+        {(bon.divisible || bon.instructionsAcces) && (
+          <div className="mt-2.5 space-y-1.5 rounded-xl bg-surface-alt px-3 py-2.5">
+            {bon.divisible && (
+              <div className="text-[11.5px] font-semibold text-ink">
+                Ce don est divisible : vous pouvez n&apos;en emporter qu&apos;une partie.
+              </div>
+            )}
+            {bon.instructionsAcces && (
+              <div className="text-[11.5px] leading-snug text-ink-muted">
+                <span className="font-semibold text-ink">Accès : </span>
+                {bon.instructionsAcces}
+              </div>
+            )}
+          </div>
+        )}
       </header>
 
       <main className="flex-1 space-y-5 overflow-y-auto px-5 pb-4">
@@ -285,9 +308,18 @@ export default function BonEnlevementClient({
               >
                 <div className="flex justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-alt">
-                      <IconeArticle designation={article.nom} />
-                    </div>
+                    {article.aUnePhoto ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- image servie par une route API authentifiée, pas un asset statique optimisable
+                      <img
+                        src={`/api/articles/${article.id}/photo`}
+                        alt=""
+                        className="h-8 w-8 shrink-0 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-alt">
+                        <IconeArticle designation={article.nom} />
+                      </div>
+                    )}
                     <div className="truncate text-sm font-semibold">{article.nom}</div>
                   </div>
                   <span className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${article.bloque ? "bg-accent-tint text-accent" : "bg-brand-tint text-brand-dark"}`}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import BottomTabBar from "@/components/BottomTabBar";
@@ -38,14 +38,27 @@ export default function DonsDisponiblesClient({
 }) {
   const [vue, setVue] = useState<Vue>("carte");
   const carteConfiguree = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) && centreCarte !== null;
-  const marqueurs = dons
-    .filter((d) => d.latitude != null && d.longitude != null)
-    .map((d) => ({ id: d.id, lat: d.latitude as number, lng: d.longitude as number, label: `${d.nom} · ${d.distance}` }));
+  // Mémoïsé : sans ça, chaque re-rendu (ex. cliquer une carte, se positionner) recrée ce tableau,
+  // ce qui force GoogleMap à détruire et recréer tous les repères (et rejouer leur animation).
+  const marqueurs = useMemo(
+    () =>
+      dons
+        .filter((d) => d.latitude != null && d.longitude != null)
+        .map((d) => ({ id: d.id, lat: d.latitude as number, lng: d.longitude as number, label: `${d.nom} · ${d.distance}` })),
+    [dons]
+  );
   const [positionnesLocal, setPositionnesLocal] = useState<Record<string, boolean>>({});
   const [erreur, setErreur] = useState<string | null>(null);
   const [avertissements, setAvertissements] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
+  const [donActifId, setDonActifId] = useState<string | null>(null);
+  const [donActifSeq, setDonActifSeq] = useState(0);
   const router = useRouter();
+
+  const selectionnerDon = (id: string) => {
+    setDonActifId(id);
+    setDonActifSeq((n) => n + 1);
+  };
 
   const positionner = (donId: string, forcer: boolean = false) => {
     setErreur(null);
@@ -111,29 +124,36 @@ export default function DonsDisponiblesClient({
         {erreur && <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreur}</div>}
 
         {vue === "carte" && (
-          carteConfiguree && centreCarte ? (
-            <GoogleMap center={centreCarte} marqueurs={marqueurs} />
-          ) : (
-            <div className="relative h-80 w-full overflow-hidden rounded-2xl bg-surface-alt">
-              <svg width="100%" height="100%" viewBox="0 0 350 320" preserveAspectRatio="none" aria-hidden="true">
-                <rect width="350" height="320" fill="#E7E3D6" />
-                <path d="M0 60 H350 M0 140 H350 M0 220 H350" stroke="#DAD5C4" strokeWidth="2" />
-                <path d="M70 0 V320 M180 0 V320 M280 0 V320" stroke="#DAD5C4" strokeWidth="2" />
-                <rect x="20" y="90" width="60" height="40" fill="#D5D0BF" />
-                <rect x="200" y="180" width="80" height="50" fill="#D5D0BF" />
-              </svg>
-              <div className="absolute left-[50%] top-[50%] h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-white bg-brand shadow-[0_0_0_4px_rgba(46,107,78,0.2)]" />
-              {dons.map((don, i) => (
-                <div
-                  key={don.id}
-                  className="absolute -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-full bg-ink px-2.5 py-1 text-[11px] font-semibold text-white"
-                  style={{ left: `${30 + i * 25}%`, top: `${28 + i * 22}%` }}
-                >
-                  {don.nom} · {don.distance}
-                </div>
-              ))}
-            </div>
-          )
+          <div className="sticky top-0 z-10 bg-bg pb-3">
+            {carteConfiguree && centreCarte ? (
+              <GoogleMap
+                center={centreCarte}
+                marqueurs={marqueurs}
+                marqueurActifId={donActifId}
+                marqueurActifSeq={donActifSeq}
+              />
+            ) : (
+              <div className="relative h-80 w-full overflow-hidden rounded-2xl bg-surface-alt">
+                <svg width="100%" height="100%" viewBox="0 0 350 320" preserveAspectRatio="none" aria-hidden="true">
+                  <rect width="350" height="320" fill="#E7E3D6" />
+                  <path d="M0 60 H350 M0 140 H350 M0 220 H350" stroke="#DAD5C4" strokeWidth="2" />
+                  <path d="M70 0 V320 M180 0 V320 M280 0 V320" stroke="#DAD5C4" strokeWidth="2" />
+                  <rect x="20" y="90" width="60" height="40" fill="#D5D0BF" />
+                  <rect x="200" y="180" width="80" height="50" fill="#D5D0BF" />
+                </svg>
+                <div className="absolute left-[50%] top-[50%] h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-white bg-brand shadow-[0_0_0_4px_rgba(46,107,78,0.2)]" />
+                {dons.map((don, i) => (
+                  <div
+                    key={don.id}
+                    className="absolute -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-full bg-ink px-2.5 py-1 text-[11px] font-semibold text-white"
+                    style={{ left: `${30 + i * 25}%`, top: `${28 + i * 22}%` }}
+                  >
+                    {don.nom} · {don.distance}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         <ul className="space-y-3">
@@ -143,6 +163,7 @@ export default function DonsDisponiblesClient({
               <li
                 key={don.id}
                 style={{ animationDelay: `${i * 50}ms` }}
+                onClick={() => selectionnerDon(don.id)}
                 className="animate-fade-slide-in rounded-2xl border border-border bg-surface p-4"
               >
                 <div className="mb-2.5 flex items-start justify-between gap-2.5">

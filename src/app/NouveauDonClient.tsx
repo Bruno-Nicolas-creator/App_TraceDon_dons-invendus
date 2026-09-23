@@ -14,11 +14,13 @@ export default function NouveauDonClient({
   associationsAujourdhui,
   congesJusquau,
   nonLusMessages = 0,
+  peutDonnerMaterielAussi = false,
 }: {
   don: Don;
   associationsAujourdhui: string[];
   congesJusquau: string | null;
   nonLusMessages?: number;
+  peutDonnerMaterielAussi?: boolean;
 }) {
   const [donId, setDonId] = useState(don.id);
   const [erreurPublication, setErreurPublication] = useState<string | null>(null);
@@ -77,6 +79,14 @@ export default function NouveauDonClient({
           </svg>
           Voir les associations à proximité
         </Link>
+        {peutDonnerMaterielAussi && (
+          <Link
+            href="/nouveau-don-materiel"
+            className="mt-2.5 flex items-center justify-center gap-1.5 rounded-full border border-border bg-surface py-2.5 text-xs font-semibold text-ink transition-transform active:scale-[0.98]"
+          >
+            Basculer vers un don matériel
+          </Link>
+        )}
       </div>
 
       <main className="flex-1 space-y-5 px-5 pb-4">

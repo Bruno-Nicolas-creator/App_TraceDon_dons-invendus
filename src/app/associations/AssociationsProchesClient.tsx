@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import BottomTabBar from "@/components/BottomTabBar";
 import GoogleMap from "@/components/GoogleMap";
@@ -44,10 +44,22 @@ export default function AssociationsProchesClient({
   nonLusMessages?: number;
 }) {
   const [vue, setVue] = useState<Vue>("carte");
+  const [associationActiveId, setAssociationActiveId] = useState<string | null>(null);
+  const [associationActiveSeq, setAssociationActiveSeq] = useState(0);
+  const selectionnerAssociation = (id: string) => {
+    setAssociationActiveId(id);
+    setAssociationActiveSeq((n) => n + 1);
+  };
   const carteConfiguree = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) && centreCarte !== null;
-  const marqueurs = associations
-    .filter((a) => a.latitude != null && a.longitude != null)
-    .map((a) => ({ id: a.id, lat: a.latitude as number, lng: a.longitude as number, label: `${a.nom} · ${a.distance}` }));
+  // Mémoïsé : sans ça, chaque re-rendu (ex. cliquer une carte) recrée ce tableau, ce qui force
+  // GoogleMap à détruire et recréer tous les repères (et rejouer leur animation d'apparition).
+  const marqueurs = useMemo(
+    () =>
+      associations
+        .filter((a) => a.latitude != null && a.longitude != null)
+        .map((a) => ({ id: a.id, lat: a.latitude as number, lng: a.longitude as number, label: `${a.nom} · ${a.distance}` })),
+    [associations]
+  );
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg">
@@ -82,20 +94,29 @@ export default function AssociationsProchesClient({
           </div>
         )}
 
-        {vue === "carte" &&
-          (carteConfiguree && centreCarte ? (
-            <GoogleMap center={centreCarte} marqueurs={marqueurs} />
-          ) : (
-            <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-border bg-surface-alt text-center text-xs text-ink-muted">
-              Carte indisponible (clé Google Maps non configurée).
-            </div>
-          ))}
+        {vue === "carte" && (
+          <div className="sticky top-0 z-10 bg-bg pb-3">
+            {carteConfiguree && centreCarte ? (
+              <GoogleMap
+                center={centreCarte}
+                marqueurs={marqueurs}
+                marqueurActifId={associationActiveId}
+                marqueurActifSeq={associationActiveSeq}
+              />
+            ) : (
+              <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed border-border bg-surface-alt text-center text-xs text-ink-muted">
+                Carte indisponible (clé Google Maps non configurée).
+              </div>
+            )}
+          </div>
+        )}
 
         <ul className="space-y-3">
           {associations.map((association, i) => (
             <li
               key={association.id}
               style={{ animationDelay: `${i * 50}ms` }}
+              onClick={() => selectionnerAssociation(association.id)}
               className="animate-fade-slide-in rounded-2xl border border-border bg-surface p-4"
             >
               <div className="mb-2 flex items-start justify-between gap-2.5">
