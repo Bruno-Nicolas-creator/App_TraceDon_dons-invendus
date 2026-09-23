@@ -46,6 +46,7 @@ export default function NouveauDonClient({
   const [afficherFormulaireManuel, setAfficherFormulaireManuel] = useState(false);
   const [designation, setDesignation] = useState("");
   const [poids, setPoids] = useState("");
+  const [unite, setUnite] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
   const [erreurPublication, setErreurPublication] = useState<string | null>(null);
   const [manqueKbis, setManqueKbis] = useState(false);
@@ -101,17 +102,23 @@ export default function NouveauDonClient({
     event.preventDefault();
     setErreur(null);
     startTransition(async () => {
-      const resultat = await ajouterArticleManuel(donId, designation, poids);
+      const resultat = await ajouterArticleManuel(donId, designation, poids, unite);
       if (!resultat.ok) {
         setErreur(resultat.error ?? "Impossible d'ajouter cet article.");
         return;
       }
       setArticles((prev) => [
         ...prev,
-        { id: `temp-${Date.now()}`, designation: designation.trim(), quantiteDeclaree: `${poids} kg`, poidsKg: Number(poids.replace(",", ".")) },
+        {
+          id: resultat.id ?? `temp-${Date.now()}`,
+          designation: designation.trim(),
+          quantiteDeclaree: resultat.quantiteDeclaree ?? "Vrac",
+          poidsKg: Number(poids.replace(",", ".")),
+        },
       ]);
       setDesignation("");
       setPoids("");
+      setUnite("");
       setAfficherFormulaireManuel(false);
       setVientDetrePublie(false);
     });
@@ -161,7 +168,7 @@ export default function NouveauDonClient({
       setArticles((prev) => [
         ...prev,
         {
-          id: `temp-${Date.now()}`,
+          id: resultat.id ?? `temp-${Date.now()}`,
           designation: designationScannee.trim(),
           quantiteDeclaree: `${unites} unité(s) × ${poidsUnitaire.toLocaleString("fr-FR")} kg`,
           poidsKg: resultat.poidsKg ?? poidsUnitaire * unites,
@@ -319,7 +326,9 @@ export default function NouveauDonClient({
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-semibold">{article.designation}</div>
                   <div className="mt-0.5 text-xs text-ink-muted">
-                    {article.quantiteDeclaree} · {article.poidsKg.toLocaleString("fr-FR")} kg
+                    {article.quantiteDeclaree === `${article.poidsKg.toLocaleString("fr-FR")} kg`
+                      ? article.quantiteDeclaree
+                      : `${article.quantiteDeclaree} · ${article.poidsKg.toLocaleString("fr-FR")} kg`}
                   </div>
                 </div>
                 <button
@@ -387,7 +396,7 @@ export default function NouveauDonClient({
               {erreur && <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreur}</div>}
               <div>
                 <label htmlFor="designation" className="mb-1 block text-xs text-ink-muted">
-                  Désignation (produit en vrac)
+                  Désignation
                 </label>
                 <input
                   id="designation"
@@ -398,19 +407,35 @@ export default function NouveauDonClient({
                   className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
                 />
               </div>
-              <div>
-                <label htmlFor="poids" className="mb-1 block text-xs text-ink-muted">
-                  Poids net (kg)
-                </label>
-                <input
-                  id="poids"
-                  type="text"
-                  inputMode="decimal"
-                  value={poids}
-                  onChange={(e) => setPoids(e.target.value)}
-                  placeholder="Ex. 6"
-                  className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
-                />
+              <div className="flex gap-2.5">
+                <div className="flex-1">
+                  <label htmlFor="unite" className="mb-1 block text-xs text-ink-muted">
+                    Quantité (unité) — optionnel
+                  </label>
+                  <input
+                    id="unite"
+                    type="text"
+                    inputMode="numeric"
+                    value={unite}
+                    onChange={(e) => setUnite(e.target.value)}
+                    placeholder="Ex. 6"
+                    className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label htmlFor="poids" className="mb-1 block text-xs text-ink-muted">
+                    Poids total (kg)
+                  </label>
+                  <input
+                    id="poids"
+                    type="text"
+                    inputMode="decimal"
+                    value={poids}
+                    onChange={(e) => setPoids(e.target.value)}
+                    placeholder="Ex. 6"
+                    className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
+                  />
+                </div>
               </div>
               <button type="submit" disabled={isPending} className="self-start rounded-full bg-ink px-4.5 py-2 text-sm font-semibold text-white transition-transform active:scale-95 disabled:opacity-50">
                 Ajouter à la liste

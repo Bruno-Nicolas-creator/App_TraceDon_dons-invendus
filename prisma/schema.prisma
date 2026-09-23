@@ -57,6 +57,12 @@ enum StatutHabilitation {
   NATIONALE
 }
 
+enum PreferenceAlerte {
+  EMAIL
+  SMS
+  SMS_EMAIL
+}
+
 model User {
   id            String   @id @default(cuid())
   email         String   @unique
@@ -132,6 +138,12 @@ model Association {
   rna                       String
   adresse                   String
   categorieEligibilite      String?
+  categoriesDon             String[]      @default([])
+  disponibilitesRetrait     String[]      @default([])
+  typesActivite             String[]      @default([])
+  notreAction               String?
+  preferenceAlerte          PreferenceAlerte @default(EMAIL)
+  telephoneAlerteSms        String?
   declarationInteretGeneral Boolean       @default(false)
   rescritStatut             StatutRescrit @default(NON_DEPOSE)
   rescritDateDepot          DateTime?

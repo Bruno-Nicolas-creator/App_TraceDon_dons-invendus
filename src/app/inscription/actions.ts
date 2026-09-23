@@ -7,6 +7,7 @@ import { rechercherOrganismes, type SuggestionOrganisme } from "@/lib/rechercheE
 import { rechercherAdresses, type SuggestionAdresse } from "@/lib/ignAdresse";
 import { nomFichierSur, validerFichierDocument } from "@/lib/documents";
 import { champTropLong, LONGUEUR_MAX_ADRESSE, rnaValide, siretValide } from "@/lib/validation";
+import { TOUTES_CATEGORIES_DON } from "@/lib/categoriesDon";
 
 function echec(code: string, email: string, type: string): never {
   const params = new URLSearchParams({ erreur: code, email, type });
@@ -125,6 +126,11 @@ export async function inscriptionAction(formData: FormData) {
     const rna = String(formData.get("rna") ?? "").trim();
     const adresse = String(formData.get("adresse") ?? "").trim();
     const categorieEligibilite = String(formData.get("categorieEligibilite") ?? "").trim();
+    const idsCategoriesConnues = new Set(TOUTES_CATEGORIES_DON.map((c) => c.id));
+    const categoriesDon = String(formData.get("categoriesDon") ?? "")
+      .split(",")
+      .map((c) => c.trim())
+      .filter((c) => idsCategoriesConnues.has(c));
     const declarationInteretGeneral = formData.get("declarationInteretGeneral") === "on";
     const rescritDemande = formData.get("rescritDemande") === "on";
 
@@ -150,6 +156,7 @@ export async function inscriptionAction(formData: FormData) {
         rna,
         adresse,
         categorieEligibilite: categorieEligibilite || null,
+        categoriesDon,
         declarationInteretGeneral,
         rescritStatut: rescritDemande ? "EN_ATTENTE" : "NON_DEPOSE",
         rescritDateDepot: rescritDemande ? new Date() : null,

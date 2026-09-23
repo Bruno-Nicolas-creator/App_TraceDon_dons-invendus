@@ -21,7 +21,7 @@ async function genererNumeroBon(): Promise<string> {
   return `${annee}-${String(total + 1).padStart(4, "0")}`;
 }
 
-export async function ajouterArticleManuel(donId: string, designation: string, poidsBrut: string) {
+export async function ajouterArticleManuel(donId: string, designation: string, poidsBrut: string, uniteBrut: string) {
   const session = await requireSession();
   const don = await prisma.don.findUniqueOrThrow({ where: { id: donId } });
   if (don.entrepriseId !== session.entrepriseId) throw new Error("Don non autorisé.");
@@ -30,11 +30,23 @@ export async function ajouterArticleManuel(donId: string, designation: string, p
   if (!designation.trim() || Number.isNaN(poidsKg) || poidsKg <= 0) {
     return { ok: false, error: "Désignation ou poids invalide." };
   }
-  await prisma.article.create({
-    data: { donId, designation: designation.trim(), quantiteDeclaree: `${poidsBrut} kg`, poidsKg },
+
+  // La quantité en unités est optionnelle : sans elle, l'article est déclaré au poids (vrac).
+  const uniteSaisie = uniteBrut.trim();
+  let quantiteDeclaree = "Vrac";
+  if (uniteSaisie) {
+    const unites = Number(uniteSaisie.replace(",", "."));
+    if (Number.isNaN(unites) || unites <= 0) {
+      return { ok: false, error: "Quantité invalide." };
+    }
+    quantiteDeclaree = `${unites} unité(s)`;
+  }
+
+  const article = await prisma.article.create({
+    data: { donId, designation: designation.trim(), quantiteDeclaree, poidsKg },
   });
   revalidatePath("/");
-  return { ok: true };
+  return { ok: true, id: article.id, quantiteDeclaree };
 }
 
 export async function rechercherProduitAction(codeBarre: string): Promise<ProduitScanne | null> {
@@ -58,7 +70,7 @@ export async function ajouterArticleScanne(
   }
 
   const poidsKg = poidsUnitaireKg * nombreUnites;
-  await prisma.article.create({
+  const article = await prisma.article.create({
     data: {
       donId,
       codeBarres: codeBarres.trim() || null,
@@ -68,7 +80,7 @@ export async function ajouterArticleScanne(
     },
   });
   revalidatePath("/");
-  return { ok: true, poidsKg };
+  return { ok: true, id: article.id, poidsKg };
 }
 
 export async function retirerArticle(articleId: string) {

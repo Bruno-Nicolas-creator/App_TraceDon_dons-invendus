@@ -82,6 +82,8 @@ export default async function AssociationsProchesPage() {
       latitude: association.latitude,
       longitude: association.longitude,
       congesJusquau: congesEnCours ? formaterDateConges(congesEnCours.fin) : null,
+      typesActivite: association.typesActivite,
+      notreAction: association.notreAction,
     };
   });
 

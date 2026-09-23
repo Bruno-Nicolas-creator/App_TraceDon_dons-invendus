@@ -7,6 +7,7 @@ import GoogleMap from "@/components/GoogleMap";
 import TogglePill from "@/components/TogglePill";
 import MapPinIcon from "@/components/MapPinIcon";
 import { lienItineraire } from "@/lib/googleMapsLinks";
+import { libelleTypeActivite } from "@/lib/activiteAssociation";
 
 type Vue = "carte" | "liste";
 
@@ -20,7 +21,16 @@ export type AssociationAffichee = {
   latitude: number | null;
   longitude: number | null;
   congesJusquau: string | null;
+  typesActivite: string[];
+  notreAction: string | null;
 };
+
+const LONGUEUR_MAX_EXTRAIT = 140;
+
+function extraitNotreAction(texte: string): string {
+  if (texte.length <= LONGUEUR_MAX_EXTRAIT) return texte;
+  return `${texte.slice(0, LONGUEUR_MAX_EXTRAIT).trimEnd()}…`;
+}
 
 export default function AssociationsProchesClient({
   associations,
@@ -122,7 +132,17 @@ export default function AssociationsProchesClient({
                     🌴 En congés jusqu&apos;au {association.congesJusquau}
                   </span>
                 )}
+                {association.typesActivite.map((id) => (
+                  <span key={id} className="rounded-full bg-surface-alt px-2.5 py-1 text-xs text-ink-muted">
+                    {libelleTypeActivite(id)}
+                  </span>
+                ))}
               </div>
+              {association.notreAction && (
+                <p className="mt-2.5 text-xs leading-relaxed text-ink-muted">
+                  {extraitNotreAction(association.notreAction)}
+                </p>
+              )}
             </li>
           ))}
           {associations.length === 0 && (

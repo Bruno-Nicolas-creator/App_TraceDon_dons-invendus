@@ -6,6 +6,10 @@ import { clearSessionCookie, getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { definitionDocumentPourRole, nomFichierSur, validerFichierDocument, type TypeDocument } from "@/lib/documents";
 import { champTropLong, LONGUEUR_MAX_CHAMP_COURT } from "@/lib/validation";
+import { disponibilitesValides } from "@/lib/disponibilites";
+import { typesActiviteValides } from "@/lib/activiteAssociation";
+
+const LONGUEUR_MAX_NOTRE_ACTION = 2000;
 
 export async function deconnexionAction() {
   await clearSessionCookie();
@@ -239,4 +243,68 @@ export async function retirerPeriodeCongesAction(periodeId: string) {
   revalidatePath("/dons");
   revalidatePath("/associations");
   revalidatePath("/");
+}
+
+export async function definirDisponibilitesAction(
+  disponibilites: string[]
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await getSession();
+  if (!session || session.role !== "ASSOCIATION" || !session.associationId) {
+    return { ok: false, error: "Action réservée aux associations." };
+  }
+
+  await prisma.association.update({
+    where: { id: session.associationId },
+    data: { disponibilitesRetrait: disponibilitesValides(disponibilites) },
+  });
+  revalidatePath("/profil");
+  return { ok: true };
+}
+
+export async function definirPresentationAction(formData: FormData) {
+  const session = await getSession();
+  if (!session || session.role !== "ASSOCIATION" || !session.associationId) {
+    throw new Error("Action réservée aux associations.");
+  }
+
+  const typesActivite = typesActiviteValides(formData.getAll("typesActivite").map(String));
+  const notreAction = String(formData.get("notreAction") ?? "").trim();
+  if (champTropLong(notreAction, LONGUEUR_MAX_NOTRE_ACTION)) {
+    throw new Error("Le texte de présentation est trop long.");
+  }
+
+  await prisma.association.update({
+    where: { id: session.associationId },
+    data: { typesActivite, notreAction: notreAction || null },
+  });
+  revalidatePath("/profil");
+  revalidatePath("/associations");
+}
+
+export async function definirPreferenceAlerteAction(formData: FormData) {
+  const session = await getSession();
+  if (!session || session.role !== "ASSOCIATION" || !session.associationId) {
+    throw new Error("Action réservée aux associations.");
+  }
+
+  const preferenceAlerte = String(formData.get("preferenceAlerte") ?? "EMAIL");
+  if (!["EMAIL", "SMS", "SMS_EMAIL"].includes(preferenceAlerte)) {
+    throw new Error("Préférence d'alerte invalide.");
+  }
+  const telephoneAlerteSms = String(formData.get("telephoneAlerteSms") ?? "").trim();
+  if (champTropLong(telephoneAlerteSms, LONGUEUR_MAX_CHAMP_COURT)) {
+    throw new Error("Numéro de téléphone trop long.");
+  }
+  if (preferenceAlerte !== "EMAIL" && !telephoneAlerteSms) {
+    throw new Error("Un numéro de téléphone est requis pour recevoir des alertes par SMS.");
+  }
+
+  await prisma.association.update({
+    where: { id: session.associationId },
+    data: {
+      preferenceAlerte: preferenceAlerte as "EMAIL" | "SMS" | "SMS_EMAIL",
+      telephoneAlerteSms: telephoneAlerteSms || null,
+    },
+  });
+  revalidatePath("/profil");
 }

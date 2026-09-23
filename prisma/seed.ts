@@ -355,7 +355,7 @@ async function main() {
         create: [
           { designation: "Yaourts nature x12", quantiteDeclaree: "12 unités", poidsKg: 1.5 },
           { designation: "Pain de mie complet", quantiteDeclaree: "6 unités", poidsKg: 2.4 },
-          { designation: "Salade de fruits en vrac", quantiteDeclaree: "8 kg", poidsKg: 8 },
+          { designation: "Salade de fruits en vrac", quantiteDeclaree: "Vrac", poidsKg: 8 },
         ],
       },
     },
@@ -423,7 +423,7 @@ async function main() {
         create: [
           { designation: "Yaourts nature x12", quantiteDeclaree: "12 unités", quantiteConstatee: "12 unités", poidsKg: 1.5, dlcOuEtat: "DLC 3 jours", temperature: "4 °C", statut: "VALIDE" },
           { designation: "Pain de mie complet", quantiteDeclaree: "6 unités", quantiteConstatee: "6 unités", poidsKg: 2.4, dlcOuEtat: "DDM 5 jours", temperature: "Ambiant", statut: "VALIDE" },
-          { designation: "Salade de fruits en vrac", quantiteDeclaree: "8 kg", quantiteConstatee: "8 kg", poidsKg: 8, dlcOuEtat: "DLC dépassée", temperature: "9 °C", dlcDepassee: true, statut: "REFUSE", motifRefus: "DLC dépassée" },
+          { designation: "Salade de fruits en vrac", quantiteDeclaree: "Vrac", quantiteConstatee: "Vrac", poidsKg: 8, dlcOuEtat: "DLC dépassée", temperature: "9 °C", dlcDepassee: true, statut: "REFUSE", motifRefus: "DLC dépassée" },
         ],
       },
     },

@@ -8,6 +8,8 @@ import { calculerImpactCarbone } from "@/lib/impactCo2";
 import { associationHabilitee, estGrandeSurface, SEUIL_GRANDE_SURFACE_M2 } from "@/lib/conformite";
 import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
 import { compterMessagesNonLus } from "@/lib/messagerie";
+import { TYPES_ACTIVITE } from "@/lib/activiteAssociation";
+import SelecteurDisponibilites from "@/components/SelecteurDisponibilites";
 import CoffreFort, { type ConventionSignee, type DocumentExistant } from "./CoffreFort";
 import {
   ajouterBenevoleAction,
@@ -15,6 +17,8 @@ import {
   basculerAssuranceRcBenevoleAction,
   deconnexionAction,
   definirConformiteAssociationAction,
+  definirPreferenceAlerteAction,
+  definirPresentationAction,
   definirReferentDonAction,
   definirSurfaceVenteAction,
   retirerBenevoleAction,
@@ -46,6 +50,11 @@ export default async function ProfilPage() {
   let documents: DocumentExistant[] = [];
   let conventionsSignees: ConventionSignee[] = [];
   let periodesConges: { id: string; debut: Date; fin: Date; motif: string | null }[] = [];
+  let disponibilitesRetrait: string[] = [];
+  let typesActivite: string[] = [];
+  let notreAction = "";
+  let preferenceAlerte: "EMAIL" | "SMS" | "SMS_EMAIL" = "EMAIL";
+  let telephoneAlerteSms = "";
   if (session.entrepriseId) {
     const entreprise = await prisma.entreprise.findUnique({
       where: { id: session.entrepriseId },
@@ -92,6 +101,11 @@ export default async function ProfilPage() {
       signatureLe: c.signatureAssociationLe ?? c.signatureEntrepriseLe ?? c.createdAt,
     }));
     periodesConges = association?.periodesConges ?? [];
+    disponibilitesRetrait = association?.disponibilitesRetrait ?? [];
+    typesActivite = association?.typesActivite ?? [];
+    notreAction = association?.notreAction ?? "";
+    preferenceAlerte = association?.preferenceAlerte ?? "EMAIL";
+    telephoneAlerteSms = association?.telephoneAlerteSms ?? "";
   }
 
   const grandeSurface = estGrandeSurface(surfaceVenteM2);
@@ -181,6 +195,58 @@ export default async function ProfilPage() {
           </div>
         )}
 
+        {session.role === "ASSOCIATION" && (
+          <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4">
+            <div>
+              <h2 className="text-sm font-semibold">Notre association</h2>
+              <p className="mt-0.5 text-xs text-ink-muted">
+                Ces informations sont visibles par les entreprises donatrices.
+              </p>
+            </div>
+            <form action={definirPresentationAction} className="space-y-3">
+              <div>
+                <span className="mb-1.5 block text-xs text-ink-muted">Type d&apos;activité</span>
+                <div className="flex flex-wrap gap-2">
+                  {TYPES_ACTIVITE.map((t) => (
+                    <label key={t.id} className="cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="typesActivite"
+                        value={t.id}
+                        defaultChecked={typesActivite.includes(t.id)}
+                        className="peer hidden"
+                      />
+                      <span className="block rounded-full border border-border bg-surface-alt px-3 py-2 text-xs font-semibold text-ink-muted transition-colors peer-checked:border-brand peer-checked:bg-brand-tint peer-checked:text-brand-dark">
+                        {t.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label htmlFor="notreAction" className="mb-1.5 block text-xs text-ink-muted">
+                  Notre action
+                </label>
+                <textarea
+                  id="notreAction"
+                  name="notreAction"
+                  defaultValue={notreAction}
+                  rows={4}
+                  maxLength={2000}
+                  placeholder="Présentez votre association aux entreprises donatrices : votre activité, votre public, votre fonctionnement…"
+                  className="w-full resize-none rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                />
+              </div>
+              <button
+                type="submit"
+                className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+              >
+                Enregistrer
+              </button>
+            </form>
+          </div>
+        )}
+
         <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4">
           <div>
             <h2 className="text-sm font-semibold">Référent don</h2>
@@ -211,6 +277,8 @@ export default async function ProfilPage() {
             </button>
           </form>
         </div>
+
+        {session.role === "ASSOCIATION" && <SelecteurDisponibilites disponibilitesInitiales={disponibilitesRetrait} />}
 
         {congesEnCours && (
           <div className="animate-fade-slide-in flex gap-3 rounded-2xl bg-accent-tint p-4">
@@ -295,6 +363,41 @@ export default async function ProfilPage() {
             </button>
           </form>
         </div>
+
+        {session.role === "ASSOCIATION" && (
+          <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4">
+            <div>
+              <h2 className="text-sm font-semibold">Préférences d&apos;alerte</h2>
+              <p className="mt-0.5 text-xs text-ink-muted">
+                Comment souhaitez-vous être prévenu(e) des nouveaux dons disponibles ?
+              </p>
+            </div>
+            <form action={definirPreferenceAlerteAction} className="space-y-2.5">
+              <select
+                name="preferenceAlerte"
+                defaultValue={preferenceAlerte}
+                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+              >
+                <option value="EMAIL">Email uniquement</option>
+                <option value="SMS">SMS uniquement</option>
+                <option value="SMS_EMAIL">SMS et email</option>
+              </select>
+              <input
+                type="tel"
+                name="telephoneAlerteSms"
+                defaultValue={telephoneAlerteSms}
+                placeholder="Numéro pour réception SMS"
+                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+              />
+              <button
+                type="submit"
+                className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+              >
+                Enregistrer
+              </button>
+            </form>
+          </div>
+        )}
 
         <CoffreFort role={session.role === "ENTREPRISE" ? "ENTREPRISE" : "ASSOCIATION"} documents={documents} conventionsSignees={conventionsSignees} />
 
