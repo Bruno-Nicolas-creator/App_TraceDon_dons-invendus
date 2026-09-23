@@ -315,6 +315,12 @@ model Don {
   categorie           String       @default("Alimentaire")
   divisible           Boolean      @default(false)
   instructionsAcces   String?
+  titre               String?
+  description         String?
+  adresseRecuperation String?
+  pieceJointeNomFichier   String?
+  pieceJointeContentType  String?
+  pieceJointeContenu      Bytes?
   distanceLabel       String?
   associationAssigneeId String?
   associationAssignee Association? @relation(fields: [associationAssigneeId], references: [id])

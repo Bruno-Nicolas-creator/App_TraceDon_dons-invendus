@@ -38,6 +38,10 @@ export type BonAffiche = {
   typeDon?: "ALIMENTAIRE" | "MATERIEL";
   divisible?: boolean;
   instructionsAcces?: string | null;
+  titre?: string | null;
+  description?: string | null;
+  adresseRecuperation?: string | null;
+  aUnePieceJointe?: boolean;
 };
 
 type ImpactCarbone = { co2EviteKg: number; equivalenceKm: number | null };
@@ -236,9 +240,11 @@ export default function BonEnlevementClient({
           </Link>
           <div className="flex-1">
             <h1 className="text-[17px] font-semibold">Bon n°{bon.numero}</h1>
+            {bon.titre && <div className="text-sm font-medium text-ink">{bon.titre}</div>}
             <div className="text-xs text-ink-muted">{bon.entrepriseNom} &rarr; {bon.associationNom}</div>
           </div>
         </div>
+        {bon.description && <p className="mb-2.5 text-xs leading-relaxed text-ink-muted">{bon.description}</p>}
         <div className="flex items-start gap-2 rounded-xl bg-accent-tint px-3 py-2.5">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0" aria-hidden="true">
             <path d="M12 9V13.5" stroke="#C1622E" strokeWidth="2" strokeLinecap="round" />
@@ -251,11 +257,17 @@ export default function BonEnlevementClient({
               : "Chaîne du froid, DLC/DDM et état des produits : vérifiez chaque ligne avant signature."}
           </span>
         </div>
-        {(bon.divisible || bon.instructionsAcces) && (
+        {(bon.divisible || bon.instructionsAcces || bon.adresseRecuperation || bon.aUnePieceJointe) && (
           <div className="mt-2.5 space-y-1.5 rounded-xl bg-surface-alt px-3 py-2.5">
             {bon.divisible && (
               <div className="text-[11.5px] font-semibold text-ink">
                 Ce don est divisible : vous pouvez n&apos;en emporter qu&apos;une partie.
+              </div>
+            )}
+            {bon.adresseRecuperation && (
+              <div className="text-[11.5px] leading-snug text-ink-muted">
+                <span className="font-semibold text-ink">Adresse de récupération : </span>
+                {bon.adresseRecuperation}
               </div>
             )}
             {bon.instructionsAcces && (
@@ -263,6 +275,16 @@ export default function BonEnlevementClient({
                 <span className="font-semibold text-ink">Accès : </span>
                 {bon.instructionsAcces}
               </div>
+            )}
+            {bon.aUnePieceJointe && (
+              <a
+                href={`/api/dons/${bon.donId}/piece-jointe`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block text-[11.5px] font-semibold text-ink underline decoration-dotted underline-offset-2"
+              >
+                Voir la pièce jointe
+              </a>
             )}
           </div>
         )}

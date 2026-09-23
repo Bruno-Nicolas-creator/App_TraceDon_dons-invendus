@@ -1,22 +1,31 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { publierDon } from "@/app/actions";
+import { definirDetailsLotAction, publierDon, retirerPieceJointeDonAction, televerserPieceJointeDonAction } from "@/app/actions";
 import Link from "next/link";
 import BottomTabBar from "@/components/BottomTabBar";
+import BoutonDictee from "@/components/BoutonDictee";
+import { useDicteeVocale } from "@/lib/dicteeVocale";
 
 type Don = {
   id: string;
+  titre: string;
+  description: string;
+  adresseRecuperation: string;
+  instructionsAcces: string;
+  pieceJointeNomFichier: string | null;
 };
 
 export default function NouveauDonClient({
   don,
+  adresseEntreprise,
   associationsAujourdhui,
   congesJusquau,
   nonLusMessages = 0,
   peutDonnerMaterielAussi = false,
 }: {
   don: Don;
+  adresseEntreprise: string;
   associationsAujourdhui: string[];
   congesJusquau: string | null;
   nonLusMessages?: number;
@@ -29,6 +38,51 @@ export default function NouveauDonClient({
   const [assigneA, setAssigneA] = useState<string | null>(null);
   const [donPublieId, setDonPublieId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const [titre, setTitre] = useState(don.titre);
+  const [description, setDescription] = useState(don.description);
+  const [adresseRecuperation, setAdresseRecuperation] = useState(don.adresseRecuperation || adresseEntreprise);
+  const [instructionsAcces, setInstructionsAcces] = useState(don.instructionsAcces);
+  const [pieceJointeNomFichier, setPieceJointeNomFichier] = useState(don.pieceJointeNomFichier);
+  const [erreurPieceJointe, setErreurPieceJointe] = useState<string | null>(null);
+  const { dictaphoneDisponible, dictEeEnCours, basculerDictee } = useDicteeVocale((texte) =>
+    setDescription((prev) => (prev ? `${prev} ${texte}` : texte))
+  );
+
+  const enregistrerDetailsLot = (champs: Partial<{ titre: string; description: string; adresseRecuperation: string; instructionsAcces: string }>) => {
+    const suivant = {
+      titre,
+      description,
+      adresseRecuperation,
+      instructionsAcces,
+      ...champs,
+    };
+    startTransition(() => {
+      void definirDetailsLotAction(donId, suivant.titre, suivant.description, suivant.adresseRecuperation, suivant.instructionsAcces);
+    });
+  };
+
+  const televerserFichier = (fichier: File) => {
+    setErreurPieceJointe(null);
+    const formData = new FormData();
+    formData.set("donId", donId);
+    formData.set("fichier", fichier);
+    startTransition(async () => {
+      const resultat = await televerserPieceJointeDonAction(formData);
+      if (!resultat.ok) {
+        setErreurPieceJointe(resultat.error ?? "Impossible d'envoyer ce fichier.");
+        return;
+      }
+      setPieceJointeNomFichier(fichier.name);
+    });
+  };
+
+  const retirerFichier = () => {
+    setPieceJointeNomFichier(null);
+    startTransition(() => {
+      void retirerPieceJointeDonAction(donId);
+    });
+  };
 
   const publier = () => {
     setErreurPublication(null);
@@ -45,6 +99,11 @@ export default function NouveauDonClient({
       setAssigneA(resultat.assigneA);
       setDonPublieId(resultat.assigneA ? donPublieAvant : null);
       setVientDetrePublie(true);
+      setTitre("");
+      setDescription("");
+      setAdresseRecuperation(adresseEntreprise);
+      setInstructionsAcces("");
+      setPieceJointeNomFichier(null);
     });
   };
 
@@ -166,6 +225,149 @@ export default function NouveauDonClient({
               l&apos;écran du bon d&apos;enlèvement, juste avant le passage de l&apos;association.
             </p>
           </div>
+        )}
+
+        {!vientDetrePublie && (
+          <section className="space-y-3.5 rounded-xl border border-border bg-surface p-3.5">
+            <h2 className="text-sm font-semibold">Détails du lot</h2>
+
+            <div>
+              <label htmlFor="titreLot" className="mb-1 block text-xs text-ink-muted">
+                Titre du lot
+              </label>
+              <input
+                id="titreLot"
+                type="text"
+                value={titre}
+                onChange={(e) => setTitre(e.target.value)}
+                onBlur={() => enregistrerDetailsLot({ titre })}
+                placeholder="Ex. Invendus du jour — rayon frais"
+                className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
+              />
+            </div>
+
+            <div>
+              <div className="mb-1 flex items-center justify-between">
+                <label htmlFor="descriptionLot" className="text-xs text-ink-muted">
+                  Description — optionnel
+                </label>
+                <BoutonDictee disponible={dictaphoneDisponible} enCours={dictEeEnCours} onClick={basculerDictee} />
+              </div>
+              <textarea
+                id="descriptionLot"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                onBlur={() => enregistrerDetailsLot({ description })}
+                placeholder="Ex. Fruits et légumes du rayon frais, à récupérer en fin de journée"
+                rows={3}
+                className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
+              />
+            </div>
+
+            <div>
+              <div className="mb-1 flex items-center justify-between text-xs text-ink-muted">
+                <span>Joindre une liste détaillée — optionnel</span>
+                {pieceJointeNomFichier && (
+                  <a
+                    href={`/api/dons/${donId}/piece-jointe`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="truncate underline decoration-dotted underline-offset-2"
+                  >
+                    {pieceJointeNomFichier}
+                  </a>
+                )}
+              </div>
+              {erreurPieceJointe && (
+                <div className="mb-2 rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreurPieceJointe}</div>
+              )}
+              <div className="flex items-center gap-2.5">
+                <label className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-border bg-surface-alt px-2.5 py-3 text-xs font-semibold text-ink transition-transform active:scale-95">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="M8 4H14L19 9V19C19 20.1 18.1 21 17 21H8C6.9 21 6 20.1 6 19V6C6 4.9 6.9 4 8 4Z"
+                      stroke="#201F1B"
+                      strokeWidth="1.6"
+                      strokeLinejoin="round"
+                    />
+                    <path d="M14 4V9H19" stroke="#201F1B" strokeWidth="1.6" strokeLinejoin="round" />
+                  </svg>
+                  Joindre un fichier
+                  <input
+                    type="file"
+                    accept="application/pdf,image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const fichier = e.target.files?.[0];
+                      if (fichier) televerserFichier(fichier);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+                <label className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-border bg-surface-alt px-2.5 py-3 text-xs font-semibold text-ink transition-transform active:scale-95">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="M4 8.5C4 7.4 4.9 6.5 6 6.5H8L9.2 4.5H14.8L16 6.5H18C19.1 6.5 20 7.4 20 8.5V17C20 18.1 19.1 19 18 19H6C4.9 19 4 18.1 4 17V8.5Z"
+                      stroke="#201F1B"
+                      strokeWidth="1.6"
+                    />
+                    <circle cx="12" cy="12.5" r="3.4" stroke="#201F1B" strokeWidth="1.6" />
+                  </svg>
+                  Scanner (appareil photo)
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={(e) => {
+                      const fichier = e.target.files?.[0];
+                      if (fichier) televerserFichier(fichier);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              </div>
+              {pieceJointeNomFichier && (
+                <button
+                  type="button"
+                  onClick={retirerFichier}
+                  className="mt-2 text-xs font-semibold text-ink-muted underline"
+                >
+                  Retirer la pièce jointe
+                </button>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="adresseRecuperation" className="mb-1 block text-xs text-ink-muted">
+                Adresse de récupération
+              </label>
+              <input
+                id="adresseRecuperation"
+                type="text"
+                value={adresseRecuperation}
+                onChange={(e) => setAdresseRecuperation(e.target.value)}
+                onBlur={() => enregistrerDetailsLot({ adresseRecuperation })}
+                placeholder={adresseEntreprise}
+                className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="instructionsAcces" className="mb-1 block text-xs text-ink-muted">
+                Détails logistiques — optionnel
+              </label>
+              <textarea
+                id="instructionsAcces"
+                value={instructionsAcces}
+                onChange={(e) => setInstructionsAcces(e.target.value)}
+                onBlur={() => enregistrerDetailsLot({ instructionsAcces })}
+                placeholder="Ex. Accès par le quai de livraison, demander M. Martin à l'accueil."
+                rows={3}
+                className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
+              />
+            </div>
+          </section>
         )}
       </main>
 

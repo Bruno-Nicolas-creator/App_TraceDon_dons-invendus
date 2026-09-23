@@ -72,6 +72,10 @@ export default async function BonEnlevementPage({
     typeDon: bon.don.type,
     divisible: bon.don.divisible,
     instructionsAcces: bon.don.instructionsAcces,
+    titre: bon.don.titre,
+    description: bon.don.description,
+    adresseRecuperation: bon.don.adresseRecuperation ?? bon.entreprise.adresse,
+    aUnePieceJointe: !!bon.don.pieceJointeContentType,
   };
 
   return (

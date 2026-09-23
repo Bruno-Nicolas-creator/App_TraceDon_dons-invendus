@@ -1,30 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { ajouterArticleMateriel } from "@/app/actions";
 import BarcodeScanner from "@/components/BarcodeScanner";
+import BoutonDictee from "@/components/BoutonDictee";
+import { useDicteeVocale } from "@/lib/dicteeVocale";
 
 export type ArticleMaterielAjoute = { id: string; designation: string; quantiteDeclaree: string; aUnePhoto: boolean };
-
-// L'API Web Speech n'est standardisée nulle part dans le DOM lib de TypeScript : on ne type que
-// ce qu'on utilise, sans dépendre d'un paquet de types tiers pour une fonctionnalité optionnelle.
-type ReconnaissanceVocale = {
-  lang: string;
-  interimResults: boolean;
-  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-  start: () => void;
-  stop: () => void;
-};
-
-function creerReconnaissanceVocale(): ReconnaissanceVocale | null {
-  if (typeof window === "undefined") return null;
-  const Ctor =
-    (window as unknown as { SpeechRecognition?: new () => ReconnaissanceVocale }).SpeechRecognition ??
-    (window as unknown as { webkitSpeechRecognition?: new () => ReconnaissanceVocale }).webkitSpeechRecognition;
-  return Ctor ? new Ctor() : null;
-}
 
 export default function AjouterArticleMaterielForm({
   donId,
@@ -38,18 +20,11 @@ export default function AjouterArticleMaterielForm({
   const [codeBarres, setCodeBarres] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [afficherScanner, setAfficherScanner] = useState(false);
-  const [dictEeEnCours, setDictEeEnCours] = useState(false);
-  const [dictaphoneDisponible, setDictaphoneDisponible] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
-  const reconnaissanceRef = useRef<ReconnaissanceVocale | null>(null);
-
-  // Détection différée au montage (rendu serveur sans `window`) : décalage volontaire entre le
-  // HTML serveur et le premier rendu client, résolu dès l'hydratation, propre aux API navigateur.
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setDictaphoneDisponible(creerReconnaissanceVocale() !== null);
-  }, []);
+  const { dictaphoneDisponible, dictEeEnCours, basculerDictee } = useDicteeVocale((texte) =>
+    setDesignation((prev) => (prev ? `${prev} ${texte}` : texte))
+  );
 
   // useMemo (pas un effect) pour l'URL elle-même : seule la révocation, un vrai effet de bord,
   // a besoin d'un useEffect.
@@ -59,29 +34,6 @@ export default function AjouterArticleMaterielForm({
       if (apercuPhoto) URL.revokeObjectURL(apercuPhoto);
     };
   }, [apercuPhoto]);
-
-  const basculerDictee = () => {
-    if (dictEeEnCours) {
-      reconnaissanceRef.current?.stop();
-      return;
-    }
-    const reconnaissance = creerReconnaissanceVocale();
-    if (!reconnaissance) return;
-    reconnaissance.lang = "fr-FR";
-    reconnaissance.interimResults = false;
-    reconnaissance.onresult = (event) => {
-      const texte = Array.from(event.results)
-        .map((r) => r[0]?.transcript ?? "")
-        .join(" ")
-        .trim();
-      if (texte) setDesignation((prev) => (prev ? `${prev} ${texte}` : texte));
-    };
-    reconnaissance.onerror = () => setDictEeEnCours(false);
-    reconnaissance.onend = () => setDictEeEnCours(false);
-    reconnaissanceRef.current = reconnaissance;
-    setDictEeEnCours(true);
-    reconnaissance.start();
-  };
 
   const soumettre = (event: FormEvent) => {
     event.preventDefault();
@@ -126,21 +78,7 @@ export default function AjouterArticleMaterielForm({
           <label htmlFor="designationMateriel" className="text-xs text-ink-muted">
             Description du don
           </label>
-          {dictaphoneDisponible && (
-            <button
-              type="button"
-              onClick={basculerDictee}
-              className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-transform active:scale-95 ${
-                dictEeEnCours ? "bg-accent text-white" : "bg-surface-alt text-ink-muted"
-              }`}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <rect x="9" y="3" width="6" height="11" rx="3" stroke="currentColor" strokeWidth="1.8" />
-                <path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              </svg>
-              {dictEeEnCours ? "Écoute…" : "Dicter"}
-            </button>
-          )}
+          <BoutonDictee disponible={dictaphoneDisponible} enCours={dictEeEnCours} onClick={basculerDictee} />
         </div>
         <textarea
           id="designationMateriel"

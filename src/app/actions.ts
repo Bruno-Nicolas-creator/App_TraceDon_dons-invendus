@@ -9,7 +9,7 @@ import { conventionEstSignee, obtenirOuCreerConvention } from "@/lib/convention"
 import { associationHabilitee, estGrandeSurface } from "@/lib/conformite";
 import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
 import { validerPhotoArticle } from "@/lib/articlePhoto";
-import { nomFichierSur } from "@/lib/documents";
+import { nomFichierSur, validerFichierDocument } from "@/lib/documents";
 import { champTropLong } from "@/lib/validation";
 
 async function requireSession() {
@@ -136,6 +136,77 @@ export async function definirDetailsDonMaterielAction(donId: string, divisible: 
     data: { divisible, instructionsAcces: instructionsNettoyees || null },
   });
   revalidatePath("/nouveau-don-materiel");
+}
+
+/**
+ * Titre/description du lot, adresse de récupération et détails logistiques d'un don (initialement
+ * pour l'alimentaire, mais générique — cf. commentaire du modèle Don).
+ */
+export async function definirDetailsLotAction(
+  donId: string,
+  titre: string,
+  description: string,
+  adresseRecuperation: string,
+  instructionsAcces: string
+) {
+  const session = await requireSession();
+  const don = await prisma.don.findUniqueOrThrow({ where: { id: donId } });
+  if (don.entrepriseId !== session.entrepriseId) throw new Error("Don non autorisé.");
+  await assurerDonModifiable(donId);
+
+  if (champTropLong(titre) || champTropLong(description, 2000) || champTropLong(adresseRecuperation, 300) || champTropLong(instructionsAcces, 2000)) {
+    throw new Error("Un des champs dépasse la longueur maximale autorisée.");
+  }
+
+  await prisma.don.update({
+    where: { id: donId },
+    data: {
+      titre: titre.trim() || null,
+      description: description.trim() || null,
+      adresseRecuperation: adresseRecuperation.trim() || null,
+      instructionsAcces: instructionsAcces.trim() || null,
+    },
+  });
+  revalidatePath("/");
+}
+
+export async function televerserPieceJointeDonAction(formData: FormData) {
+  const session = await requireSession();
+  const donId = String(formData.get("donId") ?? "");
+  const don = await prisma.don.findUniqueOrThrow({ where: { id: donId } });
+  if (don.entrepriseId !== session.entrepriseId) throw new Error("Don non autorisé.");
+  await assurerDonModifiable(donId);
+
+  const fichier = formData.get("fichier");
+  if (!(fichier instanceof File) || fichier.size === 0) {
+    return { ok: false, error: "Aucun fichier reçu." };
+  }
+  const validation = validerFichierDocument(fichier);
+  if (!validation.ok) return { ok: false, error: validation.error };
+
+  await prisma.don.update({
+    where: { id: donId },
+    data: {
+      pieceJointeNomFichier: nomFichierSur(fichier.name),
+      pieceJointeContentType: fichier.type,
+      pieceJointeContenu: Buffer.from(new Uint8Array(await fichier.arrayBuffer())) as unknown as never,
+    },
+  });
+  revalidatePath("/");
+  return { ok: true };
+}
+
+export async function retirerPieceJointeDonAction(donId: string) {
+  const session = await requireSession();
+  const don = await prisma.don.findUniqueOrThrow({ where: { id: donId } });
+  if (don.entrepriseId !== session.entrepriseId) throw new Error("Don non autorisé.");
+  await assurerDonModifiable(donId);
+
+  await prisma.don.update({
+    where: { id: donId },
+    data: { pieceJointeNomFichier: null, pieceJointeContentType: null, pieceJointeContenu: null },
+  });
+  revalidatePath("/");
 }
 
 export async function rechercherProduitAction(codeBarre: string): Promise<ProduitScanne | null> {

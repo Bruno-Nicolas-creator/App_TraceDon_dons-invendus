@@ -45,7 +45,15 @@ export default async function NouveauDonPage() {
 
   return (
     <NouveauDonClient
-      don={don}
+      don={{
+        id: don.id,
+        titre: don.titre ?? "",
+        description: don.description ?? "",
+        adresseRecuperation: don.adresseRecuperation ?? "",
+        instructionsAcces: don.instructionsAcces ?? "",
+        pieceJointeNomFichier: don.pieceJointeNomFichier,
+      }}
+      adresseEntreprise={entreprise.adresse}
       associationsAujourdhui={associationsAujourdhui}
       congesJusquau={congesEnCours ? formaterDateConges(congesEnCours.fin) : null}
       nonLusMessages={nonLusMessages}
