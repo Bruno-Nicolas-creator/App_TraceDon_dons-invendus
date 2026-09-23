@@ -59,6 +59,7 @@ export default async function BonEnlevementPage({
 
   const bonAffiche: BonAffiche = {
     id: bon.id,
+    donId: bon.donId,
     numero: bon.numero,
     entrepriseNom: bon.entreprise.raisonSociale,
     associationNom: bon.association.denomination,

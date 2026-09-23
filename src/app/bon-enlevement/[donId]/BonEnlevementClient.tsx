@@ -2,8 +2,9 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { confirmerBon, refuserArticle, validerArticle } from "@/app/actions";
+import { confirmerBon, refuserArticle, retirerArticle, validerArticle } from "@/app/actions";
 import { demarrerSignatureDocuSign } from "./docusign-actions";
+import AjouterArticleForm from "@/components/AjouterArticleForm";
 import CompteurAnime from "@/components/CompteurAnime";
 
 type Statut = "EN_ATTENTE" | "VALIDE" | "REFUSE";
@@ -23,6 +24,7 @@ export type ArticleAffiche = {
 
 export type BonAffiche = {
   id: string;
+  donId: string;
   numero: string;
   entrepriseNom: string;
   associationNom: string;
@@ -54,6 +56,7 @@ export default function BonEnlevementClient({
   const donateurSigne = bon.donateurSigne;
   const associationSigne = bon.associationSigne;
   const peutControlerArticles = role === "ASSOCIATION";
+  const peutAjouterArticles = role === "ENTREPRISE" && !bon.confirme;
   const [erreurSignature, setErreurSignature] = useState<string | null>(null);
   const [signatureEnCours, setSignatureEnCours] = useState<"DONATEUR" | "ASSOCIATION" | null>(null);
   const [confirmationEnCours, setConfirmationEnCours] = useState(false);
@@ -82,6 +85,17 @@ export default function BonEnlevementClient({
       } catch (e) {
         setArticles((prev) => prev.map((a) => (a.id === article.id ? { ...a, statut: statutPrecedent } : a)));
         setErreurSignature(e instanceof Error ? e.message : "Impossible de refuser cet article.");
+      }
+    });
+  };
+
+  const retirer = (articleId: string) => {
+    setArticles((prev) => prev.filter((a) => a.id !== articleId));
+    startTransition(async () => {
+      try {
+        await retirerArticle(articleId);
+      } catch (e) {
+        setErreurSignature(e instanceof Error ? e.message : "Impossible de retirer cet article.");
       }
     });
   };
@@ -231,6 +245,33 @@ export default function BonEnlevementClient({
       </header>
 
       <main className="flex-1 space-y-5 overflow-y-auto px-5 pb-4">
+        {peutAjouterArticles && (
+          <section>
+            <h2 className="mb-2.5 text-sm font-semibold">Ajouter un article</h2>
+            <AjouterArticleForm
+              donId={bon.donId}
+              onAjoute={(article) => {
+                setArticles((prev) => [
+                  ...prev,
+                  {
+                    id: article.id,
+                    nom: article.designation,
+                    qte: article.quantiteDeclaree,
+                    poidsKg: article.poidsKg,
+                    temp: "—",
+                    dlc: "—",
+                    bloque: false,
+                    temperatureHorsPlage: false,
+                    statut: "EN_ATTENTE",
+                    motifRefus: "",
+                  },
+                ]);
+                setMotifs((prev) => ({ ...prev, [article.id]: "" }));
+              }}
+            />
+          </section>
+        )}
+
         <ul className="space-y-2.5">
           {articles.map((article, i) => {
             const estRefuse = article.statut === "REFUSE";
@@ -310,6 +351,15 @@ export default function BonEnlevementClient({
                       {estValide ? "Validé par l'association" : estRefuse ? "Refusé par l'association" : "En attente de contrôle"}
                     </span>
                     {estRefuse && article.motifRefus && <span className="text-[11px] text-ink-muted">{article.motifRefus}</span>}
+                    {peutAjouterArticles && article.statut === "EN_ATTENTE" && (
+                      <button
+                        type="button"
+                        onClick={() => retirer(article.id)}
+                        className="text-[11px] font-semibold text-ink-muted underline"
+                      >
+                        Retirer
+                      </button>
+                    )}
                   </div>
                 )}
               </li>
