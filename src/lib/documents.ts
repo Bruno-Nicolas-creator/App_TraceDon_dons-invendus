@@ -8,13 +8,17 @@ export type TypeDocument =
   | "DECLARATION_DDPP"
   | "PV_ASSEMBLEE_GENERALE"
   | "ASSURANCE_TRANSPORT_STOCKAGE"
-  | "ATTESTATION_CHAINE_FROID";
+  | "ATTESTATION_CHAINE_FROID"
+  | "MANDAT_SIGNATURE_BENEVOLE";
 
 export type DefinitionDocument = {
   type: TypeDocument;
   label: string;
   aide: string;
   obligatoire: boolean;
+  // Documents pour lesquels l'appli propose un modèle pré-rempli (identité de l'association) à
+  // télécharger, faire signer, puis téléverser — plutôt qu'une simple case à cocher en interne.
+  modeleUrl?: string;
 };
 
 export const DOCUMENTS_ENTREPRISE: DefinitionDocument[] = [
@@ -80,6 +84,14 @@ export const DOCUMENTS_ASSOCIATION: DefinitionDocument[] = [
     label: "Attestation chaîne du froid",
     aide: "Attestation sur l'honneur de votre capacité matérielle à respecter la chaîne du froid, signée par votre représentant légal. Visible par les entreprises donatrices avant qu'elles ne se positionnent.",
     obligatoire: false,
+    modeleUrl: "/api/attestation-chaine-froid/pdf",
+  },
+  {
+    type: "MANDAT_SIGNATURE_BENEVOLE",
+    label: "Mandat de signature à un bénévole",
+    aide: "La délégation de pouvoir signée par le président habilitant un bénévole nommé à signer les bordereaux de remise au nom de l'association.",
+    obligatoire: false,
+    modeleUrl: "/api/mandat-signature-benevole/pdf",
   },
 ];
 

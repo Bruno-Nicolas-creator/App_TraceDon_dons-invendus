@@ -69,9 +69,9 @@ export default function CoffreFort({
                 </a>
               )}
 
-              {def.type === "ATTESTATION_CHAINE_FROID" && !existant && (
+              {def.modeleUrl && !existant && (
                 <a
-                  href="/api/attestation-chaine-froid/pdf"
+                  href={def.modeleUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mb-1.5 block text-[11px] text-ink-muted underline decoration-dotted underline-offset-2"
