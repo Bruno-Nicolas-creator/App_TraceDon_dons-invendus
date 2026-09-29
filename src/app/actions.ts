@@ -11,6 +11,7 @@ import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
 import { validerPhotoArticle } from "@/lib/articlePhoto";
 import { nomFichierSur, validerFichierDocument } from "@/lib/documents";
 import { champTropLong } from "@/lib/validation";
+import { extraireArticlesDepuisFichier } from "@/lib/extractionArticles";
 
 async function requireSession() {
   const session = await getSession();
@@ -262,6 +263,44 @@ export async function retirerArticle(articleId: string) {
   revalidatePath("/");
 }
 
+/**
+ * Extrait automatiquement les lignes d'articles (désignation, quantité, poids net) depuis la
+ * pièce jointe du don via une IA de lecture d'image/document (cf. src/lib/extractionArticles.ts).
+ * Ne renseigne que ces trois colonnes : DLC, température et contrôle restent à la charge de
+ * l'association au moment de l'enlèvement.
+ */
+export async function extraireArticlesAction(
+  donId: string
+): Promise<{ ok: true; articles: { id: string; designation: string; quantiteDeclaree: string; poidsKg: number }[] } | { ok: false; error: string }> {
+  const session = await requireSession();
+  const don = await prisma.don.findUniqueOrThrow({ where: { id: donId } });
+  if (don.entrepriseId !== session.entrepriseId) throw new Error("Don non autorisé.");
+  await assurerDonModifiable(donId);
+
+  if (!don.pieceJointeContenu || !don.pieceJointeContentType) {
+    return { ok: false, error: "Aucune pièce jointe à analyser." };
+  }
+
+  let extraits;
+  try {
+    extraits = await extraireArticlesDepuisFichier(Buffer.from(don.pieceJointeContenu), don.pieceJointeContentType);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Erreur d'extraction inconnue." };
+  }
+  if (extraits.length === 0) {
+    return { ok: false, error: "Aucun article reconnaissable dans la pièce jointe." };
+  }
+
+  const articles = await prisma.article.createManyAndReturn({
+    data: extraits.map((a) => ({ donId, designation: a.designation, quantiteDeclaree: a.quantite, poidsKg: a.poidsKg })),
+  });
+  revalidatePath("/");
+  return {
+    ok: true,
+    articles: articles.map((a) => ({ id: a.id, designation: a.designation, quantiteDeclaree: a.quantiteDeclaree, poidsKg: a.poidsKg })),
+  };
+}
+
 export async function publierDon(donId: string) {
   const session = await requireSession();
   if (session.role !== "ENTREPRISE" || !session.entrepriseId) throw new Error("Action réservée aux entreprises.");
@@ -434,6 +473,19 @@ export async function refuserArticle(articleId: string, motif: string) {
   await prisma.article.update({
     where: { id: articleId },
     data: { statut: "REFUSE", motifRefus: motif || null },
+  });
+  revalidatePath("/bon-enlevement");
+}
+
+/** Quantité et température réellement constatées par l'association au moment de l'enlèvement. */
+export async function constaterArticleAction(articleId: string, quantiteConstatee: string, temperature: string) {
+  await requireControleAssociation(articleId);
+  if (champTropLong(quantiteConstatee, 100) || champTropLong(temperature, 50)) {
+    throw new Error("Valeur trop longue.");
+  }
+  await prisma.article.update({
+    where: { id: articleId },
+    data: { quantiteConstatee: quantiteConstatee.trim() || null, temperature: temperature.trim() || null },
   });
   revalidatePath("/bon-enlevement");
 }

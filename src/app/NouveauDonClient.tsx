@@ -1,10 +1,18 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { definirDetailsLotAction, publierDon, retirerPieceJointeDonAction, televerserPieceJointeDonAction } from "@/app/actions";
+import {
+  definirDetailsLotAction,
+  extraireArticlesAction,
+  publierDon,
+  retirerArticle,
+  retirerPieceJointeDonAction,
+  televerserPieceJointeDonAction,
+} from "@/app/actions";
 import Link from "next/link";
 import BottomTabBar from "@/components/BottomTabBar";
 import BoutonDictee from "@/components/BoutonDictee";
+import AjouterArticleForm, { type ArticleAjoute } from "@/components/AjouterArticleForm";
 import { useDicteeVocale } from "@/lib/dicteeVocale";
 
 type Don = {
@@ -18,18 +26,22 @@ type Don = {
 
 export default function NouveauDonClient({
   don,
+  articles: articlesInitiaux = [],
   adresseEntreprise,
   associationsAujourdhui,
   congesJusquau,
   nonLusMessages = 0,
   peutDonnerMaterielAussi = false,
+  extractionConfiguree = false,
 }: {
   don: Don;
+  articles?: ArticleAjoute[];
   adresseEntreprise: string;
   associationsAujourdhui: string[];
   congesJusquau: string | null;
   nonLusMessages?: number;
   peutDonnerMaterielAussi?: boolean;
+  extractionConfiguree?: boolean;
 }) {
   const [donId, setDonId] = useState(don.id);
   const [erreurPublication, setErreurPublication] = useState<string | null>(null);
@@ -45,9 +57,31 @@ export default function NouveauDonClient({
   const [instructionsAcces, setInstructionsAcces] = useState(don.instructionsAcces);
   const [pieceJointeNomFichier, setPieceJointeNomFichier] = useState(don.pieceJointeNomFichier);
   const [erreurPieceJointe, setErreurPieceJointe] = useState<string | null>(null);
+  const [articles, setArticles] = useState(articlesInitiaux);
+  const [extractionEnCours, setExtractionEnCours] = useState(false);
+  const [erreurExtraction, setErreurExtraction] = useState<string | null>(null);
   const { dictaphoneDisponible, dictEeEnCours, basculerDictee } = useDicteeVocale((texte) =>
     setDescription((prev) => (prev ? `${prev} ${texte}` : texte))
   );
+
+  const extraireArticles = () => {
+    setErreurExtraction(null);
+    setExtractionEnCours(true);
+    startTransition(async () => {
+      const resultat = await extraireArticlesAction(donId);
+      setExtractionEnCours(false);
+      if (!resultat.ok) {
+        setErreurExtraction(resultat.error);
+        return;
+      }
+      setArticles((prev) => [...prev, ...resultat.articles]);
+    });
+  };
+
+  const retirerUnArticle = (articleId: string) => {
+    setArticles((prev) => prev.filter((a) => a.id !== articleId));
+    startTransition(() => void retirerArticle(articleId));
+  };
 
   const enregistrerDetailsLot = (champs: Partial<{ titre: string; description: string; adresseRecuperation: string; instructionsAcces: string }>) => {
     const suivant = {
@@ -104,6 +138,7 @@ export default function NouveauDonClient({
       setAdresseRecuperation(adresseEntreprise);
       setInstructionsAcces("");
       setPieceJointeNomFichier(null);
+      setArticles([]);
     });
   };
 
@@ -221,8 +256,9 @@ export default function NouveauDonClient({
               />
             </svg>
             <p className="text-sm leading-snug text-ink-muted">
-              Vous n&apos;avez pas besoin de lister les articles maintenant. Vous les scannerez directement sur
-              l&apos;écran du bon d&apos;enlèvement, juste avant le passage de l&apos;association.
+              Vous n&apos;êtes pas obligé de lister les articles maintenant : vous pouvez joindre une liste et
+              l&apos;extraire automatiquement ci-dessous, ou attendre et scanner directement sur l&apos;écran du
+              bon d&apos;enlèvement juste avant le passage de l&apos;association.
             </p>
           </div>
         )}
@@ -336,7 +372,51 @@ export default function NouveauDonClient({
                   Retirer la pièce jointe
                 </button>
               )}
+              {pieceJointeNomFichier && extractionConfiguree && (
+                <button
+                  type="button"
+                  onClick={extraireArticles}
+                  disabled={extractionEnCours}
+                  className="mt-2.5 w-full rounded-xl border border-dashed border-border bg-surface-alt py-2.5 text-xs font-semibold text-ink transition-transform active:scale-[0.98] disabled:opacity-60"
+                >
+                  {extractionEnCours ? "Lecture de la pièce jointe…" : "✨ Extraire les articles de la pièce jointe"}
+                </button>
+              )}
+              {erreurExtraction && (
+                <div className="mt-2 rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreurExtraction}</div>
+              )}
             </div>
+
+            {articles.length > 0 && (
+              <div>
+                <div className="mb-1.5 text-xs text-ink-muted">
+                  {articles.length} article{articles.length > 1 ? "s" : ""} — quantité et poids pourront être
+                  ajustés par l&apos;association à l&apos;enlèvement
+                </div>
+                <ul className="space-y-1.5">
+                  {articles.map((a) => (
+                    <li key={a.id} className="flex items-center justify-between gap-2 rounded-xl bg-surface-alt px-3 py-2.5">
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[13px] font-semibold">{a.designation}</div>
+                        <div className="text-[11px] text-ink-muted">
+                          {a.quantiteDeclaree} · {a.poidsKg.toLocaleString("fr-FR")} kg
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => retirerUnArticle(a.id)}
+                        aria-label="Retirer cet article"
+                        className="shrink-0 text-ink-muted"
+                      >
+                        &times;
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <AjouterArticleForm donId={donId} onAjoute={(article) => setArticles((prev) => [...prev, article])} />
 
             <div>
               <label htmlFor="adresseRecuperation" className="mb-1 block text-xs text-ink-muted">

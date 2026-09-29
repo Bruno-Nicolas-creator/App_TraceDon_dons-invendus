@@ -5,6 +5,7 @@ import { jourSemaineDuJour } from "@/lib/planning";
 import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
 import { compterMessagesNonLus } from "@/lib/messagerie";
 import { peutDonnerAlimentaire, peutDonnerMateriel } from "@/lib/activiteEntreprise";
+import { isExtractionConfiguree } from "@/lib/extractionArticles";
 import NouveauDonClient from "./NouveauDonClient";
 
 // Cette page peut créer un brouillon en base : elle ne doit jamais être
@@ -53,11 +54,13 @@ export default async function NouveauDonPage() {
         instructionsAcces: don.instructionsAcces ?? "",
         pieceJointeNomFichier: don.pieceJointeNomFichier,
       }}
+      articles={don.articles.map((a) => ({ id: a.id, designation: a.designation, quantiteDeclaree: a.quantiteDeclaree, poidsKg: a.poidsKg }))}
       adresseEntreprise={entreprise.adresse}
       associationsAujourdhui={associationsAujourdhui}
       congesJusquau={congesEnCours ? formaterDateConges(congesEnCours.fin) : null}
       nonLusMessages={nonLusMessages}
       peutDonnerMaterielAussi={peutDonnerMateriel(entreprise.natureActivite)}
+      extractionConfiguree={isExtractionConfiguree()}
     />
   );
 }

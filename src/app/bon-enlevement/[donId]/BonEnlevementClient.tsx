@@ -2,7 +2,14 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { confirmerBon, definirBenevoleCollecteurAction, refuserArticle, retirerArticle, validerArticle } from "@/app/actions";
+import {
+  confirmerBon,
+  constaterArticleAction,
+  definirBenevoleCollecteurAction,
+  refuserArticle,
+  retirerArticle,
+  validerArticle,
+} from "@/app/actions";
 import { demarrerSignatureDocuSign } from "./docusign-actions";
 import AjouterArticleForm from "@/components/AjouterArticleForm";
 import CompteurAnime from "@/components/CompteurAnime";
@@ -67,6 +74,9 @@ export default function BonEnlevementClient({
   const [motifs, setMotifs] = useState<Record<string, string>>(
     Object.fromEntries(bon.articles.map((a) => [a.id, a.motifRefus]))
   );
+  const [constats, setConstats] = useState<Record<string, { qte: string; temp: string }>>(
+    Object.fromEntries(bon.articles.map((a) => [a.id, { qte: a.qte, temp: a.temp === "—" ? "" : a.temp }]))
+  );
   const donateurSigne = bon.donateurSigne;
   const associationSigne = bon.associationSigne;
   const peutControlerArticles = role === "ASSOCIATION";
@@ -114,6 +124,21 @@ export default function BonEnlevementClient({
         await retirerArticle(articleId);
       } catch (e) {
         setErreurSignature(e instanceof Error ? e.message : "Impossible de retirer cet article.");
+      }
+    });
+  };
+
+  const modifierConstat = (articleId: string, champ: "qte" | "temp", valeur: string) => {
+    setConstats((prev) => ({ ...prev, [articleId]: { ...prev[articleId], [champ]: valeur } }));
+  };
+
+  const enregistrerConstat = (articleId: string) => {
+    const constat = constats[articleId] ?? { qte: "", temp: "" };
+    startTransition(async () => {
+      try {
+        await constaterArticleAction(articleId, constat.qte, constat.temp);
+      } catch (e) {
+        setErreurSignature(e instanceof Error ? e.message : "Impossible d'enregistrer la constatation.");
       }
     });
   };
@@ -375,14 +400,24 @@ export default function BonEnlevementClient({
                 <div className="flex gap-2">
                   <div className="flex-1">
                     <label className="mb-0.5 block text-[11px] text-ink-muted">Quantité constatée</label>
-                    <input type="text" defaultValue={article.qte} className="w-full rounded-lg border border-border px-2.5 py-2 text-[13px]" />
+                    <input
+                      type="text"
+                      value={constats[article.id]?.qte ?? ""}
+                      onChange={(e) => modifierConstat(article.id, "qte", e.target.value)}
+                      onBlur={() => enregistrerConstat(article.id)}
+                      disabled={!peutControlerArticles}
+                      className="w-full rounded-lg border border-border px-2.5 py-2 text-[13px] disabled:bg-surface-alt disabled:text-ink-muted"
+                    />
                   </div>
                   <div className="flex-1">
                     <label className="mb-0.5 block text-[11px] text-ink-muted">Température</label>
                     <input
                       type="text"
-                      defaultValue={article.temp}
-                      className={`w-full rounded-lg border px-2.5 py-2 text-[13px] ${article.temperatureHorsPlage ? "border-[#E7C4AE] text-accent" : "border-border"}`}
+                      value={constats[article.id]?.temp ?? ""}
+                      onChange={(e) => modifierConstat(article.id, "temp", e.target.value)}
+                      onBlur={() => enregistrerConstat(article.id)}
+                      disabled={!peutControlerArticles}
+                      className={`w-full rounded-lg border px-2.5 py-2 text-[13px] disabled:bg-surface-alt disabled:text-ink-muted ${article.temperatureHorsPlage ? "border-[#E7C4AE] text-accent" : "border-border"}`}
                     />
                   </div>
                 </div>
