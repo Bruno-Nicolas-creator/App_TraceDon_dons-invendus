@@ -266,7 +266,7 @@ export default function NouveauDonClient({
 
             <div>
               <div className="mb-1 flex items-center justify-between text-xs text-ink-muted">
-                <span>Joindre une liste détaillée — optionnel</span>
+                <span>Joindre ou prendre une photo d&apos;une liste détaillée ou du don</span>
                 {pieceJointeNomFichier && (
                   <a
                     href={`/api/dons/${donId}/piece-jointe`}
@@ -313,7 +313,7 @@ export default function NouveauDonClient({
                     />
                     <circle cx="12" cy="12.5" r="3.4" stroke="#201F1B" strokeWidth="1.6" />
                   </svg>
-                  Scanner (appareil photo)
+                  Prendre une photo
                   <input
                     type="file"
                     accept="image/*"
