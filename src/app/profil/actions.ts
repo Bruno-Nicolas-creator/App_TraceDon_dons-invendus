@@ -8,6 +8,8 @@ import { definitionDocumentPourRole, nomFichierSur, validerFichierDocument, type
 import { champTropLong, LONGUEUR_MAX_CHAMP_COURT } from "@/lib/validation";
 import { disponibilitesValides } from "@/lib/disponibilites";
 import { typesActiviteValides } from "@/lib/activiteAssociation";
+import { roleBenevoleValide } from "@/lib/benevoles";
+import { itemsChaineFroidValides } from "@/lib/chaineFroid";
 
 const LONGUEUR_MAX_NOTRE_ACTION = 2000;
 
@@ -91,15 +93,20 @@ export async function ajouterBenevoleAction(formData: FormData) {
     throw new Error("Champ trop long.");
   }
 
+  const roleBrut = String(formData.get("benevoleRole") ?? "COLLECTEUR");
+  const role = roleBenevoleValide(roleBrut) ? roleBrut : "COLLECTEUR";
   const assuranceRcAttestee = formData.get("benevoleAssuranceRc") === "on";
+  const mandatDonne = formData.get("benevoleMandat") === "on";
 
   await prisma.benevole.create({
     data: {
       associationId: session.associationId,
       nom,
       telephone: telephone || null,
+      role,
       assuranceRcAttestee,
       assuranceRcAttesteeLe: assuranceRcAttestee ? new Date() : null,
+      mandatDonneLe: mandatDonne ? new Date() : null,
     },
   });
   revalidatePath("/profil");
@@ -118,6 +125,24 @@ export async function basculerAssuranceRcBenevoleAction(benevoleId: string) {
   await prisma.benevole.update({
     where: { id: benevoleId },
     data: { assuranceRcAttestee, assuranceRcAttesteeLe: assuranceRcAttestee ? new Date() : null },
+  });
+  revalidatePath("/profil");
+}
+
+/** Mandat du président donnant à ce bénévole le pouvoir de signer les bordereaux de remise. */
+export async function basculerMandatBenevoleAction(benevoleId: string) {
+  const session = await getSession();
+  if (!session || session.role !== "ASSOCIATION" || !session.associationId) {
+    throw new Error("Action réservée aux associations.");
+  }
+
+  const benevole = await prisma.benevole.findUniqueOrThrow({ where: { id: benevoleId } });
+  if (benevole.associationId !== session.associationId) throw new Error("Bénévole non autorisé.");
+
+  const mandatDonne = !benevole.mandatDonneLe;
+  await prisma.benevole.update({
+    where: { id: benevoleId },
+    data: { mandatDonneLe: mandatDonne ? new Date() : null },
   });
   revalidatePath("/profil");
 }
@@ -304,6 +329,52 @@ export async function definirPreferenceAlerteAction(formData: FormData) {
     data: {
       preferenceAlerte: preferenceAlerte as "EMAIL" | "SMS" | "SMS_EMAIL",
       telephoneAlerteSms: telephoneAlerteSms || null,
+    },
+  });
+  revalidatePath("/profil");
+}
+
+/** Attestation sur l'honneur de capacité à respecter la chaîne du froid — cf. src/lib/chaineFroid.ts. */
+export async function definirChaineFroidAction(
+  moyens: string[]
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await getSession();
+  if (!session || session.role !== "ASSOCIATION" || !session.associationId) {
+    return { ok: false, error: "Action réservée aux associations." };
+  }
+
+  const moyensValides = itemsChaineFroidValides(moyens);
+  await prisma.association.update({
+    where: { id: session.associationId },
+    data: {
+      chaineFroidMoyens: moyensValides,
+      chaineFroidDeclareeLe: moyensValides.length > 0 ? new Date() : null,
+    },
+  });
+  revalidatePath("/profil");
+  revalidatePath("/associations");
+  return { ok: true };
+}
+
+export async function definirContactRappelAction(formData: FormData) {
+  const session = await getSession();
+  if (!session || session.role !== "ASSOCIATION" || !session.associationId) {
+    throw new Error("Action réservée aux associations.");
+  }
+
+  const nom = String(formData.get("contactRappelNom") ?? "").trim();
+  const telephone = String(formData.get("contactRappelTelephone") ?? "").trim();
+  const email = String(formData.get("contactRappelEmail") ?? "").trim();
+  if (champTropLong(nom, LONGUEUR_MAX_CHAMP_COURT) || champTropLong(telephone, LONGUEUR_MAX_CHAMP_COURT) || champTropLong(email, LONGUEUR_MAX_CHAMP_COURT)) {
+    throw new Error("Un des champs dépasse la longueur maximale autorisée.");
+  }
+
+  await prisma.association.update({
+    where: { id: session.associationId },
+    data: {
+      contactRappelNom: nom || null,
+      contactRappelTelephone: telephone || null,
+      contactRappelEmail: email || null,
     },
   });
   revalidatePath("/profil");

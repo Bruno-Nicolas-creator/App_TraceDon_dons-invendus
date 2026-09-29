@@ -23,6 +23,7 @@ export type AssociationAffichee = {
   congesJusquau: string | null;
   typesActivite: string[];
   notreAction: string | null;
+  chaineFroidAttestee: boolean;
 };
 
 const LONGUEUR_MAX_EXTRAIT = 140;
@@ -146,6 +147,11 @@ export default function AssociationsProchesClient({
                     }`}
                   >
                     {association.habilitee ? "Habilitée" : "Non habilitée"}
+                  </span>
+                )}
+                {association.chaineFroidAttestee && (
+                  <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-semibold text-brand-dark">
+                    ✓ Chaîne du froid
                   </span>
                 )}
                 {association.congesJusquau && (

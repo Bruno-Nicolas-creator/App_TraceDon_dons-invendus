@@ -236,7 +236,10 @@ export async function obtenirUrlSignatureEmbarquee(bonId: string, role: RoleSign
  * au seul paramètre `event` de l'URL de retour, qui peut être falsifié côté client.
  */
 export async function verifierEtEnregistrerSignature(bonId: string, role: RoleSignataire): Promise<boolean> {
-  const bon = await prisma.bonEnlevement.findUniqueOrThrow({ where: { id: bonId } });
+  const bon = await prisma.bonEnlevement.findUniqueOrThrow({
+    where: { id: bonId },
+    include: { association: true, benevoleCollecteur: true },
+  });
   if (!bon.docusignEnvelopeId) return false;
 
   const dejaEnregistree = role === "DONATEUR" ? bon.signatureDonateurLe : bon.signatureAssociationLe;
@@ -257,11 +260,15 @@ export async function verifierEtEnregistrerSignature(bonId: string, role: RoleSi
 
   const champ = role === "DONATEUR" ? "signatureDonateurLe" : "signatureAssociationLe";
   const horodatage = signataire.signedDateTime ? new Date(signataire.signedDateTime) : new Date();
+  // Le bénévole mandaté choisi pour cet enlèvement (cf. definirBenevoleCollecteurAction) fait foi
+  // pour notre propre registre, même si la session DocuSign reste ouverte via le compte association.
+  const signataireNom =
+    role === "ASSOCIATION" ? bon.benevoleCollecteur?.nom ?? bon.association.denomination : null;
 
   await prisma.$transaction([
     prisma.bonEnlevement.update({ where: { id: bonId }, data: { [champ]: horodatage } }),
     prisma.signature.create({
-      data: { bonEnlevementId: bonId, role, horodatage, referenceDocuSign: bon.docusignEnvelopeId },
+      data: { bonEnlevementId: bonId, role, horodatage, referenceDocuSign: bon.docusignEnvelopeId, signataireNom },
     }),
   ]);
 

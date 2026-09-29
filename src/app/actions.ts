@@ -438,6 +438,32 @@ export async function refuserArticle(articleId: string, motif: string) {
   revalidatePath("/bon-enlevement");
 }
 
+/**
+ * Désigne le bénévole mandaté qui collecte physiquement ce don et signera le bon en son nom
+ * (cf. Mandat de signature) — modifiable tant que l'association n'a pas encore signé.
+ */
+export async function definirBenevoleCollecteurAction(bonId: string, benevoleId: string | null) {
+  const session = await requireSession();
+  if (session.role !== "ASSOCIATION" || !session.associationId) {
+    throw new Error("Action réservée aux associations.");
+  }
+  const bon = await prisma.bonEnlevement.findUniqueOrThrow({ where: { id: bonId } });
+  if (bon.associationId !== session.associationId) throw new Error("Bon non autorisé.");
+  if (bon.confirme || bon.signatureAssociationLe) {
+    throw new Error("Le bon est déjà signé par l'association : le bénévole collecteur ne peut plus être modifié.");
+  }
+
+  if (benevoleId) {
+    const benevole = await prisma.benevole.findUniqueOrThrow({ where: { id: benevoleId } });
+    if (benevole.associationId !== session.associationId || !benevole.mandatDonneLe) {
+      throw new Error("Ce bénévole n'est pas mandaté par votre association.");
+    }
+  }
+
+  await prisma.bonEnlevement.update({ where: { id: bonId }, data: { benevoleCollecteurId: benevoleId } });
+  revalidatePath("/bon-enlevement");
+}
+
 export async function confirmerBon(bonId: string) {
   const session = await requireSession();
   const bon = await prisma.bonEnlevement.findUniqueOrThrow({

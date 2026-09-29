@@ -5,7 +5,9 @@ export type TypeDocument =
   | "STATUTS_SIGNES"
   | "PREUVE_RESCRIT_FISCAL"
   | "HABILITATION_AIDE_ALIMENTAIRE"
-  | "DECLARATION_DDPP";
+  | "DECLARATION_DDPP"
+  | "PV_ASSEMBLEE_GENERALE"
+  | "ASSURANCE_TRANSPORT_STOCKAGE";
 
 export type DefinitionDocument = {
   type: TypeDocument;
@@ -58,6 +60,18 @@ export const DOCUMENTS_ASSOCIATION: DefinitionDocument[] = [
     type: "DECLARATION_DDPP",
     label: "Déclaration DDPP",
     aide: "Le récépissé de votre déclaration d'activité de manipulation de denrées auprès de la Direction départementale de la protection des populations.",
+    obligatoire: false,
+  },
+  {
+    type: "PV_ASSEMBLEE_GENERALE",
+    label: "PV d'assemblée générale",
+    aide: "Le procès-verbal désignant les dirigeants (président, trésorier...) habilités à signer la convention, les bons de remise et les reçus fiscaux.",
+    obligatoire: false,
+  },
+  {
+    type: "ASSURANCE_TRANSPORT_STOCKAGE",
+    label: "Assurance transport/stockage",
+    aide: "Obligatoire uniquement si votre association assure elle-même la collecte (véhicules, entrepôts, chambres froides).",
     obligatoire: false,
   },
 ];

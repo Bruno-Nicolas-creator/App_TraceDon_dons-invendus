@@ -9,14 +9,19 @@ import { associationHabilitee, estGrandeSurface, SEUIL_GRANDE_SURFACE_M2 } from 
 import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
 import { compterMessagesNonLus } from "@/lib/messagerie";
 import { TYPES_ACTIVITE } from "@/lib/activiteAssociation";
+import { GROUPES_CHAINE_FROID, chaineFroidComplete } from "@/lib/chaineFroid";
+import { LABEL_ROLE_BENEVOLE, type RoleBenevole } from "@/lib/benevoles";
 import SelecteurDisponibilites from "@/components/SelecteurDisponibilites";
 import CoffreFort, { type ConventionSignee, type DocumentExistant } from "./CoffreFort";
 import {
   ajouterBenevoleAction,
   ajouterPeriodeCongesAction,
   basculerAssuranceRcBenevoleAction,
+  basculerMandatBenevoleAction,
   deconnexionAction,
+  definirChaineFroidAction,
   definirConformiteAssociationAction,
+  definirContactRappelAction,
   definirPreferenceAlerteAction,
   definirPresentationAction,
   definirReferentDonAction,
@@ -41,7 +46,14 @@ export default async function ProfilPage() {
   let rescritNonDepose = false;
   let referentDonNom = "";
   let referentDonTelephone = "";
-  let benevoles: { id: string; nom: string; telephone: string | null; assuranceRcAttestee: boolean }[] = [];
+  let benevoles: {
+    id: string;
+    nom: string;
+    telephone: string | null;
+    role: RoleBenevole;
+    assuranceRcAttestee: boolean;
+    mandatDonneLe: Date | null;
+  }[] = [];
   let surfaceVenteM2: number | null = null;
   let habilitationStatut = "NON_HABILITEE";
   let habilitationDateFin: Date | null = null;
@@ -55,6 +67,10 @@ export default async function ProfilPage() {
   let notreAction = "";
   let preferenceAlerte: "EMAIL" | "SMS" | "SMS_EMAIL" = "EMAIL";
   let telephoneAlerteSms = "";
+  let chaineFroidMoyens: string[] = [];
+  let contactRappelNom = "";
+  let contactRappelTelephone = "";
+  let contactRappelEmail = "";
   if (session.entrepriseId) {
     const entreprise = await prisma.entreprise.findUnique({
       where: { id: session.entrepriseId },
@@ -106,6 +122,10 @@ export default async function ProfilPage() {
     notreAction = association?.notreAction ?? "";
     preferenceAlerte = association?.preferenceAlerte ?? "EMAIL";
     telephoneAlerteSms = association?.telephoneAlerteSms ?? "";
+    chaineFroidMoyens = association?.chaineFroidMoyens ?? [];
+    contactRappelNom = association?.contactRappelNom ?? "";
+    contactRappelTelephone = association?.contactRappelTelephone ?? "";
+    contactRappelEmail = association?.contactRappelEmail ?? "";
   }
 
   const grandeSurface = estGrandeSurface(surfaceVenteM2);
@@ -462,7 +482,12 @@ export default async function ProfilPage() {
                   <li key={benevole.id} className="rounded-xl bg-surface-alt px-3.5 py-2.5 text-sm">
                     <div className="flex items-center justify-between gap-2">
                       <div>
-                        <div className="font-medium">{benevole.nom}</div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium">{benevole.nom}</span>
+                          <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-ink-muted">
+                            {LABEL_ROLE_BENEVOLE[benevole.role]}
+                          </span>
+                        </div>
                         {benevole.telephone && (
                           <div className="text-xs text-ink-muted">
                             <LienTelephone numero={benevole.telephone} />
@@ -479,20 +504,32 @@ export default async function ProfilPage() {
                         </button>
                       </form>
                     </div>
-                    <form action={basculerAssuranceRcBenevoleAction.bind(null, benevole.id)} className="mt-2">
-                      <button
-                        type="submit"
-                        className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-transform active:scale-95 ${
-                          benevole.assuranceRcAttestee
-                            ? "bg-brand/15 text-brand"
-                            : "bg-amber-500/15 text-amber-700"
-                        }`}
-                      >
-                        {benevole.assuranceRcAttestee
-                          ? "✓ Assurance RC attestée"
-                          : "⚠ Assurance RC non attestée"}
-                      </button>
-                    </form>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <form action={basculerAssuranceRcBenevoleAction.bind(null, benevole.id)}>
+                        <button
+                          type="submit"
+                          className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-transform active:scale-95 ${
+                            benevole.assuranceRcAttestee
+                              ? "bg-brand/15 text-brand"
+                              : "bg-amber-500/15 text-amber-700"
+                          }`}
+                        >
+                          {benevole.assuranceRcAttestee
+                            ? "✓ Assurance RC attestée"
+                            : "⚠ Assurance RC non attestée"}
+                        </button>
+                      </form>
+                      <form action={basculerMandatBenevoleAction.bind(null, benevole.id)}>
+                        <button
+                          type="submit"
+                          className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-transform active:scale-95 ${
+                            benevole.mandatDonneLe ? "bg-brand/15 text-brand" : "bg-surface text-ink-muted"
+                          }`}
+                        >
+                          {benevole.mandatDonneLe ? "✓ Mandaté pour signer" : "Pas encore mandaté"}
+                        </button>
+                      </form>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -514,11 +551,25 @@ export default async function ProfilPage() {
                 maxLength={200}
                 className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
               />
+              <select
+                name="benevoleRole"
+                defaultValue="COLLECTEUR"
+                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+              >
+                <option value="REFERENT">Référent don</option>
+                <option value="COLLECTEUR">Collecteur</option>
+              </select>
               <label className="flex items-start gap-2 text-xs text-ink-muted">
                 <input type="checkbox" name="benevoleAssuranceRc" className="mt-0.5" />
                 <span>
                   J&apos;atteste que ce bénévole dispose d&apos;une assurance responsabilité civile en cours de
                   validité pour ses déplacements.
+                </span>
+              </label>
+              <label className="flex items-start gap-2 text-xs text-ink-muted">
+                <input type="checkbox" name="benevoleMandat" className="mt-0.5" />
+                <span>
+                  Le président lui donne mandat pour signer les bordereaux de remise au nom de l&apos;association.
                 </span>
               </label>
               <button
@@ -574,6 +625,97 @@ export default async function ProfilPage() {
                 />
               </label>
 
+              <button
+                type="submit"
+                className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+              >
+                Enregistrer
+              </button>
+            </form>
+          </div>
+        )}
+
+        {session.role === "ASSOCIATION" && (
+          <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4" style={{ animationDelay: "85ms" }}>
+            <div>
+              <h2 className="text-sm font-semibold">Capacité chaîne du froid</h2>
+              <p className="mt-0.5 text-xs text-ink-muted">
+                Attestation sur l&apos;honneur visible par les entreprises donatrices : un magasin peut refuser de
+                céder ses invendus sans cette assurance.
+              </p>
+              {chaineFroidComplete(chaineFroidMoyens) && (
+                <span className="mt-1.5 inline-block rounded-full bg-brand-tint px-2.5 py-1 text-xs font-semibold text-brand-dark">
+                  ✓ Chaîne du froid attestée
+                </span>
+              )}
+            </div>
+            <form
+              action={async (formData: FormData) => {
+                "use server";
+                await definirChaineFroidAction(formData.getAll("chaineFroidMoyens").map(String));
+              }}
+              className="space-y-3"
+            >
+              {GROUPES_CHAINE_FROID.map((groupe) => (
+                <div key={groupe.id}>
+                  <div className="mb-1.5 text-xs font-semibold text-ink-muted">{groupe.titre}</div>
+                  <div className="space-y-1.5">
+                    {groupe.items.map((item) => (
+                      <label key={item.id} className="flex items-start gap-2 text-xs text-ink">
+                        <input
+                          type="checkbox"
+                          name="chaineFroidMoyens"
+                          value={item.id}
+                          defaultChecked={chaineFroidMoyens.includes(item.id)}
+                          className="mt-0.5"
+                        />
+                        <span>{item.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <button
+                type="submit"
+                className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+              >
+                Enregistrer
+              </button>
+            </form>
+          </div>
+        )}
+
+        {session.role === "ASSOCIATION" && (
+          <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4" style={{ animationDelay: "90ms" }}>
+            <div>
+              <h2 className="text-sm font-semibold">Contact en cas de rappel produit</h2>
+              <p className="mt-0.5 text-xs text-ink-muted">
+                La personne à prévenir immédiatement (email et téléphone) en cas de retrait/rappel d&apos;un produit
+                déjà distribué.
+              </p>
+            </div>
+            <form action={definirContactRappelAction} className="space-y-2.5">
+              <input
+                type="text"
+                name="contactRappelNom"
+                defaultValue={contactRappelNom}
+                placeholder="Nom de la personne à prévenir"
+                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+              />
+              <input
+                type="tel"
+                name="contactRappelTelephone"
+                defaultValue={contactRappelTelephone}
+                placeholder="Téléphone"
+                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+              />
+              <input
+                type="email"
+                name="contactRappelEmail"
+                defaultValue={contactRappelEmail}
+                placeholder="Email"
+                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+              />
               <button
                 type="submit"
                 className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"

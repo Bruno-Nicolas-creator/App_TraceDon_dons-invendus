@@ -32,6 +32,7 @@ export default async function BonEnlevementPage({
     include: {
       entreprise: true,
       association: true,
+      benevoleCollecteur: true,
       don: { include: { articles: { orderBy: { createdAt: "asc" } } } },
     },
   });
@@ -40,6 +41,16 @@ export default async function BonEnlevementPage({
   if (session.role === "ASSOCIATION" && bon.associationId !== session.associationId) notFound();
   if (session.role === "ENTREPRISE" && bon.entrepriseId !== session.entrepriseId) notFound();
   if (session.role === "COORDINATEUR") notFound();
+
+  const benevolesMandates =
+    session.role === "ASSOCIATION"
+      ? (
+          await prisma.benevole.findMany({
+            where: { associationId: bon.associationId, mandatDonneLe: { not: null } },
+            orderBy: { nom: "asc" },
+          })
+        ).map((b) => ({ id: b.id, nom: b.nom }))
+      : [];
 
   const articles: ArticleAffiche[] = bon.don.articles.map((a) => ({
     id: a.id,
@@ -76,6 +87,8 @@ export default async function BonEnlevementPage({
     description: bon.don.description,
     adresseRecuperation: bon.don.adresseRecuperation ?? bon.entreprise.adresse,
     aUnePieceJointe: !!bon.don.pieceJointeContentType,
+    benevoleCollecteurId: bon.benevoleCollecteurId,
+    benevoleCollecteurNom: bon.benevoleCollecteur?.nom ?? null,
   };
 
   return (
@@ -84,6 +97,7 @@ export default async function BonEnlevementPage({
       docusignConfigure={isDocuSignConfigured()}
       impact={impact}
       role={session.role === "ENTREPRISE" ? "ENTREPRISE" : "ASSOCIATION"}
+      benevolesMandates={benevolesMandates}
     />
   );
 }

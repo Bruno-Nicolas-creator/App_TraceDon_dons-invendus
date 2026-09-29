@@ -5,6 +5,7 @@ import { calculerDistances, geocoderAdresse, isGoogleMapsServerConfigured } from
 import { associationHabilitee, estGrandeSurface } from "@/lib/conformite";
 import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
 import { compterMessagesNonLus } from "@/lib/messagerie";
+import { chaineFroidComplete } from "@/lib/chaineFroid";
 import AssociationsProchesClient, { type AssociationAffichee } from "./AssociationsProchesClient";
 
 export const dynamic = "force-dynamic";
@@ -84,6 +85,7 @@ export default async function AssociationsProchesPage() {
       congesJusquau: congesEnCours ? formaterDateConges(congesEnCours.fin) : null,
       typesActivite: association.typesActivite,
       notreAction: association.notreAction,
+      chaineFroidAttestee: chaineFroidComplete(association.chaineFroidMoyens),
     };
   });
 

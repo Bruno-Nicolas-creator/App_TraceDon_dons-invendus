@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { confirmerBon, refuserArticle, retirerArticle, validerArticle } from "@/app/actions";
+import { confirmerBon, definirBenevoleCollecteurAction, refuserArticle, retirerArticle, validerArticle } from "@/app/actions";
 import { demarrerSignatureDocuSign } from "./docusign-actions";
 import AjouterArticleForm from "@/components/AjouterArticleForm";
 import CompteurAnime from "@/components/CompteurAnime";
@@ -42,20 +42,25 @@ export type BonAffiche = {
   description?: string | null;
   adresseRecuperation?: string | null;
   aUnePieceJointe?: boolean;
+  benevoleCollecteurId?: string | null;
+  benevoleCollecteurNom?: string | null;
 };
 
 type ImpactCarbone = { co2EviteKg: number; equivalenceKm: number | null };
+type BenevoleMandate = { id: string; nom: string };
 
 export default function BonEnlevementClient({
   bon,
   docusignConfigure,
   impact,
   role,
+  benevolesMandates = [],
 }: {
   bon: BonAffiche;
   docusignConfigure: boolean;
   impact: ImpactCarbone | null;
   role: "ENTREPRISE" | "ASSOCIATION";
+  benevolesMandates?: BenevoleMandate[];
 }) {
   const [ecran, setEcran] = useState<"revue" | "succes">(bon.confirme ? "succes" : "revue");
   const [articles, setArticles] = useState(bon.articles);
@@ -68,6 +73,8 @@ export default function BonEnlevementClient({
   // Le don matériel repose sur une liste établie avant publication : contrairement à
   // l'alimentaire, il n'y a pas de scan complémentaire à faire au moment de l'enlèvement.
   const peutAjouterArticles = role === "ENTREPRISE" && !bon.confirme && bon.typeDon !== "MATERIEL";
+  const peutChoisirBenevole = role === "ASSOCIATION" && !associationSigne && !bon.confirme;
+  const [benevoleCollecteurId, setBenevoleCollecteurId] = useState(bon.benevoleCollecteurId ?? "");
   const [erreurSignature, setErreurSignature] = useState<string | null>(null);
   const [signatureEnCours, setSignatureEnCours] = useState<"DONATEUR" | "ASSOCIATION" | null>(null);
   const [confirmationEnCours, setConfirmationEnCours] = useState(false);
@@ -107,6 +114,17 @@ export default function BonEnlevementClient({
         await retirerArticle(articleId);
       } catch (e) {
         setErreurSignature(e instanceof Error ? e.message : "Impossible de retirer cet article.");
+      }
+    });
+  };
+
+  const choisirBenevole = (id: string) => {
+    setBenevoleCollecteurId(id);
+    startTransition(async () => {
+      try {
+        await definirBenevoleCollecteurAction(bon.id, id || null);
+      } catch (e) {
+        setErreurSignature(e instanceof Error ? e.message : "Impossible d'enregistrer le bénévole collecteur.");
       }
     });
   };
@@ -185,6 +203,12 @@ export default function BonEnlevementClient({
                 Mes archives
               </Link>
             </div>
+            {bon.benevoleCollecteurNom && (
+              <div className="flex justify-between">
+                <span className="text-ink-muted">Collecté par</span>
+                <span className="font-semibold">{bon.benevoleCollecteurNom}</span>
+              </div>
+            )}
           </div>
 
           {impact && (
@@ -456,6 +480,33 @@ export default function BonEnlevementClient({
           {!docusignConfigure && (
             <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">
               Signature électronique DocuSign non configurée sur ce déploiement (voir .env.example).
+            </div>
+          )}
+
+          {peutChoisirBenevole && benevolesMandates.length > 0 && (
+            <div>
+              <label htmlFor="benevoleCollecteur" className="mb-1 block text-[11px] text-ink-muted">
+                Bénévole mandaté qui collecte (signera en son nom)
+              </label>
+              <select
+                id="benevoleCollecteur"
+                value={benevoleCollecteurId}
+                onChange={(e) => choisirBenevole(e.target.value)}
+                className="w-full rounded-lg border border-border px-2.5 py-2 text-[13px]"
+              >
+                <option value="">— Moi-même (compte association) —</option>
+                {benevolesMandates.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.nom}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {!peutChoisirBenevole && bon.benevoleCollecteurNom && (
+            <div className="text-[11.5px] leading-snug text-ink-muted">
+              <span className="font-semibold text-ink">Collecté par : </span>
+              {bon.benevoleCollecteurNom}
             </div>
           )}
 

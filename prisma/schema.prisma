@@ -42,6 +42,13 @@ enum StatutArticle {
   REFUSE
 }
 
+// Distingue, dans la liste des bénévoles d'une association, qui est habilité à interagir avec
+// le donateur (référent) de qui vient simplement collecter sur le terrain (collecteur).
+enum RoleBenevole {
+  REFERENT
+  COLLECTEUR
+}
+
 enum StatutRescrit {
   NON_DEPOSE
   EN_ATTENTE
@@ -166,6 +173,16 @@ model Association {
   declarationDdppDate       DateTime?
   referentDonNom            String?
   referentDonTelephone      String?
+  // Capacité matérielle de respect de la chaîne du froid (attestation sur l'honneur) : ids des
+  // moyens cochés parmi src/lib/chaineFroid.ts — condition que le donateur vérifie avant de
+  // donner (cf. checklist justificatifs associations).
+  chaineFroidMoyens         String[]      @default([])
+  chaineFroidDeclareeLe     DateTime?
+  // Personne à prévenir immédiatement en cas de rappel/retrait d'un produit déjà distribué —
+  // distincte du référent don au quotidien.
+  contactRappelNom          String?
+  contactRappelTelephone    String?
+  contactRappelEmail        String?
   latitude                  Float?
   longitude                 Float?
   reseauId                  String?
@@ -189,8 +206,13 @@ model Benevole {
   association          Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
   nom                  String
   telephone            String?
+  role                 RoleBenevole @default(COLLECTEUR)
   assuranceRcAttestee  Boolean     @default(false)
   assuranceRcAttesteeLe DateTime?
+  // Mandat de signature donné par le président de l'association à ce bénévole pour signer les
+  // bordereaux de remise en son nom (cf. Mandat_Signature_Association_Benevole).
+  mandatDonneLe        DateTime?
+  bonsCollectes        BonEnlevement[]
   createdAt            DateTime    @default(now())
 }
 
@@ -256,6 +278,8 @@ enum TypeDocument {
   PREUVE_RESCRIT_FISCAL
   HABILITATION_AIDE_ALIMENTAIRE
   DECLARATION_DDPP
+  PV_ASSEMBLEE_GENERALE
+  ASSURANCE_TRANSPORT_STOCKAGE
 }
 
 model Document {
@@ -363,6 +387,11 @@ model BonEnlevement {
   poidsTotalRetenu         Float?
   signatureDonateurLe      DateTime?
   signatureAssociationLe   DateTime?
+  // Bénévole mandaté qui signe effectivement ce bon au nom de l'association (cf. Mandat de
+  // signature) : sert de nom de signataire pour DocuSign, à défaut la dénomination de
+  // l'association est utilisée. SetNull si le bénévole est retiré : n'invalide pas le bon.
+  benevoleCollecteurId     String?
+  benevoleCollecteur       Benevole?   @relation(fields: [benevoleCollecteurId], references: [id], onDelete: SetNull)
   confirme                 Boolean     @default(false)
   docusignEnvelopeId       String?
   signatures               Signature[]
