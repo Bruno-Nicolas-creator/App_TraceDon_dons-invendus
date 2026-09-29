@@ -2,7 +2,11 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { compterMessagesNonLus } from "@/lib/messagerie";
-import ArchivesClient, { type AttestationArchive, type BonArchive } from "./ArchivesClient";
+import ArchivesClient, {
+  type AttestationArchive,
+  type AttestationInteretGeneralArchive,
+  type BonArchive,
+} from "./ArchivesClient";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +27,7 @@ export default async function ArchivesPage() {
         : {};
   const attestationWhere = bonWhere;
 
-  const [bons, attestations] = await Promise.all([
+  const [bons, attestations, attestationsInteretGeneral] = await Promise.all([
     prisma.bonEnlevement.findMany({
       where: { ...bonWhere, confirme: true },
       include: { association: true, entreprise: true },
@@ -33,6 +37,11 @@ export default async function ArchivesPage() {
       where: attestationWhere,
       include: { association: true, entreprise: true },
       orderBy: { periodeDebut: "desc" },
+    }),
+    prisma.attestationInteretGeneral.findMany({
+      where: attestationWhere,
+      include: { association: true, entreprise: true },
+      orderBy: { createdAt: "desc" },
     }),
   ]);
 
@@ -57,10 +66,19 @@ export default async function ArchivesPage() {
     statut: att.statut,
   }));
 
+  const attestationsInteretGeneralAffichees: AttestationInteretGeneralArchive[] = attestationsInteretGeneral.map(
+    (att) => ({
+      id: att.id,
+      titre: nomPartenaire(att),
+      statut: att.statut,
+    })
+  );
+
   return (
     <ArchivesClient
       bons={bonsAffiches}
       attestations={attestationsAffichees}
+      attestationsInteretGeneral={attestationsInteretGeneralAffichees}
       role={session.role}
       nonLusMessages={nonLusMessages}
     />

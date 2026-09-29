@@ -6,8 +6,8 @@ const SESSION_COOKIE = "session";
 type Role = "ENTREPRISE" | "ASSOCIATION" | "COORDINATEUR";
 
 const ALLOWED_PREFIXES: Record<Role, string[]> = {
-  ENTREPRISE: ["/", "/nouveau-don-materiel", "/planning", "/associations", "/archives", "/profil", "/convention", "/bon-enlevement", "/attestations", "/messages"],
-  ASSOCIATION: ["/dons", "/bon-enlevement", "/archives", "/profil", "/convention", "/attestations", "/messages"],
+  ENTREPRISE: ["/", "/nouveau-don-materiel", "/planning", "/associations", "/archives", "/profil", "/convention", "/bon-enlevement", "/attestations", "/attestation-interet-general", "/messages"],
+  ASSOCIATION: ["/dons", "/bon-enlevement", "/archives", "/profil", "/convention", "/attestations", "/attestation-interet-general", "/messages"],
   COORDINATEUR: ["/coordinateur", "/archives", "/profil", "/messages"],
 };
 

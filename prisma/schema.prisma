@@ -134,6 +134,7 @@ model Entreprise {
   dons             Don[]
   bonsEnlevement   BonEnlevement[]
   attestations     AttestationFiscale[]
+  attestationsInteretGeneral AttestationInteretGeneral[]
   conventions      Convention[]
   assignationsRecurrentes AssignationRecurrente[]
   documents        Document[]
@@ -191,6 +192,7 @@ model Association {
   donsAssignes              Don[]
   bonsEnlevement            BonEnlevement[]
   attestations              AttestationFiscale[]
+  attestationsInteretGeneral AttestationInteretGeneral[]
   conventions               Convention[]
   assignationsRecurrentes   AssignationRecurrente[]
   benevoles                 Benevole[]
@@ -431,4 +433,27 @@ model AttestationFiscale {
   signatureAssociationLe DateTime?
   bonsEnlevement         BonEnlevement[]
   createdAt              DateTime          @default(now())
+}
+
+enum StatutAttestationInteretGeneral {
+  BROUILLON
+  ENVOYEE
+  SIGNEE
+}
+
+// Attestation sur l'honneur du statut d'intérêt général (art. 238 bis du CGI), signée par
+// l'association et adressée à une entreprise donatrice nommée (contrairement à AttestationFiscale,
+// non rattachée à une période ou des bons précis : une seule par couple entreprise/association).
+model AttestationInteretGeneral {
+  id                     String                           @id @default(cuid())
+  entrepriseId           String
+  entreprise             Entreprise                       @relation(fields: [entrepriseId], references: [id])
+  associationId          String
+  association            Association                      @relation(fields: [associationId], references: [id])
+  statut                 StatutAttestationInteretGeneral @default(BROUILLON)
+  docusignEnvelopeId     String?
+  signatureAssociationLe DateTime?
+  createdAt              DateTime                         @default(now())
+
+  @@unique([entrepriseId, associationId])
 }

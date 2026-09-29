@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import BottomTabBar from "@/components/BottomTabBar";
 
-type Onglet = "bons" | "attestations";
+type Onglet = "bons" | "attestations" | "interetGeneral";
 
 export type BonArchive = { id: string; titre: string; date: string; poids: string };
 export type AttestationArchive = {
@@ -12,6 +12,11 @@ export type AttestationArchive = {
   titre: string;
   periode: string;
   montant: string;
+  statut: "BROUILLON" | "ENVOYEE" | "SIGNEE";
+};
+export type AttestationInteretGeneralArchive = {
+  id: string;
+  titre: string;
   statut: "BROUILLON" | "ENVOYEE" | "SIGNEE";
 };
 
@@ -29,11 +34,13 @@ function DocIcon({ variant }: { variant: "bon" | "attestation" }) {
 export default function ArchivesClient({
   bons,
   attestations,
+  attestationsInteretGeneral,
   role,
   nonLusMessages = 0,
 }: {
   bons: BonArchive[];
   attestations: AttestationArchive[];
+  attestationsInteretGeneral: AttestationInteretGeneralArchive[];
   role: "ENTREPRISE" | "ASSOCIATION" | "COORDINATEUR";
   nonLusMessages?: number;
 }) {
@@ -58,6 +65,13 @@ export default function ArchivesClient({
           >
             Attestations fiscales
           </button>
+          <button
+            type="button"
+            onClick={() => setOnglet("interetGeneral")}
+            className={`border-b-2 pb-2.5 text-[13px] font-semibold ${onglet === "interetGeneral" ? "border-ink text-ink" : "border-transparent text-ink-muted"}`}
+          >
+            Intérêt général
+          </button>
         </div>
       </header>
 
@@ -75,61 +89,109 @@ export default function ArchivesClient({
             + Générer un récapitulatif fiscal
           </Link>
         )}
-        {onglet === "bons"
-          ? bons.map((bon) => (
+        {onglet === "interetGeneral" && role === "ENTREPRISE" && (
+          <Link
+            href="/attestation-interet-general/nouvelle"
+            className="block w-full rounded-full border border-dashed border-border bg-surface py-2.5 text-center text-sm font-semibold transition-transform active:scale-[0.98]"
+          >
+            + Générer une attestation intérêt général
+          </Link>
+        )}
+        {onglet === "bons" &&
+          bons.map((bon) => (
+            <a
+              key={bon.id}
+              href={`/api/bon-enlevement/${bon.id}/pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3.5"
+            >
+              <div className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-lg bg-brand-tint">
+                <DocIcon variant="bon" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[13.5px] font-semibold">{bon.titre}</div>
+                <div className="mt-0.5 text-xs text-ink-muted">{bon.date} · {bon.poids}</div>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0" aria-hidden="true">
+                <path d="M9 6L15 12L9 18" stroke="#6B6459" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </a>
+          ))}
+        {onglet === "attestations" &&
+          attestations.map((att) => {
+            const aSigner = role === "ASSOCIATION" && att.statut !== "SIGNEE";
+            return (
               <a
-                key={bon.id}
-                href={`/api/bon-enlevement/${bon.id}/pdf`}
-                target="_blank"
-                rel="noopener noreferrer"
+                key={att.id}
+                href={aSigner ? `/attestations/${att.id}` : `/api/attestations/${att.id}/pdf`}
+                target={aSigner ? undefined : "_blank"}
+                rel={aSigner ? undefined : "noopener noreferrer"}
                 className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3.5"
               >
-                <div className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-lg bg-brand-tint">
-                  <DocIcon variant="bon" />
+                <div className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-lg bg-accent-tint">
+                  <DocIcon variant="attestation" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-[13.5px] font-semibold">{bon.titre}</div>
-                  <div className="mt-0.5 text-xs text-ink-muted">{bon.date} · {bon.poids}</div>
+                  <div className="truncate text-[13.5px] font-semibold">{att.titre}</div>
+                  <div className="mt-0.5 text-xs text-ink-muted">{att.periode} · {att.montant}</div>
                 </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0" aria-hidden="true">
-                  <path d="M9 6L15 12L9 18" stroke="#6B6459" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                {aSigner ? (
+                  <span className="shrink-0 rounded-full bg-accent-tint px-2.5 py-1 text-[11px] font-semibold text-accent">
+                    À signer
+                  </span>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0" aria-hidden="true">
+                    <path d="M9 6L15 12L9 18" stroke="#6B6459" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
               </a>
-            ))
-          : attestations.map((att) => {
-              const aSigner = role === "ASSOCIATION" && att.statut !== "SIGNEE";
-              return (
-                <a
-                  key={att.id}
-                  href={aSigner ? `/attestations/${att.id}` : `/api/attestations/${att.id}/pdf`}
-                  target={aSigner ? undefined : "_blank"}
-                  rel={aSigner ? undefined : "noopener noreferrer"}
-                  className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3.5"
-                >
-                  <div className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-lg bg-accent-tint">
-                    <DocIcon variant="attestation" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[13.5px] font-semibold">{att.titre}</div>
-                    <div className="mt-0.5 text-xs text-ink-muted">{att.periode} · {att.montant}</div>
-                  </div>
-                  {aSigner ? (
-                    <span className="shrink-0 rounded-full bg-accent-tint px-2.5 py-1 text-[11px] font-semibold text-accent">
-                      À signer
-                    </span>
-                  ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0" aria-hidden="true">
-                      <path d="M9 6L15 12L9 18" stroke="#6B6459" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                </a>
-              );
-            })}
+            );
+          })}
+        {onglet === "interetGeneral" &&
+          attestationsInteretGeneral.map((att) => {
+            const aSigner = role === "ASSOCIATION" && att.statut !== "SIGNEE";
+            return (
+              <a
+                key={att.id}
+                href={
+                  aSigner
+                    ? `/attestation-interet-general/${att.id}`
+                    : `/api/attestation-interet-general/${att.id}/pdf`
+                }
+                target={aSigner ? undefined : "_blank"}
+                rel={aSigner ? undefined : "noopener noreferrer"}
+                className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3.5"
+              >
+                <div className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-lg bg-accent-tint">
+                  <DocIcon variant="attestation" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[13.5px] font-semibold">{att.titre}</div>
+                  <div className="mt-0.5 text-xs text-ink-muted">Statut d&apos;intérêt général</div>
+                </div>
+                {aSigner ? (
+                  <span className="shrink-0 rounded-full bg-accent-tint px-2.5 py-1 text-[11px] font-semibold text-accent">
+                    À signer
+                  </span>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0" aria-hidden="true">
+                    <path d="M9 6L15 12L9 18" stroke="#6B6459" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+              </a>
+            );
+          })}
         {onglet === "bons" && bons.length === 0 && (
           <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-ink-muted">Aucun bon archivé.</div>
         )}
         {onglet === "attestations" && attestations.length === 0 && (
           <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-ink-muted">Aucune attestation générée.</div>
+        )}
+        {onglet === "interetGeneral" && attestationsInteretGeneral.length === 0 && (
+          <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-ink-muted">
+            Aucune attestation intérêt général générée.
+          </div>
         )}
       </main>
 

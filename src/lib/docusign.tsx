@@ -6,6 +6,9 @@ import { prisma } from "@/lib/prisma";
 import BonEnlevementDocument, { type ArticlePdf } from "@/lib/pdf/BonEnlevementDocument";
 import ConventionDocument, { type ConventionPdfData } from "@/lib/pdf/ConventionDocument";
 import AttestationFiscaleDocument, { type AttestationPdfData } from "@/lib/pdf/AttestationFiscaleDocument";
+import AttestationInteretGeneralDocument, {
+  type AttestationInteretGeneralPdfData,
+} from "@/lib/pdf/AttestationInteretGeneralDocument";
 import { montantEnLettres } from "@/lib/nombreEnLettres";
 
 export type RoleSignataire = "DONATEUR" | "ASSOCIATION";
@@ -620,6 +623,159 @@ export async function verifierEtEnregistrerSignatureAttestation(attestationId: s
 
   const horodatage = signataire.signedDateTime ? new Date(signataire.signedDateTime) : new Date();
   await prisma.attestationFiscale.update({
+    where: { id: attestationId },
+    data: { signatureAssociationLe: horodatage, statut: "SIGNEE" },
+  });
+
+  return true;
+}
+
+export async function genererPdfInteretGeneral(attestationId: string): Promise<Buffer> {
+  const attestation = await prisma.attestationInteretGeneral.findUniqueOrThrow({
+    where: { id: attestationId },
+    include: { entreprise: true, association: true },
+  });
+
+  const data: AttestationInteretGeneralPdfData = {
+    entreprise: {
+      raisonSociale: attestation.entreprise.raisonSociale,
+      siret: attestation.entreprise.siret,
+    },
+    association: {
+      denomination: attestation.association.denomination,
+      adresse: attestation.association.adresse,
+      rna: attestation.association.rna,
+      categorieEligibilite: attestation.association.categorieEligibilite,
+      declarationInteretGeneral: attestation.association.declarationInteretGeneral,
+      rescritStatut: attestation.association.rescritStatut,
+      rescritDateDepot: attestation.association.rescritDateDepot,
+    },
+  };
+
+  return renderToBuffer(<AttestationInteretGeneralDocument data={data} />);
+}
+
+/** Crée l'enveloppe DocuSign de l'attestation intérêt général (signataire unique : l'association) si elle n'existe pas déjà. */
+export async function envoyerInteretGeneralPourSignature(attestationId: string): Promise<string> {
+  const attestation = await prisma.attestationInteretGeneral.findUniqueOrThrow({
+    where: { id: attestationId },
+    include: { association: true, entreprise: true },
+  });
+  if (attestation.docusignEnvelopeId) return attestation.docusignEnvelopeId;
+
+  const [accessToken, pdfBuffer, emailAssociation] = await Promise.all([
+    obtenirAccessToken(),
+    genererPdfInteretGeneral(attestationId),
+    emailContact(null, attestation.associationId),
+  ]);
+  const accountId = requireEnv("DOCUSIGN_ACCOUNT_ID");
+
+  const enveloppe = {
+    emailSubject: `Attestation intérêt général — ${attestation.entreprise.raisonSociale} — signature requise`,
+    documents: [
+      {
+        documentBase64: pdfBuffer.toString("base64"),
+        name: `Attestation interet general ${attestation.association.denomination}`,
+        fileExtension: "pdf",
+        documentId: "1",
+      },
+    ],
+    recipients: {
+      signers: [
+        {
+          email: emailAssociation,
+          name: attestation.association.denomination,
+          recipientId: "1",
+          routingOrder: "1",
+          clientUserId: clientUserId(attestation.id, "ASSOCIATION"),
+          tabs: {
+            signHereTabs: [
+              {
+                documentId: "1",
+                anchorString: "Pour l'association,",
+                anchorUnits: "pixels",
+                anchorXOffset: "0",
+                anchorYOffset: "36",
+              },
+            ],
+          },
+        },
+      ],
+    },
+    status: "sent",
+  };
+
+  const res = await fetch(`${BASE_PATH}/v2.1/accounts/${accountId}/envelopes`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify(enveloppe),
+  });
+  if (!res.ok) {
+    throw new Error(`Création de l'enveloppe DocuSign échouée (${res.status}) : ${await res.text()}`);
+  }
+  const data = (await res.json()) as { envelopeId: string };
+
+  await prisma.attestationInteretGeneral.update({
+    where: { id: attestationId },
+    data: { docusignEnvelopeId: data.envelopeId, statut: "ENVOYEE" },
+  });
+  return data.envelopeId;
+}
+
+/** Ouvre une session de signature intégrée (dans l'appli) pour l'association destinataire de l'attestation. */
+export async function obtenirUrlSignatureEmbarqueeInteretGeneral(attestationId: string, origin: string): Promise<string> {
+  const envelopeId = await envoyerInteretGeneralPourSignature(attestationId);
+  const attestation = await prisma.attestationInteretGeneral.findUniqueOrThrow({
+    where: { id: attestationId },
+    include: { association: true },
+  });
+
+  const accessToken = await obtenirAccessToken();
+  const accountId = requireEnv("DOCUSIGN_ACCOUNT_ID");
+
+  const email = await emailContact(null, attestation.associationId);
+  const returnUrl = `${origin}/attestation-interet-general/${attestation.id}?event=signing_complete`;
+
+  const res = await fetch(`${BASE_PATH}/v2.1/accounts/${accountId}/envelopes/${envelopeId}/views/recipient`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      returnUrl,
+      authenticationMethod: "none",
+      email,
+      userName: attestation.association.denomination,
+      recipientId: "1",
+      clientUserId: clientUserId(attestation.id, "ASSOCIATION"),
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Ouverture de la signature DocuSign échouée (${res.status}) : ${await res.text()}`);
+  }
+  const data = (await res.json()) as { url: string };
+  return data.url;
+}
+
+/** À appeler au retour depuis DocuSign : vérifie auprès de DocuSign puis enregistre la signature de l'attestation. */
+export async function verifierEtEnregistrerSignatureInteretGeneral(attestationId: string): Promise<boolean> {
+  const attestation = await prisma.attestationInteretGeneral.findUniqueOrThrow({ where: { id: attestationId } });
+  if (!attestation.docusignEnvelopeId) return false;
+  if (attestation.signatureAssociationLe) return true;
+
+  const accessToken = await obtenirAccessToken();
+  const accountId = requireEnv("DOCUSIGN_ACCOUNT_ID");
+
+  const res = await fetch(
+    `${BASE_PATH}/v2.1/accounts/${accountId}/envelopes/${attestation.docusignEnvelopeId}/recipients`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  if (!res.ok) return false;
+
+  const data = (await res.json()) as { signers?: { recipientId: string; status: string; signedDateTime?: string }[] };
+  const signataire = data.signers?.find((s) => s.recipientId === "1");
+  if (signataire?.status !== "completed") return false;
+
+  const horodatage = signataire.signedDateTime ? new Date(signataire.signedDateTime) : new Date();
+  await prisma.attestationInteretGeneral.update({
     where: { id: attestationId },
     data: { signatureAssociationLe: horodatage, statut: "SIGNEE" },
   });
