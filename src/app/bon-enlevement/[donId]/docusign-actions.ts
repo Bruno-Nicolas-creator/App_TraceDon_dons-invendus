@@ -19,6 +19,13 @@ export async function demarrerSignatureDocuSign(
     (role === "ASSOCIATION" && session.role === "ASSOCIATION" && bon.associationId === session.associationId);
   if (!autorise) return { ok: false, error: "Vous ne pouvez signer que pour votre propre organisation." };
 
+  // L'enveloppe DocuSign est envoyée en séquence (donateur d'abord, association ensuite) :
+  // demander un lien de signature association avant que le donateur ait signé est refusé par
+  // DocuSign (RECIPIENT_NOT_IN_SEQUENCE). On l'anticipe ici avec un message clair.
+  if (role === "ASSOCIATION" && !bon.signatureDonateurLe) {
+    return { ok: false, error: "Le donateur doit signer en premier avant que vous puissiez signer." };
+  }
+
   try {
     const origin = await origineRequete();
     const url = await obtenirUrlSignatureEmbarquee(bonId, role, origin);

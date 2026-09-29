@@ -535,12 +535,18 @@ export default function BonEnlevementClient({
               <button
                 type="button"
                 onClick={() => demarrerSignature("ASSOCIATION")}
-                disabled={associationSigne || !docusignConfigure || signatureEnCours !== null}
+                disabled={associationSigne || !donateurSigne || !docusignConfigure || signatureEnCours !== null}
                 className={`flex-1 rounded-xl border-[1.5px] border-dashed border-[#C7C1B0] py-3.5 text-xs font-semibold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
                   associationSigne ? "bg-brand-tint text-brand-dark" : "bg-surface"
                 }`}
               >
-                {associationSigne ? "Association signé" : signatureEnCours === "ASSOCIATION" ? "Ouverture…" : "Signer (association)"}
+                {associationSigne
+                  ? "Association signé"
+                  : !donateurSigne
+                    ? "En attente du donateur"
+                    : signatureEnCours === "ASSOCIATION"
+                      ? "Ouverture…"
+                      : "Signer (association)"}
               </button>
             ) : (
               <div
