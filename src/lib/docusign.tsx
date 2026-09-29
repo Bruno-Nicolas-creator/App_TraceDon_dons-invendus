@@ -4,6 +4,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import QRCode from "qrcode";
 import { prisma } from "@/lib/prisma";
 import BonEnlevementDocument, { type ArticlePdf } from "@/lib/pdf/BonEnlevementDocument";
+import { libelleHabilitation } from "@/lib/conformite";
 import ConventionDocument, { type ConventionPdfData } from "@/lib/pdf/ConventionDocument";
 import AttestationFiscaleDocument, { type AttestationPdfData } from "@/lib/pdf/AttestationFiscaleDocument";
 import AttestationInteretGeneralDocument, {
@@ -100,10 +101,15 @@ async function emailContact(entrepriseId: string | null, associationId: string |
   return utilisateur.email;
 }
 
-async function genererPdfBon(bonId: string, origin: string): Promise<Buffer> {
+export async function genererPdfBon(bonId: string, origin: string): Promise<Buffer> {
   const bon = await prisma.bonEnlevement.findUniqueOrThrow({
     where: { id: bonId },
-    include: { entreprise: true, association: true, don: { include: { articles: { orderBy: { createdAt: "asc" } } } } },
+    include: {
+      entreprise: true,
+      association: true,
+      benevoleCollecteur: true,
+      don: { include: { articles: { orderBy: { createdAt: "asc" } } } },
+    },
   });
 
   const qrDataUrl = await QRCode.toDataURL(`${origin}/bon-enlevement/${bon.donId}`, { margin: 1, width: 200 });
@@ -121,8 +127,21 @@ async function genererPdfBon(bonId: string, origin: string): Promise<Buffer> {
     <BonEnlevementDocument
       data={{
         numero: bon.numero,
-        entreprise: { raisonSociale: bon.entreprise.raisonSociale, adresse: bon.entreprise.adresse, siret: bon.entreprise.siret },
-        association: { denomination: bon.association.denomination, adresse: bon.association.adresse, rna: bon.association.rna },
+        entreprise: {
+          raisonSociale: bon.entreprise.raisonSociale,
+          adresse: bon.entreprise.adresse,
+          siret: bon.entreprise.siret,
+          referentDonNom: bon.entreprise.referentDonNom,
+        },
+        association: {
+          denomination: bon.association.denomination,
+          rna: bon.association.rna,
+          habilitationLabel: libelleHabilitation(bon.association.habilitationStatut),
+        },
+        benevoleCollecteurNom: bon.benevoleCollecteur?.nom ?? null,
+        // Le modèle actuel n'attribue pas de numéro lisible aux conventions (identifiant
+        // technique uniquement) : pas de valeur pertinente à afficher ici pour l'instant.
+        numeroConvention: null,
         dateHeureEnlevement: bon.dateHeureEnlevement,
         poidsTotalRetenu: bon.poidsTotalRetenu,
         articles,
@@ -168,7 +187,17 @@ async function assurerEnveloppe(bonId: string, origin: string): Promise<string> 
           recipientId: "1",
           routingOrder: "1",
           clientUserId: clientUserId(bon.id, "DONATEUR"),
-          tabs: { signHereTabs: [{ documentId: "1", pageNumber: "1", xPosition: "60", yPosition: "660" }] },
+          tabs: {
+            signHereTabs: [
+              {
+                documentId: "1",
+                anchorString: "Pour l'entreprise donatrice,",
+                anchorUnits: "pixels",
+                anchorXOffset: "0",
+                anchorYOffset: "30",
+              },
+            ],
+          },
         },
         {
           email: emailAssociation,
@@ -176,7 +205,17 @@ async function assurerEnveloppe(bonId: string, origin: string): Promise<string> 
           recipientId: "2",
           routingOrder: "2",
           clientUserId: clientUserId(bon.id, "ASSOCIATION"),
-          tabs: { signHereTabs: [{ documentId: "1", pageNumber: "1", xPosition: "310", yPosition: "660" }] },
+          tabs: {
+            signHereTabs: [
+              {
+                documentId: "1",
+                anchorString: "Pour l'association réceptrice,",
+                anchorUnits: "pixels",
+                anchorXOffset: "0",
+                anchorYOffset: "30",
+              },
+            ],
+          },
         },
       ],
     },
