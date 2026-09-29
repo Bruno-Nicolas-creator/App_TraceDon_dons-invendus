@@ -685,9 +685,6 @@ export async function genererPdfInteretGeneral(attestationId: string): Promise<B
       adresse: attestation.association.adresse,
       rna: attestation.association.rna,
       categorieEligibilite: attestation.association.categorieEligibilite,
-      declarationInteretGeneral: attestation.association.declarationInteretGeneral,
-      rescritStatut: attestation.association.rescritStatut,
-      rescritDateDepot: attestation.association.rescritDateDepot,
     },
   };
 
@@ -731,10 +728,10 @@ export async function envoyerInteretGeneralPourSignature(attestationId: string):
             signHereTabs: [
               {
                 documentId: "1",
-                anchorString: "Pour l'association,",
+                anchorString: "Signature du/de la représentant(e) légal(e)",
                 anchorUnits: "pixels",
                 anchorXOffset: "0",
-                anchorYOffset: "36",
+                anchorYOffset: "20",
               },
             ],
           },

@@ -9,7 +9,6 @@ import { associationHabilitee, estGrandeSurface, SEUIL_GRANDE_SURFACE_M2 } from 
 import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
 import { compterMessagesNonLus } from "@/lib/messagerie";
 import { TYPES_ACTIVITE } from "@/lib/activiteAssociation";
-import { GROUPES_CHAINE_FROID, chaineFroidComplete } from "@/lib/chaineFroid";
 import { LABEL_ROLE_BENEVOLE, type RoleBenevole } from "@/lib/benevoles";
 import SelecteurDisponibilites from "@/components/SelecteurDisponibilites";
 import CoffreFort, { type ConventionSignee, type DocumentExistant } from "./CoffreFort";
@@ -19,7 +18,6 @@ import {
   basculerAssuranceRcBenevoleAction,
   basculerMandatBenevoleAction,
   deconnexionAction,
-  definirChaineFroidAction,
   definirConformiteAssociationAction,
   definirContactRappelAction,
   definirPreferenceAlerteAction,
@@ -67,7 +65,6 @@ export default async function ProfilPage() {
   let notreAction = "";
   let preferenceAlerte: "EMAIL" | "SMS" | "SMS_EMAIL" = "EMAIL";
   let telephoneAlerteSms = "";
-  let chaineFroidMoyens: string[] = [];
   let contactRappelNom = "";
   let contactRappelTelephone = "";
   let contactRappelEmail = "";
@@ -122,7 +119,6 @@ export default async function ProfilPage() {
     notreAction = association?.notreAction ?? "";
     preferenceAlerte = association?.preferenceAlerte ?? "EMAIL";
     telephoneAlerteSms = association?.telephoneAlerteSms ?? "";
-    chaineFroidMoyens = association?.chaineFroidMoyens ?? [];
     contactRappelNom = association?.contactRappelNom ?? "";
     contactRappelTelephone = association?.contactRappelTelephone ?? "";
     contactRappelEmail = association?.contactRappelEmail ?? "";
@@ -625,56 +621,6 @@ export default async function ProfilPage() {
                 />
               </label>
 
-              <button
-                type="submit"
-                className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
-              >
-                Enregistrer
-              </button>
-            </form>
-          </div>
-        )}
-
-        {session.role === "ASSOCIATION" && (
-          <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4" style={{ animationDelay: "85ms" }}>
-            <div>
-              <h2 className="text-sm font-semibold">Capacité chaîne du froid</h2>
-              <p className="mt-0.5 text-xs text-ink-muted">
-                Attestation sur l&apos;honneur visible par les entreprises donatrices : un magasin peut refuser de
-                céder ses invendus sans cette assurance.
-              </p>
-              {chaineFroidComplete(chaineFroidMoyens) && (
-                <span className="mt-1.5 inline-block rounded-full bg-brand-tint px-2.5 py-1 text-xs font-semibold text-brand-dark">
-                  ✓ Chaîne du froid attestée
-                </span>
-              )}
-            </div>
-            <form
-              action={async (formData: FormData) => {
-                "use server";
-                await definirChaineFroidAction(formData.getAll("chaineFroidMoyens").map(String));
-              }}
-              className="space-y-3"
-            >
-              {GROUPES_CHAINE_FROID.map((groupe) => (
-                <div key={groupe.id}>
-                  <div className="mb-1.5 text-xs font-semibold text-ink-muted">{groupe.titre}</div>
-                  <div className="space-y-1.5">
-                    {groupe.items.map((item) => (
-                      <label key={item.id} className="flex items-start gap-2 text-xs text-ink">
-                        <input
-                          type="checkbox"
-                          name="chaineFroidMoyens"
-                          value={item.id}
-                          defaultChecked={chaineFroidMoyens.includes(item.id)}
-                          className="mt-0.5"
-                        />
-                        <span>{item.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
               <button
                 type="submit"
                 className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"

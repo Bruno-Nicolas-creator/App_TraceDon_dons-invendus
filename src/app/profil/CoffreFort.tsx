@@ -69,6 +69,17 @@ export default function CoffreFort({
                 </a>
               )}
 
+              {def.type === "ATTESTATION_CHAINE_FROID" && !existant && (
+                <a
+                  href="/api/attestation-chaine-froid/pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mb-1.5 block text-[11px] text-ink-muted underline decoration-dotted underline-offset-2"
+                >
+                  Télécharger le modèle à faire signer par votre représentant légal
+                </a>
+              )}
+
               <DocumentUploadForm type={def.type} obligatoire={def.obligatoire} dejaFourni={!!existant} />
             </div>
           );

@@ -7,7 +7,8 @@ export type TypeDocument =
   | "HABILITATION_AIDE_ALIMENTAIRE"
   | "DECLARATION_DDPP"
   | "PV_ASSEMBLEE_GENERALE"
-  | "ASSURANCE_TRANSPORT_STOCKAGE";
+  | "ASSURANCE_TRANSPORT_STOCKAGE"
+  | "ATTESTATION_CHAINE_FROID";
 
 export type DefinitionDocument = {
   type: TypeDocument;
@@ -72,6 +73,12 @@ export const DOCUMENTS_ASSOCIATION: DefinitionDocument[] = [
     type: "ASSURANCE_TRANSPORT_STOCKAGE",
     label: "Assurance transport/stockage",
     aide: "Obligatoire uniquement si votre association assure elle-même la collecte (véhicules, entrepôts, chambres froides).",
+    obligatoire: false,
+  },
+  {
+    type: "ATTESTATION_CHAINE_FROID",
+    label: "Attestation chaîne du froid",
+    aide: "Attestation sur l'honneur de votre capacité matérielle à respecter la chaîne du froid, signée par votre représentant légal. Visible par les entreprises donatrices avant qu'elles ne se positionnent.",
     obligatoire: false,
   },
 ];

@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
 
   // Section 3 : contrôles (cases + texte légal)
   controle: { flexDirection: "row", gap: 6, marginBottom: 6, alignItems: "flex-start" },
-  case_: { fontSize: 10, marginTop: -1 },
+  case_: { width: 8, height: 8, marginTop: 1.5, border: "1pt solid #201F1B" },
   controleTexte: { flex: 1, fontSize: 8.5, lineHeight: 1.35 },
 
   // Section 4 : totaux
@@ -199,21 +199,21 @@ export default function BonEnlevementDocument({ data }: { data: BonEnlevementPdf
 
         <Text style={styles.sectionTitle}>3. Contrôles effectués lors de la collecte</Text>
         <View style={styles.controle}>
-          <Text style={styles.case_}>☐</Text>
+          <View style={styles.case_} />
           <Text style={styles.controleTexte}>
             Auto contrôle préalable du magasin : tri préalable, vérification de l&apos;intégrité des emballages,
             DLC non dépassée, lisibilité des étiquettes et allergènes, absence de lots sous alerte sanitaire.
           </Text>
         </View>
         <View style={styles.controle}>
-          <Text style={styles.case_}>☐</Text>
+          <View style={styles.case_} />
           <Text style={styles.controleTexte}>
             Aucune DLC &lt; 48 h dans ce lot au moment où l&apos;association prend en charge le don (article D.
             541-310 du Code de l&apos;environnement).
           </Text>
         </View>
         <View style={styles.controle}>
-          <Text style={styles.case_}>☐</Text>
+          <View style={styles.case_} />
           <Text style={styles.controleTexte}>
             Dérogation : ce lot contient des produits à DLC &lt; 48h (expirant au plus tôt ce jour à minuit).
             L&apos;association les accepte et atteste être en mesure de les distribuer immédiatement avant

@@ -9,7 +9,6 @@ import { champTropLong, LONGUEUR_MAX_CHAMP_COURT } from "@/lib/validation";
 import { disponibilitesValides } from "@/lib/disponibilites";
 import { typesActiviteValides } from "@/lib/activiteAssociation";
 import { roleBenevoleValide } from "@/lib/benevoles";
-import { itemsChaineFroidValides } from "@/lib/chaineFroid";
 
 const LONGUEUR_MAX_NOTRE_ACTION = 2000;
 
@@ -332,28 +331,6 @@ export async function definirPreferenceAlerteAction(formData: FormData) {
     },
   });
   revalidatePath("/profil");
-}
-
-/** Attestation sur l'honneur de capacité à respecter la chaîne du froid — cf. src/lib/chaineFroid.ts. */
-export async function definirChaineFroidAction(
-  moyens: string[]
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const session = await getSession();
-  if (!session || session.role !== "ASSOCIATION" || !session.associationId) {
-    return { ok: false, error: "Action réservée aux associations." };
-  }
-
-  const moyensValides = itemsChaineFroidValides(moyens);
-  await prisma.association.update({
-    where: { id: session.associationId },
-    data: {
-      chaineFroidMoyens: moyensValides,
-      chaineFroidDeclareeLe: moyensValides.length > 0 ? new Date() : null,
-    },
-  });
-  revalidatePath("/profil");
-  revalidatePath("/associations");
-  return { ok: true };
 }
 
 export async function definirContactRappelAction(formData: FormData) {

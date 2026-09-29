@@ -174,11 +174,6 @@ model Association {
   declarationDdppDate       DateTime?
   referentDonNom            String?
   referentDonTelephone      String?
-  // Capacité matérielle de respect de la chaîne du froid (attestation sur l'honneur) : ids des
-  // moyens cochés parmi src/lib/chaineFroid.ts — condition que le donateur vérifie avant de
-  // donner (cf. checklist justificatifs associations).
-  chaineFroidMoyens         String[]      @default([])
-  chaineFroidDeclareeLe     DateTime?
   // Personne à prévenir immédiatement en cas de rappel/retrait d'un produit déjà distribué —
   // distincte du référent don au quotidien.
   contactRappelNom          String?
@@ -282,6 +277,7 @@ enum TypeDocument {
   DECLARATION_DDPP
   PV_ASSEMBLEE_GENERALE
   ASSURANCE_TRANSPORT_STOCKAGE
+  ATTESTATION_CHAINE_FROID
 }
 
 model Document {
