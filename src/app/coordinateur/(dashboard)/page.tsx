@@ -2,18 +2,10 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { associationHabilitee, libelleHabilitation } from "@/lib/conformite";
+import { formatDepuis } from "@/lib/formatDepuis";
 import CoordinateurClient, { type AssociationLigne, type DonNonAssigne } from "./CoordinateurClient";
 
 export const dynamic = "force-dynamic";
-
-function formatDepuis(date: Date): string {
-  const diffMs = Date.now() - date.getTime();
-  const heures = Math.floor(diffMs / 3_600_000);
-  if (heures < 1) return "à l'instant";
-  if (heures < 24) return `il y a ${heures}h`;
-  const jours = Math.floor(heures / 24);
-  return jours === 1 ? "hier" : `il y a ${jours} j`;
-}
 
 function ligneRescrit(assoc: { rescritStatut: string; rescritDateDepot: Date | null }): {
   label: string;

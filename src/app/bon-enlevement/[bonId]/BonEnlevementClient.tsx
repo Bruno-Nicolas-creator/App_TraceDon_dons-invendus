@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   confirmerBon,
   constaterArticleAction,
+  constaterDlcAction,
   definirBenevoleCollecteurAction,
   refuserArticle,
   retirerArticle,
@@ -78,6 +79,9 @@ export default function BonEnlevementClient({
   const [constats, setConstats] = useState<Record<string, { qte: string; temp: string }>>(
     Object.fromEntries(bon.articles.map((a) => [a.id, { qte: a.qte, temp: a.temp === "—" ? "" : a.temp }]))
   );
+  const [dlcs, setDlcs] = useState<Record<string, string>>(
+    Object.fromEntries(bon.articles.map((a) => [a.id, a.dlc === "—" ? "" : a.dlc]))
+  );
   const donateurSigne = bon.donateurSigne;
   const associationSigne = bon.associationSigne;
   const peutControlerArticles = role === "ASSOCIATION";
@@ -140,6 +144,35 @@ export default function BonEnlevementClient({
         await constaterArticleAction(articleId, constat.qte, constat.temp);
       } catch (e) {
         setErreurSignature(e instanceof Error ? e.message : "Impossible d'enregistrer la constatation.");
+      }
+    });
+  };
+
+  const modifierDlc = (articleId: string, valeur: string) => {
+    setDlcs((prev) => ({ ...prev, [articleId]: valeur }));
+  };
+
+  const enregistrerDlc = (articleId: string) => {
+    const valeur = dlcs[articleId] ?? "";
+    startTransition(async () => {
+      try {
+        await constaterDlcAction(articleId, valeur, false);
+        setArticles((prev) => prev.map((a) => (a.id === articleId ? { ...a, dlc: valeur || "—" } : a)));
+      } catch (e) {
+        setErreurSignature(e instanceof Error ? e.message : "Impossible d'enregistrer la DLC.");
+      }
+    });
+  };
+
+  const basculerDlcDepassee = (article: ArticleAffiche) => {
+    const nouvelleValeur = !article.bloque;
+    setArticles((prev) => prev.map((a) => (a.id === article.id ? { ...a, bloque: nouvelleValeur } : a)));
+    startTransition(async () => {
+      try {
+        await constaterDlcAction(article.id, dlcs[article.id] ?? "", nouvelleValeur);
+      } catch (e) {
+        setArticles((prev) => prev.map((a) => (a.id === article.id ? { ...a, bloque: article.bloque } : a)));
+        setErreurSignature(e instanceof Error ? e.message : "Impossible d'enregistrer la DLC.");
       }
     });
   };
@@ -455,6 +488,31 @@ export default function BonEnlevementClient({
                     />
                   </div>
                 </div>
+                {bon.typeDon !== "MATERIEL" && (
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <label className="mb-0.5 block text-[11px] text-ink-muted">DLC / DDM</label>
+                      <input
+                        type="text"
+                        value={dlcs[article.id] ?? ""}
+                        onChange={(e) => modifierDlc(article.id, e.target.value)}
+                        onBlur={() => enregistrerDlc(article.id)}
+                        disabled={!peutControlerArticles}
+                        placeholder="Ex. 12/10/2026"
+                        className="w-full rounded-lg border border-border px-2.5 py-2 text-[13px] disabled:bg-surface-alt disabled:text-ink-muted"
+                      />
+                    </div>
+                    <label className="flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-2.5 py-2 text-[11.5px] text-ink-muted has-[:disabled]:bg-surface-alt">
+                      <input
+                        type="checkbox"
+                        checked={article.bloque}
+                        onChange={() => basculerDlcDepassee(article)}
+                        disabled={!peutControlerArticles}
+                      />
+                      Dépassée
+                    </label>
+                  </div>
+                )}
                 {article.bloque && (
                   <div className="rounded-lg bg-accent-tint px-2.5 py-1.5 text-[11.5px] text-accent">
                     DLC dépassée : le refus est obligatoire, la validation est désactivée.

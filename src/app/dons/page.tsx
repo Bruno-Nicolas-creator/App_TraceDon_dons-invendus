@@ -4,6 +4,7 @@ import { clearSessionCookie, getSession } from "@/lib/auth";
 import { calculerDistances, geocoderAdresse, isGoogleMapsServerConfigured } from "@/lib/googleMaps";
 import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
 import { compterMessagesNonLus } from "@/lib/messagerie";
+import { formatDepuis } from "@/lib/formatDepuis";
 import DonsDisponiblesClient, { type DonAffiche } from "./DonsDisponiblesClient";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +39,10 @@ export default async function DonsDisponiblesPage() {
       articles: true,
       bonsEnlevement: { where: { associationId: session.associationId }, select: { id: true, enAttenteValidationDonateur: true } },
     },
-    orderBy: { publieLe: "desc" },
+    // Du plus ancien au plus récent : un don publié depuis longtemps et toujours pas réclamé
+    // doit remonter en priorité (cf. le tri final ci-dessous, qui place aussi les dons pas
+    // encore positionnés avant ceux déjà pris en charge).
+    orderBy: { publieLe: "asc" },
   });
 
   let centreCarte: { lat: number; lng: number } | null =
@@ -102,8 +106,13 @@ export default async function DonsDisponiblesPage() {
       latitude: don.entreprise.latitude,
       longitude: don.entreprise.longitude,
       congesJusquau: congesEntreprise ? formaterDateConges(congesEntreprise.fin) : null,
+      publieDepuis: don.publieLe ? formatDepuis(don.publieLe) : null,
     };
   });
+
+  // Les dons pas encore réclamés remontent en premier (les plus anciens d'abord, cf. tri SQL
+  // ci-dessus, préservé ici car .sort est stable) : ce sont eux qui ont besoin d'une action.
+  donsAffiches.sort((a, b) => Number(a.positionne) - Number(b.positionne));
 
   const nonLusMessages = await compterMessagesNonLus(session);
 

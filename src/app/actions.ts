@@ -613,6 +613,23 @@ export async function constaterArticleAction(articleId: string, quantiteConstate
 }
 
 /**
+ * DLC/DDM réellement constatée par l'association au moment de l'enlèvement, et si elle est
+ * dépassée — ce que l'entreprise ne renseigne presque jamais à la publication. Une DLC dépassée
+ * bloque la validation de l'article (cf. validerArticle) : le refus devient obligatoire.
+ */
+export async function constaterDlcAction(articleId: string, dlcOuEtat: string, dlcDepassee: boolean) {
+  await requireControleAssociation(articleId);
+  if (champTropLong(dlcOuEtat, 100)) {
+    throw new Error("Valeur trop longue.");
+  }
+  await prisma.article.update({
+    where: { id: articleId },
+    data: { dlcOuEtat: dlcOuEtat.trim() || null, dlcDepassee },
+  });
+  revalidatePath("/bon-enlevement");
+}
+
+/**
  * Désigne le bénévole mandaté qui collecte physiquement ce don et signera le bon en son nom
  * (cf. Mandat de signature) — modifiable tant que l'association n'a pas encore signé.
  */

@@ -38,6 +38,7 @@ export type DonAffiche = {
   latitude: number | null;
   longitude: number | null;
   congesJusquau: string | null;
+  publieDepuis: string | null;
 };
 
 export default function DonsDisponiblesClient({
@@ -218,6 +219,11 @@ export default function DonsDisponiblesClient({
                 <div className="mb-2.5 flex flex-wrap gap-2 text-xs text-ink-muted">
                   <span className="rounded-full bg-surface-alt px-2.5 py-1">{don.categorie}</span>
                   <span className="rounded-full bg-surface-alt px-2.5 py-1">&#8776; {don.poids}</span>
+                  {!positionne && don.publieDepuis && (
+                    <span className="rounded-full bg-surface-alt px-2.5 py-1 font-semibold text-ink-muted">
+                      Publié {don.publieDepuis}
+                    </span>
+                  )}
                   {don.congesJusquau && (
                     <span className="rounded-full bg-accent-tint px-2.5 py-1 font-semibold text-accent">
                       🌴 Commerçant en congés jusqu&apos;au {don.congesJusquau}
