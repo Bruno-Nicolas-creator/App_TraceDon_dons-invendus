@@ -74,14 +74,14 @@ export default function SelecteurCategoriesDon({
 
       {ouvert && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 backdrop-blur-[1px]"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 backdrop-blur-[1px] lg:items-stretch lg:justify-end"
           onClick={() => setOuvert(false)}
         >
           <div
             role="dialog"
             aria-modal="true"
             aria-label="Choisir les catégories de dons"
-            className="animate-fade-slide-in flex max-h-[85vh] w-full max-w-md flex-col rounded-t-3xl bg-surface"
+            className="animate-fade-slide-in flex max-h-[85vh] w-full max-w-md flex-col rounded-t-3xl bg-surface lg:h-full lg:w-[420px] lg:max-w-none lg:max-h-none lg:animate-slide-in-right lg:rounded-none lg:rounded-l-3xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">

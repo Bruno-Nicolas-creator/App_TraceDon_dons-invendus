@@ -32,7 +32,8 @@ export const GROUPES_CATEGORIES_DON: GroupeCategorieDon[] = [
       { id: "produits_sucres", label: "Produits sucrés" },
       { id: "condiments", label: "Condiments" },
       { id: "conserves", label: "Conserves / produits salés" },
-      { id: "boissons", label: "Boissons diverses / Eau" },
+      { id: "boissons", label: "Boissons diverses" },
+      { id: "eau", label: "Eau" },
     ],
   },
   {
@@ -40,7 +41,6 @@ export const GROUPES_CATEGORIES_DON: GroupeCategorieDon[] = [
     label: "Non-alimentaire & Divers",
     categories: [
       { id: "hygiene", label: "Hygiène & soin" },
-      { id: "bebe", label: "Bébé" },
       { id: "animaux", label: "Alimentation animaux" },
       { id: "autres", label: "Autres produits non alimentaires" },
     ],

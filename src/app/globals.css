@@ -46,6 +46,17 @@ body {
   }
 }
 
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @keyframes fade-out-collapse {
   from {
     opacity: 1;
@@ -94,6 +105,10 @@ body {
   animation: fade-slide-in 280ms ease-out both;
 }
 
+.animate-slide-in-right {
+  animation: slide-in-right 280ms ease-out both;
+}
+
 .animate-fade-out-collapse {
   animation: fade-out-collapse 200ms ease-in forwards;
   overflow: hidden;
@@ -135,6 +150,7 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-slide-in,
+  .animate-slide-in-right,
   .animate-fade-out-collapse,
   .animate-trait-check,
   .animate-pop-rebond,
