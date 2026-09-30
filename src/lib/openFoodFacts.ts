@@ -1,6 +1,9 @@
+import { allergenesDepuisTagsOpenFoodFacts } from "@/lib/allergenes";
+
 export type ProduitScanne = {
   designation: string;
   poidsUnitaireKg: number | null;
+  allergenes: string[];
 };
 
 const USER_AGENT = "DonsInvendus/1.0 (+https://github.com/Bruno-Nicolas-creator/dons-invendus)";
@@ -22,7 +25,7 @@ export async function rechercherProduitParCodeBarre(codeBarre: string): Promise<
   const code = codeBarre.trim();
   if (!code) return null;
 
-  const url = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,product_quantity,product_quantity_unit,quantity`;
+  const url = `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=product_name,product_quantity,product_quantity_unit,quantity,allergens_tags`;
   const reponse = await fetch(url, {
     headers: { "User-Agent": USER_AGENT },
     cache: "no-store",
@@ -32,7 +35,7 @@ export async function rechercherProduitParCodeBarre(codeBarre: string): Promise<
   const donnees = await reponse.json().catch(() => null);
   if (donnees?.status !== 1 || !donnees.product) return null;
 
-  const { product_name, product_quantity, product_quantity_unit } = donnees.product;
+  const { product_name, product_quantity, product_quantity_unit, allergens_tags } = donnees.product;
   if (!product_name) return null;
 
   const poidsUnitaireKg =
@@ -40,5 +43,9 @@ export async function rechercherProduitParCodeBarre(codeBarre: string): Promise<
       ? convertirEnKg(product_quantity, product_quantity_unit)
       : null;
 
-  return { designation: product_name, poidsUnitaireKg };
+  return {
+    designation: product_name,
+    poidsUnitaireKg,
+    allergenes: allergenesDepuisTagsOpenFoodFacts(allergens_tags ?? []),
+  };
 }

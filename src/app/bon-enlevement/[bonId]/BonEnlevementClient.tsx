@@ -15,6 +15,7 @@ import { demarrerSignatureDocuSign } from "./docusign-actions";
 import AjouterArticleForm from "@/components/AjouterArticleForm";
 import CompteurAnime from "@/components/CompteurAnime";
 import IconeArticle from "@/components/IconeArticle";
+import { libelleAllergene } from "@/lib/allergenes";
 
 type Statut = "EN_ATTENTE" | "VALIDE" | "REFUSE";
 
@@ -30,6 +31,7 @@ export type ArticleAffiche = {
   statut: Statut;
   motifRefus: string;
   aUnePhoto?: boolean;
+  allergenes: string[];
 };
 
 export type BonAffiche = {
@@ -428,6 +430,7 @@ export default function BonEnlevementClient({
                     temperatureHorsPlage: false,
                     statut: "EN_ATTENTE",
                     motifRefus: "",
+                    allergenes: article.allergenes,
                   },
                 ]);
                 setMotifs((prev) => ({ ...prev, [article.id]: "" }));
@@ -464,6 +467,15 @@ export default function BonEnlevementClient({
                     {article.dlc}
                   </span>
                 </div>
+                {article.allergenes.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {article.allergenes.map((id) => (
+                      <span key={id} className="rounded-full border border-border px-2 py-0.5 text-[10.5px] font-medium text-ink-muted">
+                        {libelleAllergene(id)}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <div className="flex-1">
                     <label className="mb-0.5 block text-[11px] text-ink-muted">Quantité constatée</label>

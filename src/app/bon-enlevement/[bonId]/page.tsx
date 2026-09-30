@@ -69,6 +69,7 @@ export default async function BonEnlevementPage({
     statut: a.statut,
     motifRefus: a.motifRefus ?? "",
     aUnePhoto: !!a.photoContentType,
+    allergenes: a.allergenes,
   }));
 
   const impact =

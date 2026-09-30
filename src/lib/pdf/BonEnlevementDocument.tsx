@@ -1,4 +1,5 @@
 import { Document, Page, View, Text, StyleSheet, Image } from "@react-pdf/renderer";
+import { libelleAllergene } from "@/lib/allergenes";
 
 const VERT = "#1E4B36";
 
@@ -24,7 +25,8 @@ const styles = StyleSheet.create({
   td: { padding: 5, fontSize: 8.5, borderRight: "1pt solid #201F1B" },
   tdLast: { padding: 5, fontSize: 8.5 },
   cNum: { flex: 0.4, borderRight: "1pt solid #201F1B" },
-  cDesignation: { flex: 2.2, borderRight: "1pt solid #201F1B" },
+  cDesignation: { flex: 2.2, borderRight: "1pt solid #201F1B", padding: 5 },
+  designationAllergenes: { fontSize: 7, fontStyle: "italic", color: "#6B6459", marginTop: 2 },
   cQte: { flex: 1, borderRight: "1pt solid #201F1B" },
   cPoids: { flex: 1, borderRight: "1pt solid #201F1B" },
   cDlc: { flex: 1, borderRight: "1pt solid #201F1B" },
@@ -74,6 +76,7 @@ export type ArticlePdf = {
   temperature: string | null;
   statut: "EN_ATTENTE" | "VALIDE" | "REFUSE";
   motifRefus: string | null;
+  allergenes: string[];
 };
 
 export type BonEnlevementPdfData = {
@@ -184,7 +187,14 @@ export default function BonEnlevementDocument({ data }: { data: BonEnlevementPdf
             return (
               <View key={i} style={styles.tr}>
                 <Text style={[styles.td, styles.cNum]}>{i + 1}</Text>
-                <Text style={[styles.td, styles.cDesignation]}>{a.designation}</Text>
+                <View style={styles.cDesignation}>
+                  <Text style={{ fontSize: 8.5 }}>{a.designation}</Text>
+                  {a.allergenes.length > 0 && (
+                    <Text style={styles.designationAllergenes}>
+                      Allergènes : {a.allergenes.map(libelleAllergene).join(", ")}
+                    </Text>
+                  )}
+                </View>
                 <Text style={[styles.td, styles.cQte]}>{a.quantite}</Text>
                 <Text style={[styles.td, styles.cPoids]}>{a.poidsKg.toLocaleString("fr-FR")}</Text>
                 <Text style={[styles.td, styles.cDlc]}>{a.dlcOuEtat ?? "—"}</Text>

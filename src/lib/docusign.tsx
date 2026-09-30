@@ -123,6 +123,7 @@ export async function genererPdfBon(bonId: string, origin: string): Promise<Buff
     temperature: a.temperature,
     statut: a.statut,
     motifRefus: a.motifRefus,
+    allergenes: a.allergenes,
   }));
 
   return renderToBuffer(

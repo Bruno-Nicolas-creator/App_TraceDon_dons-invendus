@@ -387,6 +387,10 @@ model Article {
   dlcOuEtat          String?
   temperature        String?
   dlcDepassee        Boolean       @default(false)
+  // Identifiants src/lib/allergenes.ts (les 14 allergènes à déclaration obligatoire, règlement UE
+  // 1169/2011). Renseigné automatiquement depuis Open Food Facts pour un article scanné, ou coché
+  // à la main sinon — vide si inconnu, jamais vérifié.
+  allergenes         String[]      @default([])
   statut             StatutArticle @default(EN_ATTENTE)
   motifRefus         String?
   photoNomFichier    String?

@@ -16,6 +16,7 @@ import { extraireArticlesDepuisFichier } from "@/lib/extractionArticles";
 import { TOUTES_CATEGORIES_DON } from "@/lib/categoriesDon";
 import { articlesDuBon, articlesEntierementReclames } from "@/lib/donDivisible";
 import { notifier } from "@/lib/notifications";
+import { allergenesValides } from "@/lib/allergenes";
 
 async function requireSession() {
   const session = await getSession();
@@ -52,7 +53,8 @@ export async function ajouterArticleManuel(
   designation: string,
   poidsBrut: string,
   uniteBrut: string,
-  categorie: string | null = null
+  categorie: string | null = null,
+  allergenes: string[] = []
 ) {
   const session = await requireSession();
   const don = await prisma.don.findUniqueOrThrow({ where: { id: donId } });
@@ -80,7 +82,14 @@ export async function ajouterArticleManuel(
   }
 
   const article = await prisma.article.create({
-    data: { donId, designation: designation.trim(), quantiteDeclaree, poidsKg, categorie: categorieValide },
+    data: {
+      donId,
+      designation: designation.trim(),
+      quantiteDeclaree,
+      poidsKg,
+      categorie: categorieValide,
+      allergenes: allergenesValides(allergenes),
+    },
   });
   revalidatePath("/");
   return { ok: true, id: article.id, quantiteDeclaree };
@@ -236,7 +245,8 @@ export async function ajouterArticleScanne(
   codeBarres: string,
   designation: string,
   poidsUnitaireKg: number,
-  nombreUnites: number
+  nombreUnites: number,
+  allergenes: string[] = []
 ) {
   const session = await requireSession();
   const don = await prisma.don.findUniqueOrThrow({ where: { id: donId } });
@@ -264,6 +274,7 @@ export async function ajouterArticleScanne(
       designation: designation.trim(),
       quantiteDeclaree: `${nombreUnites} unité(s) × ${poidsUnitaireKg.toLocaleString("fr-FR")} kg`,
       poidsKg,
+      allergenes: allergenesValides(allergenes),
     },
   });
   revalidatePath("/");

@@ -85,7 +85,7 @@ export default function NouveauDonClient({
         setErreurExtraction(resultat.error);
         return;
       }
-      setArticles((prev) => [...prev, ...resultat.articles]);
+      setArticles((prev) => [...prev, ...resultat.articles.map((a) => ({ ...a, allergenes: [] }))]);
     });
   };
 

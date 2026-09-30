@@ -5,10 +5,43 @@ import { ajouterArticleManuel, ajouterArticleScanne, rechercherProduitAction } f
 import BarcodeScanner from "@/components/BarcodeScanner";
 import PointsChargement from "@/components/PointsChargement";
 import SelecteurCategoriesDon from "@/components/SelecteurCategoriesDon";
+import { ALLERGENES } from "@/lib/allergenes";
 
 type InfoRappel = { motif: string; dateRappel: string; lienFiche: string | null };
 
-export type ArticleAjoute = { id: string; designation: string; quantiteDeclaree: string; poidsKg: number; categorie?: string | null };
+export type ArticleAjoute = {
+  id: string;
+  designation: string;
+  quantiteDeclaree: string;
+  poidsKg: number;
+  categorie?: string | null;
+  allergenes: string[];
+};
+
+function SelecteurAllergenes({ selection, onChange }: { selection: string[]; onChange: (ids: string[]) => void }) {
+  const basculer = (id: string) => {
+    onChange(selection.includes(id) ? selection.filter((a) => a !== id) : [...selection, id]);
+  };
+  return (
+    <div>
+      <div className="mb-1 text-xs text-ink-muted">Allergènes (si connus) — optionnel</div>
+      <div className="flex flex-wrap gap-1.5">
+        {ALLERGENES.map((a) => (
+          <button
+            key={a.id}
+            type="button"
+            onClick={() => basculer(a.id)}
+            className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+              selection.includes(a.id) ? "border-accent bg-accent-tint text-accent" : "border-border text-ink-muted"
+            }`}
+          >
+            {a.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function AjouterArticleForm({ donId, onAjoute }: { donId: string; onAjoute: (article: ArticleAjoute) => void }) {
   const [afficherFormulaireManuel, setAfficherFormulaireManuel] = useState(false);
@@ -16,6 +49,7 @@ export default function AjouterArticleForm({ donId, onAjoute }: { donId: string;
   const [poids, setPoids] = useState("");
   const [unite, setUnite] = useState("");
   const [categorie, setCategorie] = useState<string[]>([]);
+  const [allergenesManuel, setAllergenesManuel] = useState<string[]>([]);
   const [erreur, setErreur] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -25,6 +59,7 @@ export default function AjouterArticleForm({ donId, onAjoute }: { donId: string;
     codeBarres: string;
     designation: string;
     poidsUnitaireKg: string;
+    allergenes: string[];
   } | null>(null);
   const [nombreUnites, setNombreUnites] = useState("1");
   const [erreurScan, setErreurScan] = useState<string | null>(null);
@@ -35,7 +70,7 @@ export default function AjouterArticleForm({ donId, onAjoute }: { donId: string;
     setErreur(null);
     const categorieChoisie = categorie[0] ?? null;
     startTransition(async () => {
-      const resultat = await ajouterArticleManuel(donId, designation, poids, unite, categorieChoisie);
+      const resultat = await ajouterArticleManuel(donId, designation, poids, unite, categorieChoisie, allergenesManuel);
       if (!resultat.ok) {
         setErreur(resultat.error ?? "Impossible d'ajouter cet article.");
         return;
@@ -46,11 +81,13 @@ export default function AjouterArticleForm({ donId, onAjoute }: { donId: string;
         quantiteDeclaree: resultat.quantiteDeclaree ?? "Vrac",
         poidsKg: Number(poids.replace(",", ".")),
         categorie: categorieChoisie,
+        allergenes: allergenesManuel,
       });
       setDesignation("");
       setPoids("");
       setUnite("");
       setCategorie([]);
+      setAllergenesManuel([]);
       setAfficherFormulaireManuel(false);
     });
   };
@@ -73,9 +110,10 @@ export default function AjouterArticleForm({ donId, onAjoute }: { donId: string;
           codeBarres: code,
           designation: produit.designation,
           poidsUnitaireKg: produit.poidsUnitaireKg != null ? String(produit.poidsUnitaireKg).replace(".", ",") : "",
+          allergenes: produit.allergenes,
         });
       } else {
-        setArticleScanne({ codeBarres: code, designation: "", poidsUnitaireKg: "" });
+        setArticleScanne({ codeBarres: code, designation: "", poidsUnitaireKg: "", allergenes: [] });
         setErreurScan("Produit non trouvé sur Open Food Facts. Renseigne les informations manuellement.");
       }
       setNombreUnites("1");
@@ -95,8 +133,9 @@ export default function AjouterArticleForm({ donId, onAjoute }: { donId: string;
     const poidsUnitaire = Number(articleScanne.poidsUnitaireKg.replace(",", "."));
     const unites = Number(nombreUnites);
     const designationScannee = articleScanne.designation;
+    const allergenesScannes = articleScanne.allergenes;
     startTransition(async () => {
-      const resultat = await ajouterArticleScanne(donId, articleScanne.codeBarres, designationScannee, poidsUnitaire, unites);
+      const resultat = await ajouterArticleScanne(donId, articleScanne.codeBarres, designationScannee, poidsUnitaire, unites, allergenesScannes);
       if (!resultat.ok) {
         setErreurScan(resultat.error ?? "Impossible d'ajouter cet article.");
         return;
@@ -106,6 +145,7 @@ export default function AjouterArticleForm({ donId, onAjoute }: { donId: string;
         designation: designationScannee.trim(),
         quantiteDeclaree: `${unites} unité(s) × ${poidsUnitaire.toLocaleString("fr-FR")} kg`,
         poidsKg: resultat.poidsKg ?? poidsUnitaire * unites,
+        allergenes: allergenesScannes,
       });
       setArticleScanne(null);
       setNombreUnites("1");
@@ -205,6 +245,7 @@ export default function AjouterArticleForm({ donId, onAjoute }: { donId: string;
             onChange={setCategorie}
             multiple={false}
           />
+          <SelecteurAllergenes selection={allergenesManuel} onChange={setAllergenesManuel} />
           <button type="submit" disabled={isPending} className="self-start rounded-full bg-ink px-4.5 py-2 text-sm font-semibold text-white transition-transform active:scale-95 disabled:opacity-50">
             Ajouter à la liste
           </button>
@@ -293,6 +334,10 @@ export default function AjouterArticleForm({ donId, onAjoute }: { donId: string;
           <div className="text-xs font-semibold text-ink">
             Poids total : {poidsTotalScanne.toLocaleString("fr-FR")} kg
           </div>
+          <SelecteurAllergenes
+            selection={articleScanne.allergenes}
+            onChange={(ids) => setArticleScanne((prev) => (prev ? { ...prev, allergenes: ids } : prev))}
+          />
           <div className="flex gap-2.5">
             <button type="submit" disabled={isPending} className="rounded-full bg-ink px-4.5 py-2 text-sm font-semibold text-white transition-transform active:scale-95 disabled:opacity-50">
               Ajouter à la liste
