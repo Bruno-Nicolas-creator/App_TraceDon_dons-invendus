@@ -90,7 +90,19 @@ model User {
   associationId String?
   association   Association? @relation(fields: [associationId], references: [id])
   messages      Message[]
+  pushSubscriptions PushSubscription[]
   createdAt     DateTime @default(now())
+}
+
+/** Un abonnement par navigateur/appareil sur lequel la personne a activé les notifications. */
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
 }
 
 model Enseigne {

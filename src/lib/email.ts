@@ -1,6 +1,5 @@
 import "server-only";
 import { Resend } from "resend";
-import { prisma } from "@/lib/prisma";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -25,13 +24,4 @@ export async function envoyerEmail(destinataires: string[], sujet: string, corps
   } catch (e) {
     console.error("Échec d'envoi d'email :", e);
   }
-}
-
-/** Adresses email des comptes rattachés à une entreprise, une association, ou du coordinateur. */
-export async function emailsDestinataires(
-  cible: { entrepriseId: string } | { associationId: string } | { coordinateur: true }
-): Promise<string[]> {
-  const where = "coordinateur" in cible ? { role: "COORDINATEUR" as const } : cible;
-  const utilisateurs = await prisma.user.findMany({ where, select: { email: true } });
-  return utilisateurs.map((u) => u.email);
 }

@@ -59,5 +59,7 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!connexion|inscription|_next/static|_next/image|favicon.ico|manifest.json).*)"],
+  // sw.js doit rester accessible sans authentification : c'est le navigateur (pas l'utilisateur
+  // connecté) qui le récupère pour les notifications push, avant même de savoir qui est connecté.
+  matcher: ["/((?!connexion|inscription|_next/static|_next/image|favicon.ico|manifest.json|sw.js).*)"],
 };

@@ -356,3 +356,25 @@ export async function definirContactRappelAction(formData: FormData) {
   });
   revalidatePath("/profil");
 }
+
+/** Enregistre l'abonnement push de cet appareil pour le compte connecté (cf. ActiverNotificationsPush). */
+export async function enregistrerAbonnementPushAction(abonnement: {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+}) {
+  const session = await getSession();
+  if (!session) throw new Error("Non authentifié.");
+
+  await prisma.pushSubscription.upsert({
+    where: { endpoint: abonnement.endpoint },
+    create: { userId: session.userId, endpoint: abonnement.endpoint, p256dh: abonnement.keys.p256dh, auth: abonnement.keys.auth },
+    update: { userId: session.userId, p256dh: abonnement.keys.p256dh, auth: abonnement.keys.auth },
+  });
+}
+
+/** Retire l'abonnement push de cet appareil (désactivation depuis le profil). */
+export async function retirerAbonnementPushAction(endpoint: string) {
+  const session = await getSession();
+  if (!session) throw new Error("Non authentifié.");
+  await prisma.pushSubscription.deleteMany({ where: { endpoint, userId: session.userId } });
+}

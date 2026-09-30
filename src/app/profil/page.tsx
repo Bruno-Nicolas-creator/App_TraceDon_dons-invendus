@@ -11,6 +11,8 @@ import { compterMessagesNonLus } from "@/lib/messagerie";
 import { TYPES_ACTIVITE } from "@/lib/activiteAssociation";
 import { LABEL_ROLE_BENEVOLE, type RoleBenevole } from "@/lib/benevoles";
 import SelecteurDisponibilites from "@/components/SelecteurDisponibilites";
+import ActiverNotificationsPush from "@/components/ActiverNotificationsPush";
+import { isPushConfigure } from "@/lib/webPush";
 import CoffreFort, { type ConventionSignee, type DocumentExistant } from "./CoffreFort";
 import {
   ajouterBenevoleAction,
@@ -171,9 +173,12 @@ export default async function ProfilPage() {
 
   if (session.role === "COORDINATEUR") {
     return (
-      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6">
-        <h1 className="mb-4 font-display text-xl font-semibold">Mon profil</h1>
+      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-4 px-6">
+        <h1 className="font-display text-xl font-semibold">Mon profil</h1>
         {carte}
+        {isPushConfigure() && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && (
+          <ActiverNotificationsPush vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
+        )}
       </div>
     );
   }
@@ -185,6 +190,10 @@ export default async function ProfilPage() {
       </header>
       <main className="flex-1 space-y-4 px-5 pb-4">
         {carte}
+
+        {isPushConfigure() && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && (
+          <ActiverNotificationsPush vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
+        )}
 
         {impactCumule && (
           <div className="animate-fade-slide-in rounded-2xl bg-brand-tint p-4">

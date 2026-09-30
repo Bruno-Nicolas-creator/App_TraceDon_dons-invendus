@@ -12,7 +12,7 @@ import AttestationInteretGeneralDocument, {
 } from "@/lib/pdf/AttestationInteretGeneralDocument";
 import { montantEnLettres } from "@/lib/nombreEnLettres";
 import { articlesDuBon } from "@/lib/donDivisible";
-import { emailsDestinataires, envoyerEmail } from "@/lib/email";
+import { notifier } from "@/lib/notifications";
 
 export type RoleSignataire = "DONATEUR" | "ASSOCIATION";
 
@@ -317,16 +317,18 @@ export async function verifierEtEnregistrerSignature(bonId: string, role: RoleSi
   ]);
 
   if (role === "DONATEUR") {
-    await envoyerEmail(
-      await emailsDestinataires({ associationId: bon.associationId }),
+    await notifier(
+      { associationId: bon.associationId },
       "Le donateur a signé, à vous de signer",
-      `${bon.entreprise.raisonSociale} a signé le bon d'enlèvement n°${bon.numero}. Vous pouvez maintenant le signer à votre tour.`
+      `${bon.entreprise.raisonSociale} a signé le bon d'enlèvement n°${bon.numero}. Vous pouvez maintenant le signer à votre tour.`,
+      `/bon-enlevement/${bon.id}`
     );
   } else {
-    await envoyerEmail(
-      await emailsDestinataires({ entrepriseId: bon.entrepriseId }),
+    await notifier(
+      { entrepriseId: bon.entrepriseId },
       "L'association a signé, vous pouvez confirmer l'enlèvement",
-      `${bon.association.denomination} a signé le bon d'enlèvement n°${bon.numero}. Vous pouvez maintenant confirmer l'enlèvement.`
+      `${bon.association.denomination} a signé le bon d'enlèvement n°${bon.numero}. Vous pouvez maintenant confirmer l'enlèvement.`,
+      `/bon-enlevement/${bon.id}`
     );
   }
 

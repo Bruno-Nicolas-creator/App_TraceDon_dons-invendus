@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { conventionEstSignee } from "@/lib/convention";
 import { nomFichierSur } from "@/lib/documents";
 import { champTropLong } from "@/lib/validation";
-import { emailsDestinataires, envoyerEmail } from "@/lib/email";
+import { notifier } from "@/lib/notifications";
 import {
   champLectureRole,
   estParticipantConversation,
@@ -152,10 +152,11 @@ export async function envoyerMessageAction(
         : session.role === "ENTREPRISE"
           ? { associationId: conversation.associationId! }
           : { entrepriseId: conversation.entrepriseId! };
-  await envoyerEmail(
-    await emailsDestinataires(destinataire),
+  await notifier(
+    destinataire,
     "Nouveau message",
-    `${session.nom} vous a envoyé un nouveau message${aUneFichier ? " (avec une pièce jointe)" : ""}${contenu ? ` :\n\n« ${contenu} »` : "."}`
+    `${session.nom} vous a envoyé un nouveau message${aUneFichier ? " (avec une pièce jointe)" : ""}${contenu ? ` :\n\n« ${contenu} »` : "."}`,
+    `/messages/${conversationId}`
   );
 
   return { ok: true };

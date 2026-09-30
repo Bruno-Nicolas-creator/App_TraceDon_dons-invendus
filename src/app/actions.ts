@@ -14,7 +14,7 @@ import { champTropLong } from "@/lib/validation";
 import { extraireArticlesDepuisFichier } from "@/lib/extractionArticles";
 import { TOUTES_CATEGORIES_DON } from "@/lib/categoriesDon";
 import { articlesDuBon, articlesEntierementReclames } from "@/lib/donDivisible";
-import { emailsDestinataires, envoyerEmail } from "@/lib/email";
+import { notifier } from "@/lib/notifications";
 
 async function requireSession() {
   const session = await getSession();
@@ -489,10 +489,11 @@ export async function sePositionner(
     revalidatePath("/nouveau-don-materiel");
 
     const association = await prisma.association.findUniqueOrThrow({ where: { id: associationId } });
-    await envoyerEmail(
-      await emailsDestinataires({ entrepriseId: donCible.entrepriseId }),
+    await notifier(
+      { entrepriseId: donCible.entrepriseId },
       "Nouvelle demande de positionnement sur votre don",
-      `${association.denomination} souhaite récupérer une partie de votre don matériel divisible.\n\nRendez-vous sur l'écran « Nouveau don matériel » pour l'accepter ou la refuser.`
+      `${association.denomination} souhaite récupérer une partie de votre don matériel divisible.\n\nRendez-vous sur l'écran « Nouveau don matériel » pour l'accepter ou la refuser.`,
+      "/nouveau-don-materiel"
     );
 
     return { ok: true, bonId: bon.id };
@@ -668,10 +669,11 @@ export async function validerPositionnementAction(bonId: string) {
   revalidatePath("/nouveau-don-materiel");
   revalidatePath("/dons");
 
-  await envoyerEmail(
-    await emailsDestinataires({ associationId: bon.associationId }),
+  await notifier(
+    { associationId: bon.associationId },
     "Votre demande de positionnement a été acceptée",
-    `${bon.entreprise.raisonSociale} a accepté votre demande. Vous pouvez maintenant consulter et signer le bon d'enlèvement.`
+    `${bon.entreprise.raisonSociale} a accepté votre demande. Vous pouvez maintenant consulter et signer le bon d'enlèvement.`,
+    `/bon-enlevement/${bon.id}`
   );
 }
 
@@ -692,10 +694,11 @@ export async function refuserPositionnementAction(bonId: string) {
   revalidatePath("/nouveau-don-materiel");
   revalidatePath("/dons");
 
-  await envoyerEmail(
-    await emailsDestinataires({ associationId: bon.associationId }),
+  await notifier(
+    { associationId: bon.associationId },
     "Votre demande de positionnement a été refusée",
-    `${bon.entreprise.raisonSociale} a refusé votre demande de positionnement. Les articles sont de nouveau disponibles pour une autre association.`
+    `${bon.entreprise.raisonSociale} a refusé votre demande de positionnement. Les articles sont de nouveau disponibles pour une autre association.`,
+    "/dons"
   );
 }
 
