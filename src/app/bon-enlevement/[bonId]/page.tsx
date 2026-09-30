@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { isDocuSignConfigured, verifierEtEnregistrerSignature } from "@/lib/docusign";
-import { calculerImpactCarbone } from "@/lib/impactCo2";
+import { calculerImpactCarboneDetaille } from "@/lib/impactCo2";
 import { articlesDuBon } from "@/lib/donDivisible";
 import BonEnlevementClient, { type ArticleAffiche, type BonAffiche } from "./BonEnlevementClient";
 
@@ -72,8 +72,13 @@ export default async function BonEnlevementPage({
     allergenes: a.allergenes,
   }));
 
+  // Le facteur CO2/kg est propre à l'alimentaire : un bon de don matériel n'a pas d'équivalent pertinent.
   const impact =
-    bon.confirme && bon.poidsTotalRetenu ? await calculerImpactCarbone(bon.poidsTotalRetenu) : null;
+    bon.confirme && bon.don.type !== "MATERIEL"
+      ? await calculerImpactCarboneDetaille(
+          articlesDuLot.filter((a) => a.statut === "VALIDE").map((a) => ({ poidsKg: a.poidsKg, categorie: a.categorie }))
+        )
+      : null;
 
   const bonAffiche: BonAffiche = {
     id: bon.id,

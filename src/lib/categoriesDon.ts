@@ -52,3 +52,12 @@ export const TOUTES_CATEGORIES_DON: CategorieDon[] = GROUPES_CATEGORIES_DON.flat
 export function libelleCategorieDon(id: string): string {
   return TOUTES_CATEGORIES_DON.find((c) => c.id === id)?.label ?? id;
 }
+
+const CATEGORIES_NON_ALIMENTAIRES = new Set(
+  GROUPES_CATEGORIES_DON.find((g) => g.id === "non_alimentaire")?.categories.map((c) => c.id) ?? []
+);
+
+/** Un article de cette catégorie n'a pas d'empreinte carbone alimentaire (ex. hygiène, matériel). */
+export function categorieEstNonAlimentaire(id: string | null): boolean {
+  return id != null && CATEGORIES_NON_ALIMENTAIRES.has(id);
+}

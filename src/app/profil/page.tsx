@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import BottomTabBar from "@/components/BottomTabBar";
 import CompteurAnime from "@/components/CompteurAnime";
 import LienTelephone from "@/components/LienTelephone";
-import { calculerImpactCarbone } from "@/lib/impactCo2";
+import { calculerImpactCarboneDetaille } from "@/lib/impactCo2";
 import { associationHabilitee, estGrandeSurface, SEUIL_GRANDE_SURFACE_M2 } from "@/lib/conformite";
 import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
 import { compterMessagesNonLus } from "@/lib/messagerie";
@@ -139,12 +139,17 @@ export default async function ProfilPage() {
 
   let impactCumule: { co2EviteKg: number; equivalenceKm: number | null; poidsTotalKg: number } | null = null;
   if (session.role === "ENTREPRISE" && session.entrepriseId) {
-    const bonsConfirmes = await prisma.bonEnlevement.findMany({
-      where: { entrepriseId: session.entrepriseId, confirme: true },
-      select: { poidsTotalRetenu: true },
+    // Uniquement les dons alimentaires effectivement remis : le facteur CO2/kg ne s'applique
+    // pas au matériel, et seuls les articles validés ont réellement été collectés.
+    const articlesConfirmes = await prisma.article.findMany({
+      where: {
+        statut: "VALIDE",
+        don: { entrepriseId: session.entrepriseId, type: { not: "MATERIEL" }, bonsEnlevement: { some: { confirme: true } } },
+      },
+      select: { poidsKg: true, categorie: true },
     });
-    const poidsTotalKg = bonsConfirmes.reduce((total, b) => total + (b.poidsTotalRetenu ?? 0), 0);
-    const impact = poidsTotalKg > 0 ? await calculerImpactCarbone(poidsTotalKg) : null;
+    const poidsTotalKg = articlesConfirmes.reduce((total, a) => total + a.poidsKg, 0);
+    const impact = poidsTotalKg > 0 ? await calculerImpactCarboneDetaille(articlesConfirmes) : null;
     if (impact) impactCumule = { ...impact, poidsTotalKg };
   }
 
