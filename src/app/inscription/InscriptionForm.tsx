@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { inscriptionAction, rechercherOrganismeAction, rechercherAdresseAction } from "./actions";
 import type { SuggestionOrganisme } from "@/lib/rechercheEntreprises";
@@ -27,16 +27,9 @@ const MESSAGES_ERREUR: Record<string, string> = {
   rna_invalide: "Le numéro RNA doit être au format W suivi de 9 chiffres (ex. W751234567).",
 };
 
-export default function InscriptionForm({
-  erreur,
-  emailPrecedent,
-  typePrecedent,
-}: {
-  erreur?: string;
-  emailPrecedent?: string;
-  typePrecedent?: string;
-}) {
-  const [type, setType] = useState<TypeCompte>(typePrecedent === "ASSOCIATION" ? "ASSOCIATION" : "ENTREPRISE");
+export default function InscriptionForm() {
+  const [etat, formAction] = useActionState(inscriptionAction, null);
+  const [type, setType] = useState<TypeCompte>("ENTREPRISE");
   const [rescritDemande, setRescritDemande] = useState(false);
   const [natureActivite, setNatureActivite] = useState<NatureActiviteEntrepriseId>("ALIMENTAIRE");
 
@@ -45,6 +38,14 @@ export default function InscriptionForm({
   const [formeJuridique, setFormeJuridique] = useState("");
   const [rna, setRna] = useState("");
   const [adresse, setAdresse] = useState("");
+  const [secteurActivite, setSecteurActivite] = useState("");
+  const [categorieEligibilite, setCategorieEligibilite] = useState("");
+  const [categoriesDon, setCategoriesDon] = useState("");
+  const [declarationInteretGeneral, setDeclarationInteretGeneral] = useState(false);
+  const [nomContact, setNomContact] = useState("");
+  const [email, setEmail] = useState("");
+  const [motDePasse, setMotDePasse] = useState("");
+  const [motDePasseConfirmation, setMotDePasseConfirmation] = useState("");
   const [adresseLat, setAdresseLat] = useState<number | null>(null);
   const [adresseLng, setAdresseLng] = useState<number | null>(null);
   const [suggestions, setSuggestions] = useState<SuggestionOrganisme[]>([]);
@@ -135,10 +136,10 @@ export default function InscriptionForm({
   };
 
   return (
-    <form action={inscriptionAction} className="space-y-5 rounded-2xl border border-border bg-surface p-6">
-      {erreur && (
+    <form action={formAction} className="space-y-5 rounded-2xl border border-border bg-surface p-6">
+      {etat?.erreur && (
         <div className="rounded-lg bg-accent-tint px-3 py-2 text-sm text-accent">
-          {MESSAGES_ERREUR[erreur] ?? "Une erreur est survenue, réessaie."}
+          {MESSAGES_ERREUR[etat.erreur] ?? "Une erreur est survenue, réessaie."}
         </div>
       )}
 
@@ -215,7 +216,14 @@ export default function InscriptionForm({
             </div>
             <input type="hidden" name="adresseLatitude" value={adresseLat ?? ""} />
             <input type="hidden" name="adresseLongitude" value={adresseLng ?? ""} />
-            <Champ id="secteurActivite" name="secteurActivite" label="Secteur d'activité" placeholder="Ex. Commerce de détail alimentaire" />
+            <Champ
+              id="secteurActivite"
+              name="secteurActivite"
+              label="Secteur d'activité"
+              placeholder="Ex. Commerce de détail alimentaire"
+              value={secteurActivite}
+              onChange={setSecteurActivite}
+            />
             <SelecteurNatureActivite name="natureActivite" valeur={natureActivite} onChange={setNatureActivite} />
           </div>
         ) : (
@@ -242,13 +250,22 @@ export default function InscriptionForm({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Champ id="rna" name="rna" label="N° RNA / agrément" placeholder="W751234567" required value={rna} onChange={setRna} />
-              <Champ id="categorieEligibilite" name="categorieEligibilite" label="Catégorie d'éligibilité" placeholder="Aide alimentaire" />
+              <Champ
+                id="categorieEligibilite"
+                name="categorieEligibilite"
+                label="Catégorie d'éligibilité"
+                placeholder="Aide alimentaire"
+                value={categorieEligibilite}
+                onChange={setCategorieEligibilite}
+              />
             </div>
             <Champ
               id="categoriesDon"
               name="categoriesDon"
               label="Catégories de dons proposées"
               placeholder="Ex. Fruits, légumes, conserves, boissons"
+              value={categoriesDon}
+              onChange={setCategoriesDon}
             />
             <div className="relative">
               <Champ
@@ -273,7 +290,14 @@ export default function InscriptionForm({
             <input type="hidden" name="adresseLatitude" value={adresseLat ?? ""} />
             <input type="hidden" name="adresseLongitude" value={adresseLng ?? ""} />
             <label htmlFor="declarationInteretGeneral" className="flex items-start gap-2.5 text-xs text-ink-muted">
-              <input id="declarationInteretGeneral" name="declarationInteretGeneral" type="checkbox" className="mt-0.5" />
+              <input
+                id="declarationInteretGeneral"
+                name="declarationInteretGeneral"
+                type="checkbox"
+                className="mt-0.5"
+                checked={declarationInteretGeneral}
+                onChange={(e) => setDeclarationInteretGeneral(e.target.checked)}
+              />
               Nous déclarons agir en tant qu&apos;organisme d&apos;intérêt général (déclaration auto-déclarative).
             </label>
 
@@ -320,10 +344,36 @@ export default function InscriptionForm({
 
       <div className="space-y-4 border-t border-border pt-4">
         <h2 className="text-xs font-semibold uppercase text-ink-muted">Votre accès</h2>
-        <Champ id="nomContact" name="nomContact" label="Votre nom" placeholder="Ex. Cécile Dubois" required />
-        <Champ id="email" name="email" label="Email" type="email" autoComplete="email" defaultValue={emailPrecedent} required />
+        <Champ
+          id="nomContact"
+          name="nomContact"
+          label="Votre nom"
+          placeholder="Ex. Cécile Dubois"
+          required
+          value={nomContact}
+          onChange={setNomContact}
+        />
+        <Champ
+          id="email"
+          name="email"
+          label="Email"
+          type="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={setEmail}
+        />
         <div className="grid grid-cols-2 gap-3">
-          <Champ id="motDePasse" name="motDePasse" label="Mot de passe" type="password" autoComplete="new-password" required />
+          <Champ
+            id="motDePasse"
+            name="motDePasse"
+            label="Mot de passe"
+            type="password"
+            autoComplete="new-password"
+            required
+            value={motDePasse}
+            onChange={setMotDePasse}
+          />
           <Champ
             id="motDePasseConfirmation"
             name="motDePasseConfirmation"
@@ -331,6 +381,8 @@ export default function InscriptionForm({
             type="password"
             autoComplete="new-password"
             required
+            value={motDePasseConfirmation}
+            onChange={setMotDePasseConfirmation}
           />
         </div>
       </div>

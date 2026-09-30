@@ -9,24 +9,24 @@ import { nomFichierSur, validerFichierDocument } from "@/lib/documents";
 import { champTropLong, LONGUEUR_MAX_ADRESSE, rnaValide, siretValide } from "@/lib/validation";
 import { natureActiviteValide } from "@/lib/activiteEntreprise";
 
-function echec(code: string, email: string, type: string): never {
-  const params = new URLSearchParams({ erreur: code, email, type });
-  redirect(`/inscription?${params.toString()}`);
-}
+export type EtatInscription = { erreur: string } | null;
 
-async function lireFichierObligatoire(
-  formData: FormData,
-  champ: string,
-  email: string,
-  type: string
-): Promise<{ nomFichier: string; contentType: string; contenu: Buffer; tailleOctets: number }> {
+type ResultatFichier =
+  | { ok: true; nomFichier: string; contentType: string; contenu: Buffer; tailleOctets: number }
+  | { ok: false; erreur: string };
+
+async function lireFichierObligatoire(formData: FormData, champ: string): Promise<ResultatFichier> {
   const fichier = formData.get(champ);
-  if (!(fichier instanceof File)) echec("champs_manquants", email, type);
+  if (!(fichier instanceof File)) return { ok: false, erreur: "champs_manquants" };
   const validation = validerFichierDocument(fichier);
   if (!validation.ok) {
-    echec(fichier.size > 0 && fichier.size <= 5 * 1024 * 1024 ? "fichier_type_invalide" : "fichier_trop_volumineux", email, type);
+    return {
+      ok: false,
+      erreur: fichier.size > 0 && fichier.size <= 5 * 1024 * 1024 ? "fichier_type_invalide" : "fichier_trop_volumineux",
+    };
   }
   return {
+    ok: true,
     nomFichier: nomFichierSur(fichier.name),
     contentType: fichier.type,
     contenu: Buffer.from(new Uint8Array(await fichier.arrayBuffer())),
@@ -45,7 +45,7 @@ export async function rechercherAdresseAction(q: string): Promise<SuggestionAdre
   return rechercherAdresses(q);
 }
 
-export async function inscriptionAction(formData: FormData) {
+export async function inscriptionAction(_etatPrecedent: EtatInscription, formData: FormData): Promise<EtatInscription> {
   const type = String(formData.get("type") ?? "");
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const motDePasse = String(formData.get("motDePasse") ?? "");
@@ -53,24 +53,24 @@ export async function inscriptionAction(formData: FormData) {
   const nomContact = String(formData.get("nomContact") ?? "").trim();
 
   if (type !== "ENTREPRISE" && type !== "ASSOCIATION") {
-    echec("type_invalide", email, type);
+    return { erreur: "type_invalide" };
   }
   if (!nomContact || !email || !motDePasse) {
-    echec("champs_manquants", email, type);
+    return { erreur: "champs_manquants" };
   }
   if (champTropLong(nomContact) || champTropLong(email)) {
-    echec("champ_trop_long", email, type);
+    return { erreur: "champ_trop_long" };
   }
   if (motDePasse.length < 8) {
-    echec("mdp_court", email, type);
+    return { erreur: "mdp_court" };
   }
   if (motDePasse !== motDePasseConfirmation) {
-    echec("mdp_different", email, type);
+    return { erreur: "mdp_different" };
   }
 
   const existant = await prisma.user.findUnique({ where: { email } });
   if (existant) {
-    echec("email_pris", email, type);
+    return { erreur: "email_pris" };
   }
 
   const passwordHash = await hashPassword(motDePasse);
@@ -91,16 +91,16 @@ export async function inscriptionAction(formData: FormData) {
     const natureActiviteBrute = String(formData.get("natureActivite") ?? "");
 
     if (!raisonSociale || !siret || !adresse) {
-      echec("champs_manquants", email, type);
+      return { erreur: "champs_manquants" };
     }
     if (champTropLong(raisonSociale) || champTropLong(formeJuridique) || champTropLong(secteurActivite) || champTropLong(adresse, LONGUEUR_MAX_ADRESSE)) {
-      echec("champ_trop_long", email, type);
+      return { erreur: "champ_trop_long" };
     }
     if (!siretValide(siret)) {
-      echec("siret_invalide", email, type);
+      return { erreur: "siret_invalide" };
     }
     if (!natureActiviteValide(natureActiviteBrute)) {
-      echec("champs_manquants", email, type);
+      return { erreur: "champs_manquants" };
     }
 
     const entreprise = await prisma.entreprise.create({
@@ -139,19 +139,26 @@ export async function inscriptionAction(formData: FormData) {
     const rescritDemande = formData.get("rescritDemande") === "on";
 
     if (!denomination || !rna || !adresse) {
-      echec("champs_manquants", email, type);
+      return { erreur: "champs_manquants" };
     }
     if (champTropLong(denomination) || champTropLong(categorieEligibilite) || champTropLong(adresse, LONGUEUR_MAX_ADRESSE)) {
-      echec("champ_trop_long", email, type);
+      return { erreur: "champ_trop_long" };
     }
     if (!rnaValide(rna)) {
-      echec("rna_invalide", email, type);
+      return { erreur: "rna_invalide" };
     }
 
-    const recepisseRna = await lireFichierObligatoire(formData, "recepisseRna", email, type);
-    const statutsSignes = await lireFichierObligatoire(formData, "statutsSignes", email, type);
-    const preuveRescritFiscal = rescritDemande
-      ? await lireFichierObligatoire(formData, "preuveRescritFiscal", email, type)
+    const recepisseRnaResultat = await lireFichierObligatoire(formData, "recepisseRna");
+    if (!recepisseRnaResultat.ok) return { erreur: recepisseRnaResultat.erreur };
+    const statutsSignesResultat = await lireFichierObligatoire(formData, "statutsSignes");
+    if (!statutsSignesResultat.ok) return { erreur: statutsSignesResultat.erreur };
+    const preuveRescritFiscalResultat = rescritDemande ? await lireFichierObligatoire(formData, "preuveRescritFiscal") : null;
+    if (preuveRescritFiscalResultat && !preuveRescritFiscalResultat.ok) return { erreur: preuveRescritFiscalResultat.erreur };
+
+    const recepisseRna = { nomFichier: recepisseRnaResultat.nomFichier, contentType: recepisseRnaResultat.contentType, contenu: recepisseRnaResultat.contenu, tailleOctets: recepisseRnaResultat.tailleOctets };
+    const statutsSignes = { nomFichier: statutsSignesResultat.nomFichier, contentType: statutsSignesResultat.contentType, contenu: statutsSignesResultat.contenu, tailleOctets: statutsSignesResultat.tailleOctets };
+    const preuveRescritFiscal = preuveRescritFiscalResultat
+      ? { nomFichier: preuveRescritFiscalResultat.nomFichier, contentType: preuveRescritFiscalResultat.contentType, contenu: preuveRescritFiscalResultat.contenu, tailleOctets: preuveRescritFiscalResultat.tailleOctets }
       : null;
 
     const association = await prisma.association.create({

@@ -1,12 +1,6 @@
 import InscriptionForm from "./InscriptionForm";
 
-export default async function InscriptionPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ erreur?: string; email?: string; type?: string }>;
-}) {
-  const { erreur, email, type } = await searchParams;
-
+export default function InscriptionPage() {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-10">
       <div className="mb-8 text-center">
@@ -17,7 +11,7 @@ export default async function InscriptionPage({
         <p className="mt-1 text-sm text-ink-muted">Entreprise donatrice ou association bénéficiaire</p>
       </div>
 
-      <InscriptionForm erreur={erreur} emailPrecedent={email} typePrecedent={type} />
+      <InscriptionForm />
 
       <p className="mt-4 text-center text-[11px] text-ink-muted">
         Les comptes coordinateur sont créés par l&apos;équipe de la plateforme, pas par auto-inscription.
