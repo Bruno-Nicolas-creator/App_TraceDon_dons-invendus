@@ -169,30 +169,16 @@ export default function NouveauDonClient({
         <span className="rounded-full border border-border px-2.5 py-1 text-xs text-ink-muted">Brouillon</span>
       </header>
 
-      <div className="px-5 pb-4">
-        <Link
-          href="/associations"
-          className="flex items-center justify-center gap-1.5 rounded-full border border-border bg-surface py-2.5 text-xs font-semibold text-ink transition-transform active:scale-[0.98]"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path
-              d="M12 21C12 21 19 15.5 19 10.5C19 6.4 15.9 3 12 3C8.1 3 5 6.4 5 10.5C5 15.5 12 21 12 21Z"
-              stroke="#201F1B"
-              strokeWidth="1.6"
-            />
-            <circle cx="12" cy="10.5" r="2.3" stroke="#201F1B" strokeWidth="1.6" />
-          </svg>
-          Voir les associations à proximité
-        </Link>
-        {peutDonnerMaterielAussi && (
+      {peutDonnerMaterielAussi && (
+        <div className="px-5 pb-4">
           <Link
             href="/nouveau-don-materiel"
-            className="mt-2.5 flex items-center justify-center gap-1.5 rounded-full border border-border bg-surface py-2.5 text-xs font-semibold text-ink transition-transform active:scale-[0.98]"
+            className="flex items-center justify-center gap-1.5 rounded-full border border-border bg-surface py-2.5 text-xs font-semibold text-ink transition-transform active:scale-[0.98]"
           >
             Basculer vers un don matériel
           </Link>
-        )}
-      </div>
+        </div>
+      )}
 
       <main className="flex-1 space-y-5 px-5 pb-4">
         {congesJusquau && !vientDetrePublie && (

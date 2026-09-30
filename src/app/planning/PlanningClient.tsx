@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import BottomTabBar from "@/components/BottomTabBar";
 import { LIBELLES_JOURS } from "@/lib/planning";
 import { definirAssignation, retirerAssignation } from "./actions";
@@ -79,6 +80,21 @@ export default function PlanningClient({
       </header>
 
       <main className="flex-1 space-y-3 px-5 pb-4">
+        <Link
+          href="/associations"
+          className="flex items-center justify-center gap-1.5 rounded-full border border-border bg-surface py-2.5 text-xs font-semibold text-ink transition-transform active:scale-[0.98]"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M12 21C12 21 19 15.5 19 10.5C19 6.4 15.9 3 12 3C8.1 3 5 6.4 5 10.5C5 15.5 12 21 12 21Z"
+              stroke="#201F1B"
+              strokeWidth="1.6"
+            />
+            <circle cx="12" cy="10.5" r="2.3" stroke="#201F1B" strokeWidth="1.6" />
+          </svg>
+          Voir les associations à proximité
+        </Link>
+
         {erreur && <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreur}</div>}
 
         {avertissement && (
