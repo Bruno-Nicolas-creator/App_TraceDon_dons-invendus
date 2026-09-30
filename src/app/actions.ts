@@ -14,6 +14,7 @@ import { champTropLong } from "@/lib/validation";
 import { extraireArticlesDepuisFichier } from "@/lib/extractionArticles";
 import { TOUTES_CATEGORIES_DON } from "@/lib/categoriesDon";
 import { articlesDuBon, articlesEntierementReclames } from "@/lib/donDivisible";
+import { emailsDestinataires, envoyerEmail } from "@/lib/email";
 
 async function requireSession() {
   const session = await getSession();
@@ -486,6 +487,14 @@ export async function sePositionner(
     });
     revalidatePath("/dons");
     revalidatePath("/nouveau-don-materiel");
+
+    const association = await prisma.association.findUniqueOrThrow({ where: { id: associationId } });
+    await envoyerEmail(
+      await emailsDestinataires({ entrepriseId: donCible.entrepriseId }),
+      "Nouvelle demande de positionnement sur votre don",
+      `${association.denomination} souhaite récupérer une partie de votre don matériel divisible.\n\nRendez-vous sur l'écran « Nouveau don matériel » pour l'accepter ou la refuser.`
+    );
+
     return { ok: true, bonId: bon.id };
   }
 
@@ -643,7 +652,7 @@ export async function confirmerBon(bonId: string) {
 async function requireBonEnAttente(bonId: string) {
   const session = await requireSession();
   if (session.role !== "ENTREPRISE" || !session.entrepriseId) throw new Error("Action réservée aux entreprises.");
-  const bon = await prisma.bonEnlevement.findUniqueOrThrow({ where: { id: bonId } });
+  const bon = await prisma.bonEnlevement.findUniqueOrThrow({ where: { id: bonId }, include: { entreprise: true } });
   if (bon.entrepriseId !== session.entrepriseId) throw new Error("Bon non autorisé.");
   if (!bon.enAttenteValidationDonateur) throw new Error("Cette demande n'est plus en attente de validation.");
   return bon;
@@ -654,10 +663,16 @@ async function requireBonEnAttente(bonId: string) {
  * signable normalement (cf. sePositionner, qui crée la demande en attente pour un don divisible).
  */
 export async function validerPositionnementAction(bonId: string) {
-  await requireBonEnAttente(bonId);
+  const bon = await requireBonEnAttente(bonId);
   await prisma.bonEnlevement.update({ where: { id: bonId }, data: { enAttenteValidationDonateur: false } });
   revalidatePath("/nouveau-don-materiel");
   revalidatePath("/dons");
+
+  await envoyerEmail(
+    await emailsDestinataires({ associationId: bon.associationId }),
+    "Votre demande de positionnement a été acceptée",
+    `${bon.entreprise.raisonSociale} a accepté votre demande. Vous pouvez maintenant consulter et signer le bon d'enlèvement.`
+  );
 }
 
 /**
@@ -676,6 +691,12 @@ export async function refuserPositionnementAction(bonId: string) {
   ]);
   revalidatePath("/nouveau-don-materiel");
   revalidatePath("/dons");
+
+  await envoyerEmail(
+    await emailsDestinataires({ associationId: bon.associationId }),
+    "Votre demande de positionnement a été refusée",
+    `${bon.entreprise.raisonSociale} a refusé votre demande de positionnement. Les articles sont de nouveau disponibles pour une autre association.`
+  );
 }
 
 export async function verifierAssociation(associationId: string, verifiee: boolean) {

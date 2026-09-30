@@ -12,6 +12,7 @@ import AttestationInteretGeneralDocument, {
 } from "@/lib/pdf/AttestationInteretGeneralDocument";
 import { montantEnLettres } from "@/lib/nombreEnLettres";
 import { articlesDuBon } from "@/lib/donDivisible";
+import { emailsDestinataires, envoyerEmail } from "@/lib/email";
 
 export type RoleSignataire = "DONATEUR" | "ASSOCIATION";
 
@@ -281,7 +282,7 @@ export async function obtenirUrlSignatureEmbarquee(bonId: string, role: RoleSign
 export async function verifierEtEnregistrerSignature(bonId: string, role: RoleSignataire): Promise<boolean> {
   const bon = await prisma.bonEnlevement.findUniqueOrThrow({
     where: { id: bonId },
-    include: { association: true, benevoleCollecteur: true },
+    include: { entreprise: true, association: true, benevoleCollecteur: true },
   });
   if (!bon.docusignEnvelopeId) return false;
 
@@ -314,6 +315,20 @@ export async function verifierEtEnregistrerSignature(bonId: string, role: RoleSi
       data: { bonEnlevementId: bonId, role, horodatage, referenceDocuSign: bon.docusignEnvelopeId, signataireNom },
     }),
   ]);
+
+  if (role === "DONATEUR") {
+    await envoyerEmail(
+      await emailsDestinataires({ associationId: bon.associationId }),
+      "Le donateur a signé, à vous de signer",
+      `${bon.entreprise.raisonSociale} a signé le bon d'enlèvement n°${bon.numero}. Vous pouvez maintenant le signer à votre tour.`
+    );
+  } else {
+    await envoyerEmail(
+      await emailsDestinataires({ entrepriseId: bon.entrepriseId }),
+      "L'association a signé, vous pouvez confirmer l'enlèvement",
+      `${bon.association.denomination} a signé le bon d'enlèvement n°${bon.numero}. Vous pouvez maintenant confirmer l'enlèvement.`
+    );
+  }
 
   return true;
 }
