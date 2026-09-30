@@ -177,6 +177,42 @@ async function main() {
     },
   });
 
+  const deco = await prisma.entreprise.create({
+    data: {
+      id: "ent_deco",
+      raisonSociale: "Déco Intérieur Nice",
+      formeJuridique: "SAS",
+      siret: "84567891200015",
+      adresse: "24 Rue de la Buffa, 06000 Nice",
+      latitude: 43.695029,
+      longitude: 7.259613,
+      secteurActivite: "Décoration et arts de la table",
+      coutRevientKg: 5.5,
+      surfaceVenteM2: 310,
+      referentDonNom: "Nadia Perrin",
+      referentDonTelephone: "06 51 23 45 67",
+      natureActivite: "NON_ALIMENTAIRE",
+    },
+  });
+
+  const librairie = await prisma.entreprise.create({
+    data: {
+      id: "ent_librairie",
+      raisonSociale: "Librairie-Papeterie du Cours",
+      formeJuridique: "SARL",
+      siret: "85678912300028",
+      adresse: "4 Cours Saleya, 06000 Nice",
+      latitude: 43.695455,
+      longitude: 7.275144,
+      secteurActivite: "Librairie et papeterie",
+      coutRevientKg: 4.8,
+      surfaceVenteM2: 130,
+      referentDonNom: "Thomas Guérin",
+      referentDonTelephone: "06 62 34 56 78",
+      natureActivite: "NON_ALIMENTAIRE",
+    },
+  });
+
   const coeurPartage = await prisma.association.create({
     data: {
       id: "assoc_coeur",
@@ -497,6 +533,8 @@ async function main() {
       { email: "carrefour@exemple.fr", passwordHash, nom: "Cécile Dubois", role: "ENTREPRISE", entrepriseId: carrefour.id },
       { email: "coeur@exemple.fr", passwordHash, nom: "Karim Haddad", role: "ASSOCIATION", associationId: coeurPartage.id },
       { email: "resto@exemple.fr", passwordHash, nom: "Julie Renard", role: "ASSOCIATION", associationId: restoSolidaire.id },
+      { email: "deco@exemple.fr", passwordHash, nom: "Nadia Perrin", role: "ENTREPRISE", entrepriseId: deco.id },
+      { email: "librairie@exemple.fr", passwordHash, nom: "Thomas Guérin", role: "ENTREPRISE", entrepriseId: librairie.id },
       { email: "bruno@exemple.fr", passwordHash, nom: "Bruno", role: "COORDINATEUR" },
     ],
   });
@@ -572,6 +610,8 @@ async function main() {
   console.log("  Entreprise    carrefour@exemple.fr");
   console.log("  Association   coeur@exemple.fr");
   console.log("  Association   resto@exemple.fr");
+  console.log("  Entreprise    deco@exemple.fr (non alimentaire)");
+  console.log("  Entreprise    librairie@exemple.fr (non alimentaire)");
   console.log("  Coordinateur  bruno@exemple.fr");
 }
 

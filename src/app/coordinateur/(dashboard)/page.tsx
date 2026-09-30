@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { associationHabilitee, libelleHabilitation } from "@/lib/conformite";
-import CoordinateurClient, { type AssociationLigne, type DonNonAssigne, type EntrepriseLigne } from "./CoordinateurClient";
+import CoordinateurClient, { type AssociationLigne, type DonNonAssigne } from "./CoordinateurClient";
 
 export const dynamic = "force-dynamic";
 
@@ -40,12 +40,8 @@ export default async function CoordinateurDashboardPage() {
   const session = await getSession();
   if (!session || session.role !== "COORDINATEUR") redirect("/connexion");
 
-  const [associations, entreprises, donsNonAssignes, bonsConfirmes, articles] = await Promise.all([
+  const [associations, donsNonAssignes, bonsConfirmes, articles] = await Promise.all([
     prisma.association.findMany({ orderBy: { denomination: "asc" } }),
-    prisma.entreprise.findMany({
-      orderBy: { raisonSociale: "asc" },
-      include: { documents: { where: { type: "KBIS" } } },
-    }),
     prisma.don.findMany({
       where: { statut: "PUBLIE" },
       include: { entreprise: true, articles: true },
@@ -69,13 +65,6 @@ export default async function CoordinateurDashboardPage() {
     };
   });
 
-  const entreprisesAffichees: EntrepriseLigne[] = entreprises.map((e) => ({
-    id: e.id,
-    nom: e.raisonSociale,
-    siret: e.siret,
-    kbisFourni: e.documents.length > 0,
-  }));
-
   const donsAffiches: DonNonAssigne[] = donsNonAssignes.map((don) => ({
     id: don.id,
     nom: don.entreprise.raisonSociale,
@@ -91,12 +80,10 @@ export default async function CoordinateurDashboardPage() {
   return (
     <CoordinateurClient
       associations={associationsAffichees}
-      entreprises={entreprisesAffichees}
       donsNonAssignes={donsAffiches}
       poidsMois={poidsMois}
       nombreDons={bonsConfirmes.length}
       tauxRefus={tauxRefus}
-      nomCoordinateur={session.nom}
     />
   );
 }
