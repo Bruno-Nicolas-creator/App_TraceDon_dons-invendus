@@ -4,14 +4,16 @@ import { useState, useTransition, type FormEvent } from "react";
 import { ajouterArticleManuel, ajouterArticleScanne, rechercherProduitAction } from "@/app/actions";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import PointsChargement from "@/components/PointsChargement";
+import SelecteurCategoriesDon from "@/components/SelecteurCategoriesDon";
 
-export type ArticleAjoute = { id: string; designation: string; quantiteDeclaree: string; poidsKg: number };
+export type ArticleAjoute = { id: string; designation: string; quantiteDeclaree: string; poidsKg: number; categorie?: string | null };
 
 export default function AjouterArticleForm({ donId, onAjoute }: { donId: string; onAjoute: (article: ArticleAjoute) => void }) {
   const [afficherFormulaireManuel, setAfficherFormulaireManuel] = useState(false);
   const [designation, setDesignation] = useState("");
   const [poids, setPoids] = useState("");
   const [unite, setUnite] = useState("");
+  const [categorie, setCategorie] = useState<string[]>([]);
   const [erreur, setErreur] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -28,8 +30,9 @@ export default function AjouterArticleForm({ donId, onAjoute }: { donId: string;
   const ajouter = (event: FormEvent) => {
     event.preventDefault();
     setErreur(null);
+    const categorieChoisie = categorie[0] ?? null;
     startTransition(async () => {
-      const resultat = await ajouterArticleManuel(donId, designation, poids, unite);
+      const resultat = await ajouterArticleManuel(donId, designation, poids, unite, categorieChoisie);
       if (!resultat.ok) {
         setErreur(resultat.error ?? "Impossible d'ajouter cet article.");
         return;
@@ -39,10 +42,12 @@ export default function AjouterArticleForm({ donId, onAjoute }: { donId: string;
         designation: designation.trim(),
         quantiteDeclaree: resultat.quantiteDeclaree ?? "Vrac",
         poidsKg: Number(poids.replace(",", ".")),
+        categorie: categorieChoisie,
       });
       setDesignation("");
       setPoids("");
       setUnite("");
+      setCategorie([]);
       setAfficherFormulaireManuel(false);
     });
   };
@@ -185,6 +190,13 @@ export default function AjouterArticleForm({ donId, onAjoute }: { donId: string;
               />
             </div>
           </div>
+          <SelecteurCategoriesDon
+            name="categorieArticle"
+            label="Catégorie de l'article"
+            selection={categorie}
+            onChange={setCategorie}
+            multiple={false}
+          />
           <button type="submit" disabled={isPending} className="self-start rounded-full bg-ink px-4.5 py-2 text-sm font-semibold text-white transition-transform active:scale-95 disabled:opacity-50">
             Ajouter à la liste
           </button>

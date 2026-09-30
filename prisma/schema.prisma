@@ -359,6 +359,9 @@ model Article {
   don                Don           @relation(fields: [donId], references: [id], onDelete: Cascade)
   codeBarres         String?
   designation        String
+  // Catégorie choisie parmi src/lib/categoriesDon.ts, uniquement pour les articles ajoutés à la
+  // main (cf. AjouterArticleForm) — pas pour ceux scannés ou extraits automatiquement.
+  categorie          String?
   quantiteDeclaree   String
   quantiteConstatee  String?
   poidsKg            Float

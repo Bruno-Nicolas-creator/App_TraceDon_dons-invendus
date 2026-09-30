@@ -9,7 +9,6 @@ import PointsChargement from "@/components/PointsChargement";
 import TogglePill from "@/components/TogglePill";
 import InfoBulle from "@/components/InfoBulle";
 import SubmitButton from "@/components/SubmitButton";
-import SelecteurCategoriesDon from "@/components/SelecteurCategoriesDon";
 import SelecteurNatureActivite from "@/components/SelecteurNatureActivite";
 import type { NatureActiviteEntrepriseId } from "@/lib/activiteEntreprise";
 
@@ -39,7 +38,6 @@ export default function InscriptionForm({
 }) {
   const [type, setType] = useState<TypeCompte>(typePrecedent === "ASSOCIATION" ? "ASSOCIATION" : "ENTREPRISE");
   const [rescritDemande, setRescritDemande] = useState(false);
-  const [categoriesDon, setCategoriesDon] = useState<string[]>([]);
   const [natureActivite, setNatureActivite] = useState<NatureActiviteEntrepriseId>("ALIMENTAIRE");
 
   const [nomOrganisme, setNomOrganisme] = useState("");
@@ -134,7 +132,6 @@ export default function InscriptionForm({
     setAdresseLat(null);
     setAdresseLng(null);
     setSuggestions([]);
-    setCategoriesDon([]);
   };
 
   return (
@@ -247,7 +244,12 @@ export default function InscriptionForm({
               <Champ id="rna" name="rna" label="N° RNA / agrément" placeholder="W751234567" required value={rna} onChange={setRna} />
               <Champ id="categorieEligibilite" name="categorieEligibilite" label="Catégorie d'éligibilité" placeholder="Aide alimentaire" />
             </div>
-            <SelecteurCategoriesDon name="categoriesDon" selection={categoriesDon} onChange={setCategoriesDon} />
+            <Champ
+              id="categoriesDon"
+              name="categoriesDon"
+              label="Catégories de dons proposées"
+              placeholder="Ex. Fruits, légumes, conserves, boissons"
+            />
             <div className="relative">
               <Champ
                 id="adresse"

@@ -54,7 +54,7 @@ export default async function NouveauDonPage() {
         instructionsAcces: don.instructionsAcces ?? "",
         pieceJointeNomFichier: don.pieceJointeNomFichier,
       }}
-      articles={don.articles.map((a) => ({ id: a.id, designation: a.designation, quantiteDeclaree: a.quantiteDeclaree, poidsKg: a.poidsKg }))}
+      articles={don.articles.map((a) => ({ id: a.id, designation: a.designation, quantiteDeclaree: a.quantiteDeclaree, poidsKg: a.poidsKg, categorie: a.categorie }))}
       adresseEntreprise={entreprise.adresse}
       associationsAujourdhui={associationsAujourdhui}
       congesJusquau={congesEnCours ? formaterDateConges(congesEnCours.fin) : null}

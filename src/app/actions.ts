@@ -12,6 +12,7 @@ import { validerPhotoArticle } from "@/lib/articlePhoto";
 import { nomFichierSur, validerFichierDocument } from "@/lib/documents";
 import { champTropLong } from "@/lib/validation";
 import { extraireArticlesDepuisFichier } from "@/lib/extractionArticles";
+import { TOUTES_CATEGORIES_DON } from "@/lib/categoriesDon";
 
 async function requireSession() {
   const session = await getSession();
@@ -41,7 +42,13 @@ async function assurerDonModifiable(donId: string) {
   assurerBonNonConfirme(bon);
 }
 
-export async function ajouterArticleManuel(donId: string, designation: string, poidsBrut: string, uniteBrut: string) {
+export async function ajouterArticleManuel(
+  donId: string,
+  designation: string,
+  poidsBrut: string,
+  uniteBrut: string,
+  categorie: string | null = null
+) {
   const session = await requireSession();
   const don = await prisma.don.findUniqueOrThrow({ where: { id: donId } });
   if (don.entrepriseId !== session.entrepriseId) throw new Error("Don non autorisé.");
@@ -54,6 +61,7 @@ export async function ajouterArticleManuel(donId: string, designation: string, p
   if (champTropLong(designation)) {
     return { ok: false, error: "Désignation trop longue." };
   }
+  const categorieValide = categorie && TOUTES_CATEGORIES_DON.some((c) => c.id === categorie) ? categorie : null;
 
   // La quantité en unités est optionnelle : sans elle, l'article est déclaré au poids (vrac).
   const uniteSaisie = uniteBrut.trim();
@@ -67,7 +75,7 @@ export async function ajouterArticleManuel(donId: string, designation: string, p
   }
 
   const article = await prisma.article.create({
-    data: { donId, designation: designation.trim(), quantiteDeclaree, poidsKg },
+    data: { donId, designation: designation.trim(), quantiteDeclaree, poidsKg, categorie: categorieValide },
   });
   revalidatePath("/");
   return { ok: true, id: article.id, quantiteDeclaree };

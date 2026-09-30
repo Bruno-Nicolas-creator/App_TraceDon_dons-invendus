@@ -13,6 +13,7 @@ import Link from "next/link";
 import BottomTabBar from "@/components/BottomTabBar";
 import BoutonDictee from "@/components/BoutonDictee";
 import AjouterArticleForm, { type ArticleAjoute } from "@/components/AjouterArticleForm";
+import { libelleCategorieDon } from "@/lib/categoriesDon";
 import { useDicteeVocale } from "@/lib/dicteeVocale";
 
 type Don = {
@@ -400,6 +401,7 @@ export default function NouveauDonClient({
                         <div className="truncate text-[13px] font-semibold">{a.designation}</div>
                         <div className="text-[11px] text-ink-muted">
                           {a.quantiteDeclaree} · {a.poidsKg.toLocaleString("fr-FR")} kg
+                          {a.categorie && ` · ${libelleCategorieDon(a.categorie)}`}
                         </div>
                       </div>
                       <button

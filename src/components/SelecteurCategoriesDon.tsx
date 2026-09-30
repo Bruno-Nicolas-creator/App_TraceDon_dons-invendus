@@ -33,15 +33,24 @@ export default function SelecteurCategoriesDon({
   name,
   selection,
   onChange,
+  multiple = true,
+  label = "Catégories de dons proposées",
 }: {
   name: string;
   selection: string[];
   onChange: (selection: string[]) => void;
+  /** false : une seule catégorie à la fois (ex. catégorie d'un article), sans "Tout cocher". */
+  multiple?: boolean;
+  label?: string;
 }) {
   const [ouvert, setOuvert] = useState(false);
   const [groupeOuvert, setGroupeOuvert] = useState<string>(GROUPES_CATEGORIES_DON[0].id);
 
   const basculerCategorie = (id: string) => {
+    if (!multiple) {
+      onChange(selection.includes(id) ? [] : [id]);
+      return;
+    }
     onChange(selection.includes(id) ? selection.filter((c) => c !== id) : [...selection, id]);
   };
 
@@ -54,17 +63,24 @@ export default function SelecteurCategoriesDon({
   };
 
   const libellePluriel = (n: number) => `${n} catégorie${n > 1 ? "s" : ""} sélectionnée${n > 1 ? "s" : ""}`;
+  const libelleUnique = GROUPES_CATEGORIES_DON.flatMap((g) => g.categories).find((c) => c.id === selection[0])?.label;
 
   return (
     <div>
-      <span className="mb-1 block text-xs text-ink-muted">Catégories de dons proposées</span>
+      <span className="mb-1 block text-xs text-ink-muted">{label}</span>
       <button
         type="button"
         onClick={() => setOuvert(true)}
         className="flex w-full items-center justify-between gap-2 rounded-lg border border-border px-3 py-2.5 text-left text-sm transition-colors active:bg-surface-alt"
       >
         <span className={selection.length ? "text-ink" : "text-ink-muted"}>
-          {selection.length > 0 ? libellePluriel(selection.length) : "Choisir les catégories (optionnel)"}
+          {selection.length > 0
+            ? multiple
+              ? libellePluriel(selection.length)
+              : libelleUnique
+            : multiple
+              ? "Choisir les catégories (optionnel)"
+              : "Choisir une catégorie (optionnel)"}
         </span>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="shrink-0">
           <path d="M9 6L15 12L9 18" stroke="#6B6459" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -85,7 +101,7 @@ export default function SelecteurCategoriesDon({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
-              <h3 className="font-display text-base font-semibold">Catégories de dons</h3>
+              <h3 className="font-display text-base font-semibold">{multiple ? "Catégories de dons" : "Catégorie"}</h3>
               <button
                 type="button"
                 onClick={() => setOuvert(false)}
@@ -126,13 +142,15 @@ export default function SelecteurCategoriesDon({
 
                     {estOuvert && (
                       <div className="mt-3 space-y-3">
-                        <button
-                          type="button"
-                          onClick={() => basculerGroupe(idsGroupe, tousSelectionnes)}
-                          className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-ink transition-transform active:scale-95"
-                        >
-                          {tousSelectionnes ? "Tout décocher" : "Tout cocher"}
-                        </button>
+                        {multiple && (
+                          <button
+                            type="button"
+                            onClick={() => basculerGroupe(idsGroupe, tousSelectionnes)}
+                            className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-ink transition-transform active:scale-95"
+                          >
+                            {tousSelectionnes ? "Tout décocher" : "Tout cocher"}
+                          </button>
+                        )}
                         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
                           {groupe.categories.map((cat) => {
                             const active = selection.includes(cat.id);
