@@ -19,8 +19,17 @@ async function getOrCreateBrouillon(entrepriseId: string) {
   });
   if (existant) return existant;
 
+  // Les dons d'une même entreprise se ressemblent souvent d'un jour sur l'autre (dons
+  // récurrents) : on reprend le titre et la description du don précédent par défaut, plutôt
+  // que de repartir d'un formulaire vide à chaque fois.
+  const precedent = await prisma.don.findFirst({
+    where: { entrepriseId, type: "ALIMENTAIRE", NOT: { statut: "BROUILLON" } },
+    orderBy: { createdAt: "desc" },
+    select: { titre: true, description: true },
+  });
+
   return prisma.don.create({
-    data: { entrepriseId, type: "ALIMENTAIRE" },
+    data: { entrepriseId, type: "ALIMENTAIRE", titre: precedent?.titre, description: precedent?.description },
     include: { articles: true },
   });
 }
