@@ -31,48 +31,31 @@ function tabsForRole(role: Role): { id: Tab; href: string; label: string }[] {
   }
 }
 
+const EMOJI_PAR_ONGLET: Record<Tab, string> = {
+  dons: "🧺",
+  planning: "📅",
+  messages: "💬",
+  archives: "🗂️",
+  profil: "👤",
+};
+
+const FOND_PAR_ONGLET: Record<Tab, string> = {
+  dons: "#E9F6E4",
+  planning: "#E3F0FA",
+  messages: "#EEE9FA",
+  archives: "#FBEEDA",
+  profil: "#FBE0DA",
+};
+
 function TabIcon({ id, active }: { id: Tab; active: boolean }) {
-  const stroke = active ? "#2E6B4E" : "#6B6459";
-  if (id === "dons") {
-    return (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path d="M12 3L4 9V21H20V9L12 3Z" stroke={stroke} strokeWidth="1.8" strokeLinejoin="round" />
-      </svg>
-    );
-  }
-  if (id === "planning") {
-    return (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <rect x="4" y="5" width="16" height="15" rx="2" stroke={stroke} strokeWidth="1.8" />
-        <path d="M4 9.5H20M8 3V6.5M16 3V6.5" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" />
-      </svg>
-    );
-  }
-  if (id === "archives") {
-    return (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <rect x="4" y="4" width="16" height="16" rx="2" stroke={stroke} strokeWidth="1.8" />
-        <path d="M4 10H20" stroke={stroke} strokeWidth="1.8" />
-      </svg>
-    );
-  }
-  if (id === "messages") {
-    return (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <path
-          d="M4 5H20V16H9L4 20V5Z"
-          stroke={stroke}
-          strokeWidth="1.8"
-          strokeLinejoin="round"
-        />
-      </svg>
-    );
-  }
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="8" r="3.2" stroke={stroke} strokeWidth="1.6" />
-      <path d="M5 20C5 16.5 8 14.5 12 14.5C16 14.5 19 16.5 19 20" stroke={stroke} strokeWidth="1.6" />
-    </svg>
+    <span
+      aria-hidden="true"
+      className={`flex h-8 w-8 items-center justify-center rounded-full text-base leading-none transition-opacity ${active ? "opacity-100" : "opacity-45 grayscale"}`}
+      style={{ backgroundColor: FOND_PAR_ONGLET[id] }}
+    >
+      {EMOJI_PAR_ONGLET[id]}
+    </span>
   );
 }
 

@@ -387,9 +387,7 @@ export default function BonEnlevementClient({
                         className="h-8 w-8 shrink-0 rounded-lg object-cover"
                       />
                     ) : (
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-alt">
-                        <IconeArticle designation={article.nom} />
-                      </div>
+                      <IconeArticle designation={article.nom} />
                     )}
                     <div className="truncate text-sm font-semibold">{article.nom}</div>
                   </div>

@@ -21,13 +21,15 @@ export type AttestationInteretGeneralArchive = {
 };
 
 function DocIcon({ variant }: { variant: "bon" | "attestation" }) {
-  const color = variant === "bon" ? "#1E4B36" : "#8A4420";
+  const fond = variant === "bon" ? "var(--brand-tint)" : "var(--accent-tint)";
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M6 3H14L19 8V21H6V3Z" stroke={color} strokeWidth="1.6" strokeLinejoin="round" />
-      <path d="M14 3V8H19" stroke={color} strokeWidth="1.6" />
-      {variant === "attestation" && <path d="M9 13H15M9 16.5H15" stroke={color} strokeWidth="1.4" />}
-    </svg>
+    <span
+      aria-hidden="true"
+      className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-full text-lg leading-none"
+      style={{ backgroundColor: fond }}
+    >
+      {variant === "bon" ? "🧾" : "📜"}
+    </span>
   );
 }
 
@@ -106,9 +108,7 @@ export default function ArchivesClient({
               rel="noopener noreferrer"
               className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3.5"
             >
-              <div className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-lg bg-brand-tint">
-                <DocIcon variant="bon" />
-              </div>
+              <DocIcon variant="bon" />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[13.5px] font-semibold">{bon.titre}</div>
                 <div className="mt-0.5 text-xs text-ink-muted">{bon.date} · {bon.poids}</div>
@@ -129,9 +129,7 @@ export default function ArchivesClient({
                 rel={aSigner ? undefined : "noopener noreferrer"}
                 className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3.5"
               >
-                <div className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-lg bg-accent-tint">
-                  <DocIcon variant="attestation" />
-                </div>
+                <DocIcon variant="attestation" />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[13.5px] font-semibold">{att.titre}</div>
                   <div className="mt-0.5 text-xs text-ink-muted">{att.periode} · {att.montant}</div>
@@ -163,9 +161,7 @@ export default function ArchivesClient({
                 rel={aSigner ? undefined : "noopener noreferrer"}
                 className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3.5"
               >
-                <div className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-lg bg-accent-tint">
-                  <DocIcon variant="attestation" />
-                </div>
+                <DocIcon variant="attestation" />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[13.5px] font-semibold">{att.titre}</div>
                   <div className="mt-0.5 text-xs text-ink-muted">Statut d&apos;intérêt général</div>
