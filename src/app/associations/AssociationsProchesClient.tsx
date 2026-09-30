@@ -88,9 +88,11 @@ export default function AssociationsProchesClient({
           <div className="flex gap-3 rounded-2xl bg-accent-tint p-4">
             <span aria-hidden="true" className="text-lg leading-none">⚠️</span>
             <p className="text-xs leading-relaxed text-ink">
-              Votre surface de vente dépasse 400 m² : la loi Garot vous impose de céder vos invendus à une
-              association <strong>habilitée</strong>. Le statut d&apos;habilitation de chaque association est
-              indiqué ci-dessous.
+              Votre surface de vente dépasse 400 m² : la loi Garot vous impose de proposer une convention de don à
+              au moins une association <strong>habilitée</strong>, et vous interdit de détruire des denrées encore
+              consommables. Vous pouvez tout à fait donner aussi à des associations non habilitées, ce n&apos;est
+              pas exclusif — le statut d&apos;habilitation de chaque association est indiqué ci-dessous à titre
+              d&apos;information.
             </p>
           </div>
         )}

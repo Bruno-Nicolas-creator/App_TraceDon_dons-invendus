@@ -452,9 +452,11 @@ export default async function ProfilPage() {
             <p className="text-xs leading-relaxed text-ink">
               <span className="font-semibold text-accent">Surface &gt; {SEUIL_GRANDE_SURFACE_M2} m² : obligation légale de don.</span>{" "}
               La loi Garot (art. L. 541-15-5 du code de l&apos;environnement, décret n° 2016-1962) vous interdit de
-              détruire des denrées encore consommables et vous impose de proposer une convention de don à une
-              association d&apos;aide alimentaire <strong>habilitée</strong>. Vérifiez le statut d&apos;habilitation
-              de vos associations partenaires dans votre{" "}
+              détruire des denrées encore consommables et vous impose de proposer, dans l&apos;année suivant le
+              franchissement du seuil, une convention de don à <strong>au moins une</strong> association
+              d&apos;aide alimentaire habilitée. Cette obligation porte sur la proposition, pas sur l&apos;exclusivité
+              : vous pouvez tout à fait donner aussi à des associations non habilitées en parallèle. Vérifiez le
+              statut d&apos;habilitation de vos associations partenaires dans votre{" "}
               <a href="/planning" className="font-semibold underline">
                 planning
               </a>

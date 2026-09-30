@@ -420,7 +420,7 @@ export async function sePositionner(
         ok: false,
         avertissementHabilitation: true,
         error:
-          "Ce commerce dépasse 400 m² de surface de vente : la loi Garot impose que ses invendus soient cédés à une association habilitée. Votre association n'est pas déclarée habilitée.",
+          "Ce commerce dépasse 400 m² de surface de vente : la loi Garot lui impose de proposer une convention de don à au moins une association habilitée. Votre association n'est pas déclarée habilitée — vous pouvez tout de même vous positionner sur ce don, ce n'est pas interdit, mais ce commerce devra aussi avoir au moins une association habilitée parmi ses partenaires pour être en conformité.",
       };
     }
   }
