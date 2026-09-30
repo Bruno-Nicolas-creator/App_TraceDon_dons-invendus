@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { verifierAssociation } from "@/app/actions";
 
@@ -30,6 +30,8 @@ export default function AssociationsClient({ associations }: { associations: Ass
   const [verifieesLocal, setVerifieesLocal] = useState<Record<string, boolean>>({});
   const [erreur, setErreur] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [recherche, setRecherche] = useState("");
+  const [filtre, setFiltre] = useState<"toutes" | "a_verifier" | "non_habilitee">("toutes");
 
   const toggleVerifie = (id: string, actuel: boolean) => {
     const prochain = !actuel;
@@ -51,6 +53,22 @@ export default function AssociationsClient({ associations }: { associations: Ass
 
   const enAttente = associations.filter((a) => !(verifieesLocal[a.id] ?? a.verifiee)).length;
 
+  const associationsAffichees = useMemo(() => {
+    const rechercheNormalisee = recherche.trim().toLowerCase();
+    return [...associations]
+      .filter((a) => {
+        if (rechercheNormalisee && !a.nom.toLowerCase().includes(rechercheNormalisee) && !a.rna.toLowerCase().includes(rechercheNormalisee)) {
+          return false;
+        }
+        const verifiee = verifieesLocal[a.id] ?? a.verifiee;
+        if (filtre === "a_verifier" && verifiee) return false;
+        if (filtre === "non_habilitee" && a.habilitationVariant !== "absente") return false;
+        return true;
+      })
+      // Les non-vérifiées remontent en premier : ce sont elles qui demandent une action.
+      .sort((a, b) => Number(verifieesLocal[a.id] ?? a.verifiee) - Number(verifieesLocal[b.id] ?? b.verifiee));
+  }, [associations, recherche, filtre, verifieesLocal]);
+
   return (
     <>
       <div className="flex items-center justify-between">
@@ -61,6 +79,36 @@ export default function AssociationsClient({ associations }: { associations: Ass
       </div>
 
       {erreur && <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreur}</div>}
+
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+        <input
+          type="text"
+          value={recherche}
+          onChange={(e) => setRecherche(e.target.value)}
+          placeholder="Rechercher par nom ou RNA…"
+          className="w-full rounded-full border border-border bg-surface px-4 py-2 text-sm sm:max-w-xs"
+        />
+        <div className="flex flex-wrap gap-1.5">
+          {(
+            [
+              { id: "toutes", label: "Toutes" },
+              { id: "a_verifier", label: "À vérifier" },
+              { id: "non_habilitee", label: "Non habilitées" },
+            ] as const
+          ).map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => setFiltre(f.id)}
+              className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-transform active:scale-95 ${
+                filtre === f.id ? "border-brand bg-brand-tint text-brand-dark" : "border-border bg-surface text-ink-muted"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="rounded-2xl border border-border bg-surface p-4 lg:p-5">
         <div className="overflow-x-auto">
@@ -76,7 +124,7 @@ export default function AssociationsClient({ associations }: { associations: Ass
               </tr>
             </thead>
             <tbody>
-              {associations.map((asso, i) => {
+              {associationsAffichees.map((asso, i) => {
                 const verifiee = verifieesLocal[asso.id] ?? asso.verifiee;
                 return (
                   <tr key={asso.id} className="animate-fade-slide-in" style={{ animationDelay: `${i * 40}ms` }}>
@@ -111,9 +159,9 @@ export default function AssociationsClient({ associations }: { associations: Ass
               })}
             </tbody>
           </table>
-          {associations.length === 0 && (
+          {associationsAffichees.length === 0 && (
             <div className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-ink-muted">
-              Aucune association enregistrée sur la plateforme.
+              Aucune association ne correspond à cette recherche.
             </div>
           )}
         </div>

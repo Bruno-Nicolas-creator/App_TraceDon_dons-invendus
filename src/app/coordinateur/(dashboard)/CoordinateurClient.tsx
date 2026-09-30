@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { assignerDon, verifierAssociation } from "@/app/actions";
 import CompteurAnime from "@/components/CompteurAnime";
 
@@ -21,7 +22,17 @@ export type DonNonAssigne = {
   nom: string;
   poids: string;
   depuis: string;
+  articlesReclames: { reclames: number; total: number } | null;
 };
+
+export type EntrepriseNonConforme = {
+  id: string;
+  nom: string;
+  surfaceM2: number;
+  nombrePartenaires: number;
+};
+
+export type MoisTendance = { mois: string; poidsKg: number };
 
 const RESCRIT_STYLES: Record<AssociationLigne["rescritVariant"], string> = {
   attente: "bg-surface-alt text-ink-muted",
@@ -37,15 +48,25 @@ const HABILITATION_STYLES: Record<AssociationLigne["habilitationVariant"], strin
 export default function CoordinateurClient({
   associations,
   donsNonAssignes,
-  poidsMois,
+  poidsMoisCourant,
+  libelleMoisCourant,
   nombreDons,
   tauxRefus,
+  tendance,
+  entreprisesNonConformes,
+  co2EviteKg,
+  equivalenceKm,
 }: {
   associations: AssociationLigne[];
   donsNonAssignes: DonNonAssigne[];
-  poidsMois: number;
+  poidsMoisCourant: number;
+  libelleMoisCourant: string;
   nombreDons: number;
   tauxRefus: number;
+  tendance: MoisTendance[];
+  entreprisesNonConformes: EntrepriseNonConforme[];
+  co2EviteKg: number | null;
+  equivalenceKm: number | null;
 }) {
   const [verifieesLocal, setVerifieesLocal] = useState<Record<string, boolean>>({});
   const [assignesLocal, setAssignesLocal] = useState<Record<string, string>>({});
@@ -92,25 +113,32 @@ export default function CoordinateurClient({
   };
 
   const enAttente = associations.filter((a) => !(verifieesLocal[a.id] ?? a.verifiee)).length;
+  // Les non-vérifiées remontent en premier : ce sont elles que le compteur ci-dessus annonce,
+  // le tableau doit montrer la même chose en priorité plutôt qu'un simple ordre alphabétique.
+  const associationsTriees = [...associations].sort((a, b) => {
+    const verifieeA = verifieesLocal[a.id] ?? a.verifiee;
+    const verifieeB = verifieesLocal[b.id] ?? b.verifiee;
+    return Number(verifieeA) - Number(verifieeB);
+  });
 
   return (
     <>
       <div className="flex items-center justify-between">
         <h1 className="font-display text-xl font-semibold lg:text-2xl">Tableau de bord</h1>
-        <span className="rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-ink-muted lg:px-3.5 lg:py-2 lg:text-[13px]">
-          Septembre 2026
+        <span className="rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold capitalize text-ink-muted lg:px-3.5 lg:py-2 lg:text-[13px]">
+          {libelleMoisCourant}
         </span>
       </div>
 
       {erreur && <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreur}</div>}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5 lg:gap-4">
         <div className="rounded-2xl border border-border bg-surface p-3.5 lg:p-4.5">
           <div className="mb-2 text-xs text-ink-muted">Poids donné ce mois</div>
           <div className="font-display text-xl font-bold lg:text-[26px]">
-            <CompteurAnime valeur={poidsMois} decimales={1} suffixe=" kg" />
+            <CompteurAnime valeur={poidsMoisCourant} decimales={1} suffixe=" kg" />
           </div>
-          <div className="mt-1 text-xs text-brand-dark">Cumul des bons confirmés</div>
+          <div className="mt-1 text-xs text-brand-dark">Bons confirmés du mois</div>
         </div>
         <div className="rounded-2xl border border-border bg-surface p-3.5 lg:p-4.5">
           <div className="mb-2 text-xs text-ink-muted">Dons réalisés</div>
@@ -133,13 +161,51 @@ export default function CoordinateurClient({
           </div>
           <div className="mt-1 text-xs text-ink-muted">Vérification manuelle requise</div>
         </div>
+        <div className="rounded-2xl border border-border bg-surface p-3.5 lg:p-4.5">
+          <div className="mb-2 text-xs text-ink-muted">Impact CO2 évité</div>
+          <div className="font-display text-xl font-bold text-brand-dark lg:text-[26px]">
+            {co2EviteKg != null ? <CompteurAnime valeur={co2EviteKg} decimales={0} suffixe=" kg" /> : "—"}
+          </div>
+          <div className="mt-1 text-xs text-ink-muted">
+            {equivalenceKm != null ? (
+              <>≈ <CompteurAnime valeur={equivalenceKm} decimales={0} suffixe=" km" /> en voiture</>
+            ) : (
+              "Dons alimentaires, tous confondus"
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Carte prioritaire : un don sans association assignée reste bloqué, donc c'est la
-          première chose que le coordinateur doit voir et traiter. */}
+      <div className="rounded-2xl border border-border bg-surface p-4 lg:p-5">
+        <h2 className="mb-3.5 text-[15px] font-semibold">Poids donné, 6 derniers mois</h2>
+        <div style={{ width: "100%", height: 220 }}>
+          <ResponsiveContainer>
+            <AreaChart data={tendance} margin={{ top: 6, right: 6, left: -18, bottom: 0 }}>
+              <defs>
+                <linearGradient id="degradeVert" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#1E4B36" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#1E4B36" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} stroke="#EFEBE1" />
+              <XAxis dataKey="mois" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: "#6B6459" }} />
+              <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: "#6B6459" }} width={48} />
+              <Tooltip
+                formatter={(valeur) => [`${Number(valeur).toLocaleString("fr-FR")} kg`, "Poids donné"]}
+                contentStyle={{ borderRadius: 10, border: "1px solid #DDD8C9", fontSize: 13 }}
+              />
+              <Area type="monotone" dataKey="poidsKg" stroke="#1E4B36" strokeWidth={2} fill="url(#degradeVert)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Carte prioritaire : un don encore publié reste bloqué (ou partiellement bloqué, pour un
+          don matériel divisible dont il reste des articles libres), donc c'est la première chose
+          que le coordinateur doit voir et traiter. */}
       <div className="rounded-2xl border-2 border-accent/30 bg-surface p-4 lg:p-5">
         <div className="mb-3.5 flex items-center justify-between">
-          <h2 className="text-[15px] font-semibold">Dons sans association</h2>
+          <h2 className="text-[15px] font-semibold">Dons à traiter</h2>
           {donsNonAssignes.length > 0 && (
             <span className="rounded-full bg-accent-tint px-2.5 py-1 text-xs font-semibold text-accent">
               {donsNonAssignes.length} à traiter
@@ -157,6 +223,11 @@ export default function CoordinateurClient({
               >
                 <div className="text-[13px] font-semibold">{don.nom}</div>
                 <div className="my-1.5 text-xs text-ink-muted">{don.poids} · publié {don.depuis}</div>
+                {don.articlesReclames && (
+                  <div className="mb-1.5 inline-block rounded-full bg-surface-alt px-2.5 py-1 text-[11px] font-semibold text-ink-muted">
+                    {don.articlesReclames.reclames}/{don.articlesReclames.total} articles déjà réclamés
+                  </div>
+                )}
                 {nomAssigne ? (
                   <div className="w-full rounded-full bg-brand-tint py-2 text-center text-xs font-bold text-brand-dark">
                     Assigné à {nomAssigne}
@@ -195,6 +266,50 @@ export default function CoordinateurClient({
         </div>
       </div>
 
+      {/* Loi Garot : une entreprise de plus de 400 m² doit avoir au moins une association
+          habilitée à l'aide alimentaire parmi ses partenaires (convention signée). Celles qui
+          n'en ont aucune sont en défaut. */}
+      <div className="rounded-2xl border-2 border-accent/30 bg-surface p-4 lg:p-5">
+        <div className="mb-3.5 flex items-center justify-between">
+          <h2 className="text-[15px] font-semibold">Conformité loi Garot</h2>
+          {entreprisesNonConformes.length > 0 && (
+            <span className="rounded-full bg-accent-tint px-2.5 py-1 text-xs font-semibold text-accent">
+              {entreprisesNonConformes.length} à risque
+            </span>
+          )}
+        </div>
+        {entreprisesNonConformes.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-ink-muted">
+            Toutes les entreprises de plus de 400 m² ont au moins une association habilitée parmi
+            leurs partenaires.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-xs text-ink-muted">
+              Ces entreprises dépassent 400&nbsp;m² mais n&apos;ont aucune association habilitée à
+              l&apos;aide alimentaire parmi leurs partenaires conventionnés.
+            </p>
+            {entreprisesNonConformes.map((ent, i) => (
+              <div
+                key={ent.id}
+                style={{ animationDelay: `${i * 40}ms` }}
+                className="animate-fade-slide-in flex items-center justify-between rounded-xl border border-border p-3"
+              >
+                <div>
+                  <div className="text-[13px] font-semibold">{ent.nom}</div>
+                  <div className="text-xs text-ink-muted">
+                    {ent.surfaceM2.toLocaleString("fr-FR")} m² ·{" "}
+                    {ent.nombrePartenaires === 0
+                      ? "aucun partenaire conventionné"
+                      : `${ent.nombrePartenaires} partenaire${ent.nombrePartenaires > 1 ? "s" : ""} conventionné${ent.nombrePartenaires > 1 ? "s" : ""}, aucun habilité`}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="rounded-2xl border border-border bg-surface p-4 lg:p-5">
         <div className="mb-3.5 flex items-center justify-between">
           <h2 className="text-[15px] font-semibold">Associations à vérifier</h2>
@@ -218,7 +333,7 @@ export default function CoordinateurClient({
               </tr>
             </thead>
             <tbody>
-              {associations.map((asso, i) => {
+              {associationsTriees.map((asso, i) => {
                 const verifiee = verifieesLocal[asso.id] ?? asso.verifiee;
                 return (
                   <tr key={asso.id} className="animate-fade-slide-in" style={{ animationDelay: `${i * 40}ms` }}>
