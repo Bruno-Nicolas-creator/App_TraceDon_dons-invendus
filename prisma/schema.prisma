@@ -172,6 +172,12 @@ model Association {
   disponibilitesRetrait     String[]      @default([])
   typesActivite             String[]      @default([])
   notreAction               String?
+  // Déclaratif, en complément de l'attestation chaîne du froid (cf. Document type
+  // ATTESTATION_CHAINE_FROID) : sert à avertir (pas bloquer) une association qui se positionnerait
+  // sur un don dépassant la quantité qu'elle a indiqué pouvoir gérer.
+  capaciteAccueilKg         Float?
+  // Purement informatif, visible par les entreprises donatrices pour choisir leurs partenaires.
+  nombreBeneficiaires       Int?
   preferenceAlerte          PreferenceAlerte @default(EMAIL)
   telephoneAlerteSms        String?
   declarationInteretGeneral Boolean       @default(false)

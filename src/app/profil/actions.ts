@@ -305,6 +305,44 @@ export async function definirPresentationAction(formData: FormData) {
   revalidatePath("/associations");
 }
 
+/**
+ * Capacité d'accueil déclarative (en complément de l'attestation chaîne du froid) et nombre de
+ * bénéficiaires servis (purement informatif). Ni l'un ni l'autre n'est jamais vérifié : ce sont
+ * des indications qui servent à avertir avant un positionnement, pas des seuils imposés.
+ */
+export async function definirCapaciteAction(formData: FormData) {
+  const session = await getSession();
+  if (!session || session.role !== "ASSOCIATION" || !session.associationId) {
+    throw new Error("Action réservée aux associations.");
+  }
+
+  const capaciteBrute = String(formData.get("capaciteAccueilKg") ?? "").trim();
+  const beneficiairesBrut = String(formData.get("nombreBeneficiaires") ?? "").trim();
+
+  let capaciteAccueilKg: number | null = null;
+  if (capaciteBrute) {
+    capaciteAccueilKg = Number(capaciteBrute.replace(",", "."));
+    if (!Number.isFinite(capaciteAccueilKg) || capaciteAccueilKg <= 0) {
+      throw new Error("Capacité invalide.");
+    }
+  }
+
+  let nombreBeneficiaires: number | null = null;
+  if (beneficiairesBrut) {
+    nombreBeneficiaires = Number(beneficiairesBrut);
+    if (!Number.isInteger(nombreBeneficiaires) || nombreBeneficiaires <= 0) {
+      throw new Error("Nombre de bénéficiaires invalide.");
+    }
+  }
+
+  await prisma.association.update({
+    where: { id: session.associationId },
+    data: { capaciteAccueilKg, nombreBeneficiaires },
+  });
+  revalidatePath("/profil");
+  revalidatePath("/associations");
+}
+
 export async function definirPreferenceAlerteAction(formData: FormData) {
   const session = await getSession();
   if (!session || session.role !== "ASSOCIATION" || !session.associationId) {

@@ -85,6 +85,8 @@ export default async function AssociationsProchesPage() {
       typesActivite: association.typesActivite,
       notreAction: association.notreAction,
       chaineFroidAttestee: association.documents.length > 0,
+      capaciteAccueilKg: association.capaciteAccueilKg,
+      nombreBeneficiaires: association.nombreBeneficiaires,
     };
   });
 

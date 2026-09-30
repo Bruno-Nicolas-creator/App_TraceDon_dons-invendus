@@ -406,7 +406,10 @@ export async function sePositionner(
   donId: string,
   forcerMalgreAvertissement: boolean = false,
   articleIds: string[] | null = null
-): Promise<{ ok: true; bonId: string } | { ok: false; error: string; conventionId?: string; avertissementHabilitation?: boolean }> {
+): Promise<
+  | { ok: true; bonId: string }
+  | { ok: false; error: string; conventionId?: string; avertissementHabilitation?: boolean; avertissementCapacite?: boolean }
+> {
   const session = await requireSession();
   if (session.role !== "ASSOCIATION" || !session.associationId) throw new Error("Action réservée aux associations.");
 
@@ -455,6 +458,23 @@ export async function sePositionner(
         error:
           "Ce commerce dépasse 400 m² de surface de vente : la loi Garot lui impose de proposer une convention de don à au moins une association habilitée. Votre association n'est pas déclarée habilitée — vous pouvez tout de même vous positionner sur ce don, ce n'est pas interdit, mais ce commerce devra aussi avoir au moins une association habilitée parmi ses partenaires pour être en conformité.",
       };
+    }
+
+    // Capacité déclarative, jamais vérifiée : juste un rappel avant de confirmer, si l'association
+    // en a renseigné une (cf. profil, en complément de l'attestation chaîne du froid).
+    if (association.capaciteAccueilKg != null) {
+      const articlesConcernes =
+        articleIds && articleIds.length > 0
+          ? donCible.articles.filter((a) => articleIds.includes(a.id))
+          : donCible.articles;
+      const poidsConcerne = articlesConcernes.reduce((total, a) => total + a.poidsKg, 0);
+      if (poidsConcerne > association.capaciteAccueilKg) {
+        return {
+          ok: false,
+          avertissementCapacite: true,
+          error: `Ce don pèse ${poidsConcerne.toLocaleString("fr-FR")} kg, au-delà de la capacité de ${association.capaciteAccueilKg.toLocaleString("fr-FR")} kg que vous avez indiquée dans votre profil. Vous pouvez tout de même vous positionner, ce n'est qu'un repère.`,
+        };
+      }
     }
   }
 

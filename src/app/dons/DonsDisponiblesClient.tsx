@@ -106,7 +106,7 @@ export default function DonsDisponiblesClient({
           router.push(`/convention/${resultat.conventionId}?retour=/dons`);
           return;
         }
-        if (resultat.avertissementHabilitation) {
+        if (resultat.avertissementHabilitation || resultat.avertissementCapacite) {
           setAvertissements((prev) => ({ ...prev, [donId]: resultat.error }));
           return;
         }

@@ -20,6 +20,7 @@ import {
   basculerAssuranceRcBenevoleAction,
   basculerMandatBenevoleAction,
   deconnexionAction,
+  definirCapaciteAction,
   definirConformiteAssociationAction,
   definirContactRappelAction,
   definirPreferenceAlerteAction,
@@ -70,6 +71,8 @@ export default async function ProfilPage() {
   let contactRappelNom = "";
   let contactRappelTelephone = "";
   let contactRappelEmail = "";
+  let capaciteAccueilKg: number | null = null;
+  let nombreBeneficiaires: number | null = null;
   if (session.entrepriseId) {
     const entreprise = await prisma.entreprise.findUnique({
       where: { id: session.entrepriseId },
@@ -124,6 +127,8 @@ export default async function ProfilPage() {
     contactRappelNom = association?.contactRappelNom ?? "";
     contactRappelTelephone = association?.contactRappelTelephone ?? "";
     contactRappelEmail = association?.contactRappelEmail ?? "";
+    capaciteAccueilKg = association?.capaciteAccueilKg ?? null;
+    nombreBeneficiaires = association?.nombreBeneficiaires ?? null;
   }
 
   const grandeSurface = estGrandeSurface(surfaceVenteM2);
@@ -414,6 +419,51 @@ export default async function ProfilPage() {
                 placeholder="Numéro pour réception SMS"
                 className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
               />
+              <button
+                type="submit"
+                className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+              >
+                Enregistrer
+              </button>
+            </form>
+          </div>
+        )}
+
+        {session.role === "ASSOCIATION" && (
+          <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4" style={{ animationDelay: "140ms" }}>
+            <div>
+              <h2 className="text-sm font-semibold">Capacité d&apos;accueil</h2>
+              <p className="mt-0.5 text-xs leading-relaxed text-ink-muted">
+                En complément de votre attestation chaîne du froid ci-dessous : indiquez la quantité maximale que
+                vous pouvez gérer par collecte. Ce n&apos;est jamais vérifié — juste un repère pour vous avertir
+                avant de vous positionner sur un don qui dépasserait cette quantité (vous pourrez toujours passer
+                outre). Le nombre de bénéficiaires est visible par les entreprises donatrices pour les aider à
+                choisir leurs partenaires.
+              </p>
+            </div>
+            <form action={definirCapaciteAction} className="space-y-2.5">
+              <label className="block text-xs text-ink-muted">
+                Quantité maximale par collecte (kg) — optionnel
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  name="capaciteAccueilKg"
+                  defaultValue={capaciteAccueilKg ?? ""}
+                  placeholder="Ex. 30"
+                  className="mt-1 w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                />
+              </label>
+              <label className="block text-xs text-ink-muted">
+                Nombre de bénéficiaires servis — optionnel
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  name="nombreBeneficiaires"
+                  defaultValue={nombreBeneficiaires ?? ""}
+                  placeholder="Ex. 150"
+                  className="mt-1 w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                />
+              </label>
               <button
                 type="submit"
                 className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
