@@ -3,22 +3,23 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { isDocuSignConfigured, verifierEtEnregistrerSignature } from "@/lib/docusign";
 import { calculerImpactCarbone } from "@/lib/impactCo2";
+import { articlesDuBon } from "@/lib/donDivisible";
 import BonEnlevementClient, { type ArticleAffiche, type BonAffiche } from "./BonEnlevementClient";
 
 export default async function BonEnlevementPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ donId: string }>;
+  params: Promise<{ bonId: string }>;
   searchParams: Promise<{ docusignRole?: string; event?: string }>;
 }) {
-  const { donId } = await params;
+  const { bonId } = await params;
   const { docusignRole, event } = await searchParams;
 
   const session = await getSession();
   if (!session) redirect("/connexion");
 
-  const bonExistant = await prisma.bonEnlevement.findUnique({ where: { donId } });
+  const bonExistant = await prisma.bonEnlevement.findUnique({ where: { id: bonId } });
   if (!bonExistant) notFound();
 
   // Retour depuis la cérémonie de signature DocuSign : on vérifie auprès de DocuSign
@@ -28,7 +29,7 @@ export default async function BonEnlevementPage({
   }
 
   const bon = await prisma.bonEnlevement.findUnique({
-    where: { donId },
+    where: { id: bonId },
     include: {
       entreprise: true,
       association: true,
@@ -52,7 +53,11 @@ export default async function BonEnlevementPage({
         ).map((b) => ({ id: b.id, nom: b.nom }))
       : [];
 
-  const articles: ArticleAffiche[] = bon.don.articles.map((a) => ({
+  // Don matériel divisible : ce bon ne porte que les articles réclamés par cette association,
+  // pas l'ensemble du don (les autres associations ont chacune le leur).
+  const articlesDuLot = articlesDuBon(bon.don, bon.don.articles, bon.associationId);
+
+  const articles: ArticleAffiche[] = articlesDuLot.map((a) => ({
     id: a.id,
     nom: a.designation,
     qte: a.quantiteConstatee ?? a.quantiteDeclaree,
@@ -79,6 +84,7 @@ export default async function BonEnlevementPage({
     donateurSigne: !!bon.signatureDonateurLe,
     associationSigne: !!bon.signatureAssociationLe,
     confirme: bon.confirme,
+    enAttenteValidationDonateur: bon.enAttenteValidationDonateur,
     poidsTotalRetenu: bon.poidsTotalRetenu,
     typeDon: bon.don.type,
     divisible: bon.don.divisible,

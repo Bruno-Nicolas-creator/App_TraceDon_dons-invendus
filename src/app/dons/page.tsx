@@ -28,9 +28,16 @@ export default async function DonsDisponiblesPage() {
       OR: [
         { statut: "PUBLIE" },
         { statut: "PRIS_EN_CHARGE", associationAssigneeId: session.associationId },
+        // Don matériel divisible : je reste concerné tant que j'ai réclamé au moins un article,
+        // même si le don entier est encore ouvert (statut PUBLIE) ou assigné à personne en propre.
+        { articles: { some: { associationAssigneeId: session.associationId } } },
       ],
     },
-    include: { entreprise: { include: { periodesConges: true } }, articles: true },
+    include: {
+      entreprise: { include: { periodesConges: true } },
+      articles: true,
+      bonsEnlevement: { where: { associationId: session.associationId }, select: { id: true, enAttenteValidationDonateur: true } },
+    },
     orderBy: { publieLe: "desc" },
   });
 
@@ -74,6 +81,12 @@ export default async function DonsDisponiblesPage() {
 
   const donsAffiches: DonAffiche[] = dons.map((don, i) => {
     const congesEntreprise = periodeCongesActive(don.entreprise.periodesConges);
+    const mesArticles = don.articles.filter((a) => a.associationAssigneeId === session.associationId);
+    const articlesDisponibles = don.divisible
+      ? don.articles
+          .filter((a) => a.associationAssigneeId == null)
+          .map((a) => ({ id: a.id, designation: a.designation, quantiteDeclaree: a.quantiteDeclaree, poidsKg: a.poidsKg }))
+      : [];
     return {
       id: don.id,
       nom: don.entreprise.raisonSociale,
@@ -81,7 +94,11 @@ export default async function DonsDisponiblesPage() {
       distance: distances[i] ?? don.distanceLabel ?? "—",
       categorie: don.categorie,
       poids: `${don.articles.reduce((total, a) => total + a.poidsKg, 0).toLocaleString("fr-FR")} kg`,
-      positionne: don.statut === "PRIS_EN_CHARGE",
+      positionne: don.divisible ? mesArticles.length > 0 : don.statut === "PRIS_EN_CHARGE",
+      enAttenteValidationDonateur: don.bonsEnlevement[0]?.enAttenteValidationDonateur ?? false,
+      divisible: don.divisible,
+      articlesDisponibles,
+      bonId: don.bonsEnlevement[0]?.id ?? null,
       latitude: don.entreprise.latitude,
       longitude: don.entreprise.longitude,
       congesJusquau: congesEntreprise ? formaterDateConges(congesEntreprise.fin) : null,

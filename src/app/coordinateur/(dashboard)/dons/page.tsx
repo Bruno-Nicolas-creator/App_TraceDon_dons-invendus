@@ -22,7 +22,7 @@ const formatDate = (date: Date) =>
 export default async function CoordinateurDonsPage() {
   const dons = await prisma.don.findMany({
     where: { statut: { not: "BROUILLON" } },
-    include: { entreprise: true, associationAssignee: true, articles: true },
+    include: { entreprise: true, associationAssignee: true, articles: { include: { associationAssignee: true } } },
     orderBy: { createdAt: "desc" },
   });
 
@@ -48,11 +48,19 @@ export default async function CoordinateurDonsPage() {
               </tr>
             </thead>
             <tbody>
-              {dons.map((don, i) => (
+              {dons.map((don, i) => {
+                // Don matériel divisible : plusieurs associations peuvent s'être partagé les
+                // articles, chacune avec son propre bon — on les liste toutes.
+                const associationsDuLot = don.divisible
+                  ? [...new Set(don.articles.map((a) => a.associationAssignee?.denomination).filter((n): n is string => !!n))]
+                  : don.associationAssignee
+                    ? [don.associationAssignee.denomination]
+                    : [];
+                return (
                 <tr key={don.id} className="animate-fade-slide-in" style={{ animationDelay: `${i * 40}ms` }}>
                   <td className="border-b border-surface-alt py-3 text-[13px] font-semibold">{don.entreprise.raisonSociale}</td>
                   <td className="border-b border-surface-alt py-3 text-[13px] text-ink-muted">
-                    {don.associationAssignee?.denomination ?? "—"}
+                    {associationsDuLot.length > 0 ? associationsDuLot.join(", ") : "—"}
                   </td>
                   <td className="border-b border-surface-alt py-3">
                     <span className={`rounded-full px-2.5 py-1 text-xs ${STATUT_STYLES[don.statut] ?? "bg-surface-alt text-ink-muted"}`}>
@@ -66,7 +74,8 @@ export default async function CoordinateurDonsPage() {
                     {don.publieLe ? formatDate(don.publieLe) : "—"}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
           {dons.length === 0 && (

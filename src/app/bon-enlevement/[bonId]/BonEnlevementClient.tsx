@@ -41,6 +41,7 @@ export type BonAffiche = {
   donateurSigne: boolean;
   associationSigne: boolean;
   confirme: boolean;
+  enAttenteValidationDonateur: boolean;
   poidsTotalRetenu: number | null;
   typeDon?: "ALIMENTAIRE" | "MATERIEL";
   divisible?: boolean;
@@ -270,6 +271,41 @@ export default function BonEnlevementClient({
             {role === "ENTREPRISE" ? "Retour à mes dons" : "Retour aux dons disponibles"}
           </Link>
         </footer>
+      </div>
+    );
+  }
+
+  if (bon.enAttenteValidationDonateur) {
+    return (
+      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg">
+        <header className="flex items-center gap-3 px-5 pt-5 pb-3">
+          <Link
+            href={role === "ENTREPRISE" ? "/" : "/dons"}
+            aria-label="Retour"
+            className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-full border border-border bg-surface"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M15 18L9 12L15 6" stroke="#201F1B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Link>
+          <h1 className="text-[17px] font-semibold">Bon n°{bon.numero}</h1>
+        </header>
+        <main className="flex flex-1 flex-col items-center gap-4 px-6 pt-10 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-accent-tint text-2xl">⏳</div>
+          <div>
+            <h2 className="mb-1.5 text-lg font-semibold">En attente de validation</h2>
+            <p className="text-sm leading-relaxed text-ink-muted">
+              {role === "ENTREPRISE"
+                ? "Acceptez ou refusez cette demande de positionnement depuis l'écran « Nouveau don matériel » pour continuer."
+                : "Le donateur doit d'abord valider votre demande de positionnement sur cette sélection d'articles. Vous serez notifié(e) dès que ce sera fait."}
+            </p>
+          </div>
+          <ul className="w-full space-y-1.5 rounded-2xl border border-border bg-surface p-4 text-left text-sm">
+            {articles.map((a) => (
+              <li key={a.id}>· {a.nom}</li>
+            ))}
+          </ul>
+        </main>
       </div>
     );
   }

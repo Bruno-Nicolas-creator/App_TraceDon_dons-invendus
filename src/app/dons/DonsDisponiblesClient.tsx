@@ -12,6 +12,13 @@ import { sePositionner } from "@/app/actions";
 
 type Vue = "carte" | "liste";
 
+export type ArticleDisponible = {
+  id: string;
+  designation: string;
+  quantiteDeclaree: string;
+  poidsKg: number;
+};
+
 export type DonAffiche = {
   id: string;
   nom: string;
@@ -20,6 +27,14 @@ export type DonAffiche = {
   categorie: string;
   poids: string;
   positionne: boolean;
+  // Le donateur doit valider une sélection d'articles avant qu'elle ne soit définitive
+  // (cf. Don matériel divisible) — le bon n'est pas encore consultable/signable tant que c'est le cas.
+  enAttenteValidationDonateur: boolean;
+  // Don matériel divisible : plusieurs associations peuvent se partager les articles, chacune
+  // choisissant les siens parmi ceux encore libres, plutôt que de prendre le don en entier.
+  divisible: boolean;
+  articlesDisponibles: ArticleDisponible[];
+  bonId: string | null;
   latitude: number | null;
   longitude: number | null;
   congesJusquau: string | null;
@@ -48,6 +63,8 @@ export default function DonsDisponiblesClient({
     [dons]
   );
   const [positionnesLocal, setPositionnesLocal] = useState<Record<string, boolean>>({});
+  const [bonIdLocal, setBonIdLocal] = useState<Record<string, string>>({});
+  const [selectionArticles, setSelectionArticles] = useState<Record<string, Set<string>>>({});
   const [erreur, setErreur] = useState<string | null>(null);
   const [avertissements, setAvertissements] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
@@ -60,7 +77,16 @@ export default function DonsDisponiblesClient({
     setDonActifSeq((n) => n + 1);
   };
 
-  const positionner = (donId: string, forcer: boolean = false) => {
+  const basculerArticle = (donId: string, articleId: string) => {
+    setSelectionArticles((prev) => {
+      const actuel = new Set(prev[donId] ?? []);
+      if (actuel.has(articleId)) actuel.delete(articleId);
+      else actuel.add(articleId);
+      return { ...prev, [donId]: actuel };
+    });
+  };
+
+  const positionner = (donId: string, forcer: boolean = false, articleIds: string[] | null = null) => {
     setErreur(null);
     setAvertissements((prev) => {
       const suivant = { ...prev };
@@ -69,7 +95,7 @@ export default function DonsDisponiblesClient({
     });
     setPositionnesLocal((prev) => ({ ...prev, [donId]: true }));
     startTransition(async () => {
-      const resultat = await sePositionner(donId, forcer);
+      const resultat = await sePositionner(donId, forcer, articleIds);
       if (!resultat.ok) {
         setPositionnesLocal((prev) => {
           const suivant = { ...prev };
@@ -85,7 +111,9 @@ export default function DonsDisponiblesClient({
           return;
         }
         setErreur(resultat.error);
+        return;
       }
+      setBonIdLocal((prev) => ({ ...prev, [donId]: resultat.bonId }));
     });
   };
 
@@ -159,6 +187,11 @@ export default function DonsDisponiblesClient({
         <ul className="space-y-3">
           {dons.map((don, i) => {
             const positionne = don.positionne || !!positionnesLocal[don.id];
+            const bonId = bonIdLocal[don.id] ?? don.bonId;
+            // Une sélection tout juste soumise pour un don divisible attend toujours l'accord du
+            // donateur ; au chargement suivant, la valeur vient directement du serveur.
+            const enAttente = don.enAttenteValidationDonateur || (don.divisible && !!bonIdLocal[don.id]);
+            const selection = selectionArticles[don.id] ?? new Set<string>();
             return (
               <li
                 key={don.id}
@@ -193,10 +226,18 @@ export default function DonsDisponiblesClient({
                 </div>
                 {positionne ? (
                   <div className="space-y-2">
-                    <div className="w-full rounded-full bg-brand-tint py-2.5 text-center text-sm font-bold text-brand-dark">Positionné(e)</div>
-                    <Link href={`/bon-enlevement/${don.id}`} className="block w-full rounded-full border border-border py-2.5 text-center text-sm font-semibold">
-                      Voir le bon d&apos;enlèvement
-                    </Link>
+                    <div
+                      className={`w-full rounded-full py-2.5 text-center text-sm font-bold ${
+                        enAttente ? "bg-accent-tint text-accent" : "bg-brand-tint text-brand-dark"
+                      }`}
+                    >
+                      {enAttente ? "En attente de validation du donateur" : "Positionné(e)"}
+                    </div>
+                    {bonId && (
+                      <Link href={`/bon-enlevement/${bonId}`} className="block w-full rounded-full border border-border py-2.5 text-center text-sm font-semibold">
+                        Voir le bon d&apos;enlèvement
+                      </Link>
+                    )}
                   </div>
                 ) : avertissements[don.id] ? (
                   <div className="space-y-2.5 rounded-xl bg-accent-tint p-3">
@@ -217,12 +258,42 @@ export default function DonsDisponiblesClient({
                       </button>
                       <button
                         type="button"
-                        onClick={() => positionner(don.id, true)}
+                        onClick={() => positionner(don.id, true, don.divisible ? Array.from(selection) : null)}
                         className="flex-1 rounded-full bg-ink py-2 text-xs font-semibold text-white transition-transform active:scale-95"
                       >
                         Se positionner quand même
                       </button>
                     </div>
+                  </div>
+                ) : don.divisible ? (
+                  <div className="space-y-2.5" onClick={(e) => e.stopPropagation()}>
+                    {don.articlesDisponibles.length > 0 ? (
+                      <ul className="space-y-1.5">
+                        {don.articlesDisponibles.map((article) => (
+                          <li key={article.id}>
+                            <label className="flex items-center gap-2.5 rounded-xl border border-border px-3 py-2 text-xs">
+                              <input
+                                type="checkbox"
+                                checked={selection.has(article.id)}
+                                onChange={() => basculerArticle(don.id, article.id)}
+                              />
+                              <span className="flex-1">{article.designation}</span>
+                              <span className="text-ink-muted">{article.quantiteDeclaree}</span>
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-xs text-ink-muted">Tous les articles de ce don ont déjà été réclamés.</p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => positionner(don.id, false, Array.from(selection))}
+                      disabled={isPending || !!congesAssociationJusquau || selection.size === 0}
+                      className="w-full rounded-full bg-brand py-2.5 text-sm font-bold text-white transition-transform active:scale-95 disabled:opacity-50"
+                    >
+                      Se positionner sur {selection.size > 0 ? `${selection.size} article${selection.size > 1 ? "s" : ""}` : "les articles sélectionnés"}
+                    </button>
                   </div>
                 ) : (
                   <button

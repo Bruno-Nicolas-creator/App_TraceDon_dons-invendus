@@ -11,6 +11,7 @@ import AttestationInteretGeneralDocument, {
   type AttestationInteretGeneralPdfData,
 } from "@/lib/pdf/AttestationInteretGeneralDocument";
 import { montantEnLettres } from "@/lib/nombreEnLettres";
+import { articlesDuBon } from "@/lib/donDivisible";
 
 export type RoleSignataire = "DONATEUR" | "ASSOCIATION";
 
@@ -112,8 +113,8 @@ export async function genererPdfBon(bonId: string, origin: string): Promise<Buff
     },
   });
 
-  const qrDataUrl = await QRCode.toDataURL(`${origin}/bon-enlevement/${bon.donId}`, { margin: 1, width: 200 });
-  const articles: ArticlePdf[] = bon.don.articles.map((a) => ({
+  const qrDataUrl = await QRCode.toDataURL(`${origin}/bon-enlevement/${bon.id}`, { margin: 1, width: 200 });
+  const articles: ArticlePdf[] = articlesDuBon(bon.don, bon.don.articles, bon.associationId).map((a) => ({
     designation: a.designation,
     quantite: a.quantiteConstatee ?? a.quantiteDeclaree,
     poidsKg: a.poidsKg,
@@ -251,7 +252,7 @@ export async function obtenirUrlSignatureEmbarquee(bonId: string, role: RoleSign
   const email = await emailContact(estDonateur ? bon.entrepriseId : null, estDonateur ? null : bon.associationId);
   const nom = estDonateur ? bon.entreprise.raisonSociale : bon.association.denomination;
   const recipientId = estDonateur ? "1" : "2";
-  const returnUrl = `${origin}/bon-enlevement/${bon.donId}?docusignRole=${role}`;
+  const returnUrl = `${origin}/bon-enlevement/${bon.id}?docusignRole=${role}`;
 
   const res = await fetch(`${BASE_PATH}/v2.1/accounts/${accountId}/envelopes/${envelopeId}/views/recipient`, {
     method: "POST",

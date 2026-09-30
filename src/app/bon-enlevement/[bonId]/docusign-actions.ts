@@ -18,6 +18,9 @@ export async function demarrerSignatureDocuSign(
     (role === "DONATEUR" && session.role === "ENTREPRISE" && bon.entrepriseId === session.entrepriseId) ||
     (role === "ASSOCIATION" && session.role === "ASSOCIATION" && bon.associationId === session.associationId);
   if (!autorise) return { ok: false, error: "Vous ne pouvez signer que pour votre propre organisation." };
+  if (bon.enAttenteValidationDonateur) {
+    return { ok: false, error: "Le donateur doit d'abord valider cette demande de positionnement." };
+  }
 
   // L'enveloppe DocuSign est envoyée en séquence (donateur d'abord, association ensuite) :
   // demander un lien de signature association avant que le donateur ait signé est refusé par

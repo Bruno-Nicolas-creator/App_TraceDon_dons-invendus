@@ -34,6 +34,15 @@ export default async function NouveauDonMaterielPage() {
   const congesEnCours = periodeCongesActive(periodesConges);
   const nonLusMessages = await compterMessagesNonLus(session);
 
+  // Don matériel divisible : demandes de positionnement en attente de l'accord du donateur
+  // (cf. sePositionner / validerPositionnementAction) — à traiter avant que l'association ne
+  // puisse signer quoi que ce soit.
+  const demandesEnAttente = await prisma.bonEnlevement.findMany({
+    where: { entrepriseId: session.entrepriseId, enAttenteValidationDonateur: true },
+    include: { association: true, don: { include: { articles: true } } },
+    orderBy: { createdAt: "asc" },
+  });
+
   return (
     <NouveauDonMaterielClient
       don={{
@@ -42,6 +51,13 @@ export default async function NouveauDonMaterielPage() {
         instructionsAcces: don.instructionsAcces ?? "",
         articles: don.articles.map((a) => ({ id: a.id, designation: a.designation, quantiteDeclaree: a.quantiteDeclaree, aUnePhoto: !!a.photoContentType })),
       }}
+      demandesEnAttente={demandesEnAttente.map((bon) => ({
+        bonId: bon.id,
+        associationNom: bon.association.denomination,
+        articles: bon.don.articles
+          .filter((a) => a.associationAssigneeId === bon.associationId)
+          .map((a) => ({ designation: a.designation, quantiteDeclaree: a.quantiteDeclaree })),
+      }))}
       peutDonnerAlimentaireAussi={entreprise.natureActivite === "ALIMENTAIRE_ET_NON_ALIMENTAIRE"}
       congesJusquau={congesEnCours ? formaterDateConges(congesEnCours.fin) : null}
       nonLusMessages={nonLusMessages}

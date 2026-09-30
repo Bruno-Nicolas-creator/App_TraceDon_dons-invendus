@@ -185,6 +185,7 @@ model Association {
   reseau                    Reseau?       @relation(fields: [reseauId], references: [id])
   users                     User[]
   donsAssignes              Don[]
+  articlesAssignes          Article[]
   bonsEnlevement            BonEnlevement[]
   attestations              AttestationFiscale[]
   attestationsInteretGeneral AttestationInteretGeneral[]
@@ -348,7 +349,7 @@ model Don {
   associationAssigneeId String?
   associationAssignee Association? @relation(fields: [associationAssigneeId], references: [id])
   articles            Article[]
-  bonEnlevement       BonEnlevement?
+  bonsEnlevement      BonEnlevement[]
   createdAt           DateTime     @default(now())
   publieLe            DateTime?
 }
@@ -373,13 +374,19 @@ model Article {
   photoNomFichier    String?
   photoContentType   String?
   photoContenu       Bytes?
+  // Association qui a réclamé cet article précis — uniquement pour un don matériel divisible
+  // (cf. Don.divisible) : plusieurs associations peuvent alors se partager les articles d'un même
+  // don. Reste `null` pour un don non divisible (l'attribution se fait alors au niveau du don via
+  // Don.associationAssigneeId) et pour les articles pas encore réclamés.
+  associationAssigneeId String?
+  associationAssignee    Association? @relation(fields: [associationAssigneeId], references: [id])
   createdAt          DateTime      @default(now())
 }
 
 model BonEnlevement {
   id                       String      @id @default(cuid())
   numero                   String      @unique
-  donId                    String      @unique
+  donId                    String
   don                      Don         @relation(fields: [donId], references: [id])
   entrepriseId             String
   entreprise               Entreprise  @relation(fields: [entrepriseId], references: [id])
@@ -395,11 +402,21 @@ model BonEnlevement {
   benevoleCollecteurId     String?
   benevoleCollecteur       Benevole?   @relation(fields: [benevoleCollecteurId], references: [id], onDelete: SetNull)
   confirme                 Boolean     @default(false)
+  // Don matériel divisible uniquement : le donateur doit valider la sélection d'articles choisie
+  // par l'association avant que quoi que ce soit (signature, contrôle) ne soit possible, pour
+  // éviter une répartition trop petite ou trop grande à son goût. Toujours à false pour un don
+  // non divisible (aucune validation supplémentaire, comportement historique).
+  enAttenteValidationDonateur Boolean   @default(false)
   docusignEnvelopeId       String?
   signatures               Signature[]
   attestationId            String?
   attestation              AttestationFiscale? @relation(fields: [attestationId], references: [id])
   createdAt                DateTime    @default(now())
+
+  // Un don matériel divisible peut être réparti entre plusieurs associations : chacune reçoit
+  // son propre bon (une seule fois chacune, d'où l'unicité sur la paire don+association) plutôt
+  // que l'ancienne contrainte "un seul bon par don".
+  @@unique([donId, associationId])
 }
 
 model Signature {

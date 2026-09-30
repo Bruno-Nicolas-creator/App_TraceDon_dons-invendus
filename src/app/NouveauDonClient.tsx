@@ -52,7 +52,7 @@ export default function NouveauDonClient({
   const [manqueKbis, setManqueKbis] = useState(false);
   const [vientDetrePublie, setVientDetrePublie] = useState(false);
   const [assigneA, setAssigneA] = useState<string | null>(null);
-  const [donPublieId, setDonPublieId] = useState<string | null>(null);
+  const [bonPublieId, setBonPublieId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const [titre, setTitre] = useState(don.titre);
@@ -133,7 +133,6 @@ export default function NouveauDonClient({
     setErreurPublication(null);
     setManqueKbis(false);
     startTransition(async () => {
-      const donPublieAvant = donId;
       const resultat = await publierDon(donId);
       if (!resultat.ok) {
         setErreurPublication(resultat.error);
@@ -142,7 +141,7 @@ export default function NouveauDonClient({
       }
       setDonId(resultat.id);
       setAssigneA(resultat.assigneA);
-      setDonPublieId(resultat.assigneA ? donPublieAvant : null);
+      setBonPublieId(resultat.bonId);
       setVientDetrePublie(true);
       setTitre("");
       setDescription("");
@@ -219,9 +218,9 @@ export default function NouveauDonClient({
                 &times;
               </button>
             </div>
-            {donPublieId && (
+            {bonPublieId && (
               <Link
-                href={`/bon-enlevement/${donPublieId}`}
+                href={`/bon-enlevement/${bonPublieId}`}
                 className="block w-full rounded-full bg-brand-dark py-2.5 text-center text-xs font-bold text-white transition-transform active:scale-[0.98]"
               >
                 Voir et signer le bon d&apos;enlèvement

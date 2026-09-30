@@ -2,7 +2,13 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { definirDetailsDonMaterielAction, publierDon, retirerArticle } from "@/app/actions";
+import {
+  definirDetailsDonMaterielAction,
+  publierDon,
+  refuserPositionnementAction,
+  retirerArticle,
+  validerPositionnementAction,
+} from "@/app/actions";
 import AjouterArticleMaterielForm, { type ArticleMaterielAjoute } from "@/components/AjouterArticleMaterielForm";
 import BottomTabBar from "@/components/BottomTabBar";
 
@@ -13,13 +19,21 @@ type Don = {
   articles: ArticleMaterielAjoute[];
 };
 
+export type DemandePositionnement = {
+  bonId: string;
+  associationNom: string;
+  articles: { designation: string; quantiteDeclaree: string }[];
+};
+
 export default function NouveauDonMaterielClient({
   don,
+  demandesEnAttente,
   peutDonnerAlimentaireAussi,
   congesJusquau,
   nonLusMessages = 0,
 }: {
   don: Don;
+  demandesEnAttente: DemandePositionnement[];
   peutDonnerAlimentaireAussi: boolean;
   congesJusquau: string | null;
   nonLusMessages?: number;
@@ -33,8 +47,29 @@ export default function NouveauDonMaterielClient({
   const [erreurRetrait, setErreurRetrait] = useState<string | null>(null);
   const [vientDetrePublie, setVientDetrePublie] = useState(false);
   const [assigneA, setAssigneA] = useState<string | null>(null);
-  const [donPublieId, setDonPublieId] = useState<string | null>(null);
+  const [bonPublieId, setBonPublieId] = useState<string | null>(null);
+  const [demandesLocal, setDemandesLocal] = useState(demandesEnAttente);
+  const [demandesTraitees, setDemandesTraitees] = useState<Record<string, boolean>>({});
+  const [erreurDemande, setErreurDemande] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const traiterDemande = (bonId: string, accepter: boolean) => {
+    setErreurDemande(null);
+    setDemandesTraitees((prev) => ({ ...prev, [bonId]: true }));
+    startTransition(async () => {
+      try {
+        await (accepter ? validerPositionnementAction(bonId) : refuserPositionnementAction(bonId));
+        setDemandesLocal((prev) => prev.filter((d) => d.bonId !== bonId));
+      } catch (e) {
+        setDemandesTraitees((prev) => {
+          const suivant = { ...prev };
+          delete suivant[bonId];
+          return suivant;
+        });
+        setErreurDemande(e instanceof Error ? e.message : "Impossible de traiter cette demande.");
+      }
+    });
+  };
 
   const enregistrerDetails = (nouveauDivisible: boolean, nouvellesInstructions: string) => {
     startTransition(() => {
@@ -58,7 +93,6 @@ export default function NouveauDonMaterielClient({
     setErreurPublication(null);
     setManqueKbis(false);
     startTransition(async () => {
-      const donPublieAvant = donId;
       const resultat = await publierDon(donId);
       if (!resultat.ok) {
         setErreurPublication(resultat.error);
@@ -70,7 +104,7 @@ export default function NouveauDonMaterielClient({
       setDivisible(false);
       setInstructionsAcces("");
       setAssigneA(resultat.assigneA);
-      setDonPublieId(resultat.assigneA ? donPublieAvant : null);
+      setBonPublieId(resultat.bonId);
       setVientDetrePublie(true);
     });
   };
@@ -103,6 +137,51 @@ export default function NouveauDonMaterielClient({
       )}
 
       <main className="flex-1 space-y-5 px-5 pb-4">
+        {demandesLocal.length > 0 && (
+          <section className="space-y-2.5 rounded-2xl border-2 border-accent/30 bg-surface p-4">
+            <h2 className="text-sm font-semibold">Demandes de positionnement en attente</h2>
+            <p className="text-xs leading-relaxed text-ink-muted">
+              Une association souhaite récupérer une partie d&apos;un de vos dons divisibles. Vérifiez que la
+              sélection vous convient (ni trop petite, ni trop grande) avant d&apos;accepter.
+            </p>
+            {erreurDemande && (
+              <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreurDemande}</div>
+            )}
+            <ul className="space-y-2.5">
+              {demandesLocal.map((demande) => (
+                <li key={demande.bonId} className="rounded-xl border border-border bg-bg p-3.5">
+                  <div className="mb-1.5 text-sm font-semibold">{demande.associationNom}</div>
+                  <ul className="mb-2.5 space-y-0.5 text-xs text-ink-muted">
+                    {demande.articles.map((a, i) => (
+                      <li key={i}>
+                        · {a.designation} — {a.quantiteDeclaree}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => traiterDemande(demande.bonId, false)}
+                      disabled={!!demandesTraitees[demande.bonId]}
+                      className="flex-1 rounded-full border border-border bg-surface py-2 text-xs font-semibold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Refuser
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => traiterDemande(demande.bonId, true)}
+                      disabled={!!demandesTraitees[demande.bonId]}
+                      className="flex-1 rounded-full bg-brand py-2 text-xs font-bold text-white transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Accepter
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {congesJusquau && !vientDetrePublie && (
           <div className="flex gap-3 rounded-xl bg-accent-tint px-4 py-3.5">
             <span aria-hidden="true" className="text-lg leading-none">🌴</span>
@@ -130,9 +209,9 @@ export default function NouveauDonMaterielClient({
                 &times;
               </button>
             </div>
-            {donPublieId && (
+            {bonPublieId && (
               <Link
-                href={`/bon-enlevement/${donPublieId}`}
+                href={`/bon-enlevement/${bonPublieId}`}
                 className="block w-full rounded-full bg-brand-dark py-2.5 text-center text-xs font-bold text-white transition-transform active:scale-[0.98]"
               >
                 Voir et signer le bon d&apos;enlèvement
@@ -223,7 +302,8 @@ export default function NouveauDonMaterielClient({
             <span className="text-sm">
               <span className="block font-semibold">Don divisible</span>
               <span className="block text-xs text-ink-muted">
-                Une association peut prendre seulement une partie du don, sans devoir tout emporter.
+                Plusieurs associations pourront se partager les articles, chacune choisissant ceux
+                qui l&apos;intéressent, sans qu&apos;une seule ait à tout emporter.
               </span>
             </span>
           </label>
