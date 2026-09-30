@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -20,6 +21,7 @@ export default function CoordinateurShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const [menuOuvert, setMenuOuvert] = useState(false);
 
   return (
     <div className="flex min-h-screen flex-col bg-bg lg:flex-row">
@@ -56,26 +58,60 @@ export default function CoordinateurShell({
         </Link>
       </aside>
 
-      <div className="flex items-center justify-between bg-brand-dark px-4 py-3 lg:hidden">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-tint font-display text-sm font-bold text-brand-dark">D</div>
-          <span className="font-display text-sm font-semibold text-white">DonSolidaire</span>
+      <div className="lg:hidden">
+        <div className="flex items-center justify-between bg-brand-dark px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-tint font-display text-sm font-bold text-brand-dark">D</div>
+            <span className="font-display text-sm font-semibold text-white">DonSolidaire</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setMenuOuvert((v) => !v)}
+              aria-label="Menu"
+              aria-expanded={menuOuvert}
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 text-white/80"
+            >
+              {menuOuvert ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M5 5L19 19M19 5L5 19" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              )}
+            </button>
+            <Link href="/profil" className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-tint text-xs font-bold text-brand-dark">
+              {nomCoordinateur.slice(0, 1).toUpperCase()}
+            </Link>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/archives"
-            aria-label="Archives"
-            className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 text-white/80"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" strokeWidth="1.8" />
-              <path d="M4 10H20" stroke="currentColor" strokeWidth="1.8" />
-            </svg>
-          </Link>
-          <Link href="/profil" className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-tint text-xs font-bold text-brand-dark">
-            {nomCoordinateur.slice(0, 1).toUpperCase()}
-          </Link>
-        </div>
+
+        {/* Le menu de navigation complet (Entreprises, Associations, Dons, Réseaux...) n'a pas
+            d'équivalent visible sous le sidebar desktop tant que cet écran n'est pas déplié : sans
+            lui, ces pages ne sont tout simplement pas atteignables sur mobile. */}
+        {menuOuvert && (
+          <nav className="border-b border-black/10 bg-brand-dark px-4 pb-3">
+            <div className="flex flex-col gap-0.5">
+              {NAV_ITEMS.map((item) => {
+                const actif = item.href === "/coordinateur" ? pathname === item.href : pathname.startsWith(item.href);
+                return (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    onClick={() => setMenuOuvert(false)}
+                    className={`rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                      actif ? "bg-white/10 font-semibold text-white" : "text-white/70"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </nav>
+        )}
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col">
