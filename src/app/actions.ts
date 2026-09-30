@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { rechercherProduitParCodeBarre, type ProduitScanne } from "@/lib/openFoodFacts";
+import { verifierRappel, type InfoRappel } from "@/lib/rappelConso";
 import { jourSemaineDuJour } from "@/lib/planning";
 import { conventionEstSignee, obtenirOuCreerConvention } from "@/lib/convention";
 import { associationHabilitee, estGrandeSurface } from "@/lib/conformite";
@@ -222,9 +223,12 @@ export async function retirerPieceJointeDonAction(donId: string) {
   revalidatePath("/");
 }
 
-export async function rechercherProduitAction(codeBarre: string): Promise<ProduitScanne | null> {
+export async function rechercherProduitAction(
+  codeBarre: string
+): Promise<{ produit: ProduitScanne | null; rappel: InfoRappel | null }> {
   await requireSession();
-  return rechercherProduitParCodeBarre(codeBarre);
+  const [produit, rappel] = await Promise.all([rechercherProduitParCodeBarre(codeBarre), verifierRappel(codeBarre)]);
+  return { produit, rappel };
 }
 
 export async function ajouterArticleScanne(
@@ -244,6 +248,12 @@ export async function ajouterArticleScanne(
   }
   if (champTropLong(designation)) {
     return { ok: false, error: "Désignation trop longue." };
+  }
+  // Deuxième vérification côté serveur (au cas où l'état de l'écran aurait été contourné) :
+  // un produit sous rappel officiel actif ne peut jamais être ajouté à un don.
+  const rappel = await verifierRappel(codeBarres);
+  if (rappel) {
+    return { ok: false, error: `Ce produit fait l'objet d'un rappel officiel (${rappel.motif}). Il ne peut pas être ajouté à un don.`, rappele: true };
   }
 
   const poidsKg = poidsUnitaireKg * nombreUnites;

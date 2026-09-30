@@ -6,6 +6,8 @@ import BarcodeScanner from "@/components/BarcodeScanner";
 import PointsChargement from "@/components/PointsChargement";
 import SelecteurCategoriesDon from "@/components/SelecteurCategoriesDon";
 
+type InfoRappel = { motif: string; dateRappel: string; lienFiche: string | null };
+
 export type ArticleAjoute = { id: string; designation: string; quantiteDeclaree: string; poidsKg: number; categorie?: string | null };
 
 export default function AjouterArticleForm({ donId, onAjoute }: { donId: string; onAjoute: (article: ArticleAjoute) => void }) {
@@ -26,6 +28,7 @@ export default function AjouterArticleForm({ donId, onAjoute }: { donId: string;
   } | null>(null);
   const [nombreUnites, setNombreUnites] = useState("1");
   const [erreurScan, setErreurScan] = useState<string | null>(null);
+  const [articleRappele, setArticleRappele] = useState<InfoRappel | null>(null);
 
   const ajouter = (event: FormEvent) => {
     event.preventDefault();
@@ -57,9 +60,14 @@ export default function AjouterArticleForm({ donId, onAjoute }: { donId: string;
     setAfficherFormulaireManuel(false);
     setScanEnCours(true);
     setErreurScan(null);
+    setArticleRappele(null);
     startTransition(async () => {
-      const produit = await rechercherProduitAction(code);
+      const { produit, rappel } = await rechercherProduitAction(code);
       setScanEnCours(false);
+      if (rappel) {
+        setArticleRappele(rappel);
+        return;
+      }
       if (produit) {
         setArticleScanne({
           codeBarres: code,
@@ -206,6 +214,32 @@ export default function AjouterArticleForm({ donId, onAjoute }: { donId: string;
       {scanEnCours && (
         <div className="mt-2.5 flex animate-fade-slide-in items-center justify-center gap-2 rounded-xl border border-border bg-surface p-3.5 text-center text-xs text-ink-muted">
           Recherche du produit <PointsChargement />
+        </div>
+      )}
+
+      {articleRappele && (
+        <div className="mt-2.5 animate-fade-slide-in space-y-2 rounded-xl border border-accent bg-accent-tint p-3.5">
+          <div className="flex items-center gap-1.5 text-sm font-bold text-accent">⚠️ Produit sous rappel officiel</div>
+          <p className="text-xs leading-relaxed text-accent">
+            {articleRappele.motif}. Ce produit ne peut pas être ajouté à un don.
+          </p>
+          {articleRappele.lienFiche && (
+            <a
+              href={articleRappele.lienFiche}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block text-xs font-semibold text-accent underline decoration-dotted underline-offset-2"
+            >
+              Voir la fiche officielle du rappel
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={() => setArticleRappele(null)}
+            className="rounded-full border border-accent px-3.5 py-1.5 text-xs font-semibold text-accent transition-transform active:scale-95"
+          >
+            Fermer
+          </button>
         </div>
       )}
 
