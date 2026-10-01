@@ -21,6 +21,7 @@ export default function SelecteurCategoriesDon({
   onChange,
   multiple = true,
   label = "Catégories de dons proposées",
+  inline = false,
 }: {
   name: string;
   selection: string[];
@@ -28,6 +29,9 @@ export default function SelecteurCategoriesDon({
   /** false : une seule catégorie à la fois (ex. catégorie d'un article), sans "Tout cocher". */
   multiple?: boolean;
   label?: string;
+  /** true : tuiles affichées directement (pas de bouton à taper ni de fenêtre à ouvrir) —
+   * pour un choix rapide et unique, ex. la catégorie d'un article qu'on vient d'ajouter. */
+  inline?: boolean;
 }) {
   const [ouvert, setOuvert] = useState(false);
   const [groupeOuvert, setGroupeOuvert] = useState<string>(GROUPES_CATEGORIES_DON[0].id);
@@ -50,6 +54,70 @@ export default function SelecteurCategoriesDon({
 
   const libellePluriel = (n: number) => `${n} catégorie${n > 1 ? "s" : ""} sélectionnée${n > 1 ? "s" : ""}`;
   const libelleUnique = GROUPES_CATEGORIES_DON.flatMap((g) => g.categories).find((c) => c.id === selection[0])?.label;
+
+  if (inline) {
+    return (
+      <div>
+        <span className="mb-1.5 block text-xs text-ink-muted">{label}</span>
+        <input type="hidden" name={name} value={selection.join(",")} />
+        <div className="rounded-xl border border-border">
+          {GROUPES_CATEGORIES_DON.map((groupe) => {
+            const idsGroupe = groupe.categories.map((c) => c.id);
+            const nbSelectionnes = idsGroupe.filter((id) => selection.includes(id)).length;
+            const estOuvert = groupeOuvert === groupe.id;
+
+            return (
+              <div key={groupe.id} className="border-b border-border px-3.5 py-3 last:border-none">
+                <button
+                  type="button"
+                  onClick={() => setGroupeOuvert(estOuvert ? "" : groupe.id)}
+                  aria-expanded={estOuvert}
+                  className="flex w-full items-center justify-between gap-2"
+                >
+                  <span className="flex flex-wrap items-center gap-2 text-left text-sm font-semibold">
+                    {groupe.label}
+                    {nbSelectionnes > 0 && (
+                      <span className="rounded-full bg-brand-tint px-2 py-0.5 text-[10px] font-semibold text-brand-dark">
+                        {nbSelectionnes}/{idsGroupe.length}
+                      </span>
+                    )}
+                  </span>
+                  <ChevronIcon ouvert={estOuvert} />
+                </button>
+
+                {estOuvert && (
+                  <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+                    {groupe.categories.map((cat) => {
+                      const active = selection.includes(cat.id);
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => basculerCategorie(cat.id)}
+                          aria-pressed={active}
+                          className={`relative flex flex-col items-center gap-1.5 rounded-xl border p-2.5 text-center transition-all active:scale-95 ${
+                            active ? "border-brand bg-brand-tint" : "border-border bg-surface"
+                          }`}
+                        >
+                          {active && <CheckBadge />}
+                          <IconeCategorieDon id={cat.id} active={active} />
+                          <span
+                            className={`text-[11px] leading-tight ${active ? "font-semibold text-brand-dark" : "text-ink-muted"}`}
+                          >
+                            {cat.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

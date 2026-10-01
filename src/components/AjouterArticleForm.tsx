@@ -195,6 +195,14 @@ export default function AjouterArticleForm({ donId, onAjoute }: { donId: string;
       {afficherFormulaireManuel && (
         <form onSubmit={ajouter} className="mt-2.5 flex flex-col gap-2.5 rounded-xl border border-border bg-surface p-3.5">
           {erreur && <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreur}</div>}
+          <SelecteurCategoriesDon
+            name="categorieArticle"
+            label="Catégorie de l'article"
+            selection={categorie}
+            onChange={setCategorie}
+            multiple={false}
+            inline
+          />
           <div>
             <label htmlFor="designation" className="mb-1 block text-xs text-ink-muted">
               Désignation
@@ -210,7 +218,7 @@ export default function AjouterArticleForm({ donId, onAjoute }: { donId: string;
           </div>
           <div className="flex gap-2.5">
             <div className="flex-1">
-              <label htmlFor="unite" className="mb-1 block text-xs text-ink-muted">
+              <label htmlFor="unite" className="mb-1 block min-h-8 text-xs text-ink-muted">
                 Quantité (unité) — optionnel
               </label>
               <input
@@ -224,7 +232,7 @@ export default function AjouterArticleForm({ donId, onAjoute }: { donId: string;
               />
             </div>
             <div className="flex-1">
-              <label htmlFor="poids" className="mb-1 block text-xs text-ink-muted">
+              <label htmlFor="poids" className="mb-1 block min-h-8 text-xs text-ink-muted">
                 Poids total (kg)
               </label>
               <input
@@ -238,13 +246,6 @@ export default function AjouterArticleForm({ donId, onAjoute }: { donId: string;
               />
             </div>
           </div>
-          <SelecteurCategoriesDon
-            name="categorieArticle"
-            label="Catégorie de l'article"
-            selection={categorie}
-            onChange={setCategorie}
-            multiple={false}
-          />
           <SelecteurAllergenes selection={allergenesManuel} onChange={setAllergenesManuel} />
           <button type="submit" disabled={isPending} className="self-start rounded-full bg-ink px-4.5 py-2 text-sm font-semibold text-white transition-transform active:scale-95 disabled:opacity-50">
             Ajouter à la liste
