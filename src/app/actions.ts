@@ -14,7 +14,7 @@ import { nomFichierSur, validerFichierDocument } from "@/lib/documents";
 import { champTropLong } from "@/lib/validation";
 import { extraireArticlesDepuisFichier } from "@/lib/extractionArticles";
 import { TOUTES_CATEGORIES_DON } from "@/lib/categoriesDon";
-import { articlesDuBon, articlesEntierementReclames } from "@/lib/donDivisible";
+import { articlesDuBon, articlesEntierementReclames, poidsTotalArticles } from "@/lib/donDivisible";
 import { notifier } from "@/lib/notifications";
 import { allergenesValides } from "@/lib/allergenes";
 
@@ -478,7 +478,7 @@ export async function sePositionner(
         articleIds && articleIds.length > 0
           ? donCible.articles.filter((a) => articleIds.includes(a.id))
           : donCible.articles;
-      const poidsConcerne = articlesConcernes.reduce((total, a) => total + a.poidsKg, 0);
+      const poidsConcerne = poidsTotalArticles(articlesConcernes);
       if (poidsConcerne > association.capaciteAccueilKg) {
         return {
           ok: false,
@@ -540,10 +540,16 @@ export async function sePositionner(
     return { ok: true, bonId: bon.id };
   }
 
-  await prisma.don.update({
-    where: { id: donId },
+  // Mise à jour conditionnelle (where statut: "PUBLIE") plutôt qu'un simple update : sans cette
+  // condition, une deuxième association appelant cette action sur le même don pendant qu'il vient
+  // d'être pris pourrait se l'attribuer aussi, créant deux bons d'enlèvement valides pour le même lot.
+  const { count } = await prisma.don.updateMany({
+    where: { id: donId, statut: "PUBLIE" },
     data: { statut: "PRIS_EN_CHARGE", associationAssigneeId: associationId },
   });
+  if (count === 0) {
+    return { ok: false, error: "Ce don vient d'être attribué à une autre association, merci de rafraîchir la page." };
+  }
 
   let bon = await prisma.bonEnlevement.findUnique({
     where: { donId_associationId: { donId, associationId } },
@@ -679,15 +685,22 @@ export async function confirmerBon(bonId: string) {
     (session.role === "ENTREPRISE" && bon.entrepriseId === session.entrepriseId) ||
     (session.role === "ASSOCIATION" && bon.associationId === session.associationId);
   if (!autorise) throw new Error("Bon non autorisé.");
+  // Filet de sécurité pour un don non divisible : si ce bon n'est plus l'attribution active du
+  // don (ex. réattribué entre-temps par le coordinateur), il ne doit plus pouvoir être confirmé,
+  // même s'il a déjà pu être signé. Un don divisible, lui, autorise plusieurs bons simultanés par
+  // construction (un par association ayant réclamé sa part), donc cette règle ne s'y applique pas.
+  if (!bon.don.divisible && bon.don.associationAssigneeId !== bon.associationId) {
+    return { ok: false, error: "Ce don a été réattribué entre-temps : ce bon n'est plus valide." };
+  }
   if (bon.enAttenteValidationDonateur) {
     return { ok: false, error: "Le donateur doit d'abord valider cette demande de positionnement." };
   }
   if (!bon.signatureDonateurLe || !bon.signatureAssociationLe) {
     return { ok: false, error: "Les deux signatures sont requises avant de confirmer l'enlèvement." };
   }
-  const poidsTotalRetenu = articlesDuBon(bon.don, bon.don.articles, bon.associationId)
-    .filter((a) => a.statut === "VALIDE")
-    .reduce((total, a) => total + a.poidsKg, 0);
+  const poidsTotalRetenu = poidsTotalArticles(
+    articlesDuBon(bon.don, bon.don.articles, bon.associationId).filter((a) => a.statut === "VALIDE")
+  );
 
   // Un don matériel divisible n'est clôturé que lorsque tous ses articles ont trouvé preneur
   // et que tous les bons associés (le sien y compris) sont confirmés — les autres associations
@@ -789,11 +802,16 @@ export async function assignerDon(donId: string, associationId: string) {
       don = await prisma.don.update({ where: { id: donId }, data: { statut: "PRIS_EN_CHARGE" }, include: { articles: true } });
     }
   } else {
-    don = await prisma.don.update({
-      where: { id: donId },
+    // Mise à jour conditionnelle : si le don a été réclamé entre-temps (ex. une association s'est
+    // positionnée pendant que ce panneau était ouvert), on ne l'écrase pas silencieusement.
+    const { count } = await prisma.don.updateMany({
+      where: { id: donId, statut: "PUBLIE" },
       data: { statut: "PRIS_EN_CHARGE", associationAssigneeId: associationId },
-      include: { articles: true },
     });
+    if (count === 0) {
+      throw new Error("Ce don a déjà été pris en charge entre-temps.");
+    }
+    don = await prisma.don.findUniqueOrThrow({ where: { id: donId }, include: { articles: true } });
   }
 
   const bonExistant = await prisma.bonEnlevement.findUnique({
