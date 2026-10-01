@@ -16,6 +16,7 @@ import AjouterArticleForm from "@/components/AjouterArticleForm";
 import CompteurAnime from "@/components/CompteurAnime";
 import IconeArticle from "@/components/IconeArticle";
 import { libelleAllergene } from "@/lib/allergenes";
+import { poidsTotalArticles } from "@/lib/donDivisible";
 
 type Statut = "EN_ATTENTE" | "VALIDE" | "REFUSE";
 
@@ -206,7 +207,7 @@ export default function BonEnlevementClient({
 
   const nombreValides = articles.filter((a) => a.statut === "VALIDE").length;
   const nombreRefuses = articles.filter((a) => a.statut === "REFUSE").length;
-  const poidsRetenu = articles.filter((a) => a.statut === "VALIDE").reduce((total, a) => total + a.poidsKg, 0);
+  const poidsRetenu = poidsTotalArticles(articles.filter((a) => a.statut === "VALIDE"));
 
   const confirmer = () => {
     setConfirmationEnCours(true);

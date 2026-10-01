@@ -3,10 +3,6 @@ import { Resend } from "resend";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-export function isEmailConfigure(): boolean {
-  return resend !== null;
-}
-
 /**
  * Envoie un email transactionnel si Resend est configuré sur ce déploiement, sinon ne fait rien.
  * N'échoue jamais bruyamment : une notification ratée ne doit pas casser l'action métier qui

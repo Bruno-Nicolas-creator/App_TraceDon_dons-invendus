@@ -5,6 +5,7 @@ import { calculerDistances, geocoderAdresse, isGoogleMapsServerConfigured } from
 import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
 import { compterMessagesNonLus } from "@/lib/messagerie";
 import { formatDepuis } from "@/lib/formatDepuis";
+import { poidsTotalArticles } from "@/lib/donDivisible";
 import DonsDisponiblesClient, { type DonAffiche } from "./DonsDisponiblesClient";
 
 export const dynamic = "force-dynamic";
@@ -97,7 +98,7 @@ export default async function DonsDisponiblesPage() {
       adresse: don.entreprise.adresse,
       distance: distances[i] ?? don.distanceLabel ?? "—",
       categorie: don.categorie,
-      poids: `${don.articles.reduce((total, a) => total + a.poidsKg, 0).toLocaleString("fr-FR")} kg`,
+      poids: `${poidsTotalArticles(don.articles).toLocaleString("fr-FR")} kg`,
       positionne: don.divisible ? mesArticles.length > 0 : don.statut === "PRIS_EN_CHARGE",
       enAttenteValidationDonateur: don.bonsEnlevement[0]?.enAttenteValidationDonateur ?? false,
       divisible: don.divisible,

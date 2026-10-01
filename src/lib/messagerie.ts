@@ -21,12 +21,6 @@ export function validerPieceJointe(fichier: File): { ok: true } | { ok: false; e
   return { ok: true };
 }
 
-export const LABEL_PRIORITE: Record<string, string> = {
-  NORMALE: "Normal",
-  IMPORTANTE: "Important",
-  URGENTE: "Urgent",
-};
-
 type ConversationOwners = { entrepriseId: string | null; associationId: string | null; avecCoordinateur: boolean };
 
 /** Vrai si la session est un participant légitime de cette conversation. */

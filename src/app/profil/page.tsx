@@ -5,6 +5,7 @@ import BottomTabBar from "@/components/BottomTabBar";
 import CompteurAnime from "@/components/CompteurAnime";
 import LienTelephone from "@/components/LienTelephone";
 import { calculerImpactCarboneDetaille } from "@/lib/impactCo2";
+import { poidsTotalArticles } from "@/lib/donDivisible";
 import { associationHabilitee, estGrandeSurface, SEUIL_GRANDE_SURFACE_M2 } from "@/lib/conformite";
 import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
 import { compterMessagesNonLus } from "@/lib/messagerie";
@@ -148,7 +149,7 @@ export default async function ProfilPage() {
       },
       select: { poidsKg: true, categorie: true },
     });
-    const poidsTotalKg = articlesConfirmes.reduce((total, a) => total + a.poidsKg, 0);
+    const poidsTotalKg = poidsTotalArticles(articlesConfirmes);
     const impact = poidsTotalKg > 0 ? await calculerImpactCarboneDetaille(articlesConfirmes) : null;
     if (impact) impactCumule = { ...impact, poidsTotalKg };
   }

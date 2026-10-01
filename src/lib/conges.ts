@@ -8,10 +8,6 @@ export function periodeCongesActive<T extends PeriodeCongesMinimale>(
   return periodes.find((p) => p.debut <= date && date <= p.fin) ?? null;
 }
 
-export function estEnConges(periodes: PeriodeCongesMinimale[], date: Date = new Date()): boolean {
-  return periodeCongesActive(periodes, date) !== null;
-}
-
 export function formaterDateConges(date: Date): string {
   return date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 }

@@ -22,10 +22,6 @@ export function natureActiviteValide(valeur: string): valeur is NatureActiviteEn
   return NATURES_ACTIVITE_ENTREPRISE.some((n) => n.id === valeur);
 }
 
-export function libelleNatureActivite(id: string): string {
-  return NATURES_ACTIVITE_ENTREPRISE.find((n) => n.id === id)?.label ?? id;
-}
-
 export function peutDonnerAlimentaire(natureActivite: string): boolean {
   return natureActivite === "ALIMENTAIRE" || natureActivite === "ALIMENTAIRE_ET_NON_ALIMENTAIRE";
 }

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { articlesEntierementReclames } from "@/lib/donDivisible";
+import { articlesEntierementReclames, poidsTotalArticles } from "@/lib/donDivisible";
 import DonsClient, { type DonLigne } from "./DonsClient";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +31,7 @@ export default async function CoordinateurDonsPage() {
       // "Publié" mais déjà partiellement réclamé : un don divisible n'est marqué "Pris en
       // charge" que lorsque tous ses articles ont trouvé preneur.
       partiel: don.statut === "PUBLIE" && don.divisible && nbReclames > 0 && !articlesEntierementReclames(don),
-      poidsKg: don.articles.reduce((t, a) => t + a.poidsKg, 0),
+      poidsKg: poidsTotalArticles(don.articles),
       publieLe: don.publieLe ? formatDate(don.publieLe) : "—",
     };
   });

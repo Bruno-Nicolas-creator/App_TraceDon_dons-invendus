@@ -13,6 +13,11 @@ export function articlesDuBon<A extends { associationAssigneeId: string | null }
   return articles.filter((a) => a.associationAssigneeId === bonAssociationId);
 }
 
+/** Poids total (kg) d'un lot d'articles — même calcul répété à plusieurs endroits de l'app. */
+export function poidsTotalArticles(articles: { poidsKg: number }[]): number {
+  return articles.reduce((total, a) => total + a.poidsKg, 0);
+}
+
 /** Vrai si chaque article du don a désormais un attributaire (plus rien à réclamer). */
 export function articlesEntierementReclames(don: {
   divisible: boolean;

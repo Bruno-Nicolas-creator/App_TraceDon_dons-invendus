@@ -15,11 +15,3 @@ export function typesActiviteValides(ids: string[]): string[] {
 export function libelleTypeActivite(id: string): string {
   return TYPES_ACTIVITE.find((t) => t.id === id)?.label ?? id;
 }
-
-export type PreferenceAlerte = "EMAIL" | "SMS" | "SMS_EMAIL";
-
-export const LABEL_PREFERENCE_ALERTE: Record<PreferenceAlerte, string> = {
-  EMAIL: "Email uniquement",
-  SMS: "SMS uniquement",
-  SMS_EMAIL: "SMS et email",
-};

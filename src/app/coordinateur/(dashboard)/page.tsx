@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { associationHabilitee, libelleHabilitation, SEUIL_GRANDE_SURFACE_M2 } from "@/lib/conformite";
 import { formatDepuis } from "@/lib/formatDepuis";
 import { calculerImpactCarboneDetaille } from "@/lib/impactCo2";
+import { poidsTotalArticles } from "@/lib/donDivisible";
 import CoordinateurClient, {
   type AssociationLigne,
   type DonNonAssigne,
@@ -104,7 +105,7 @@ export default async function CoordinateurDashboardPage() {
     return {
       id: don.id,
       nom: don.entreprise.raisonSociale,
-      poids: `${don.articles.reduce((t, a) => t + a.poidsKg, 0).toLocaleString("fr-FR")} kg`,
+      poids: `${poidsTotalArticles(don.articles).toLocaleString("fr-FR")} kg`,
       depuis: don.publieLe ? formatDepuis(don.publieLe) : "—",
       // Don matériel divisible : certains articles peuvent déjà avoir trouvé preneur alors que
       // le don reste au statut "Publié" tant qu'il n'est pas entièrement réclamé — sans cette

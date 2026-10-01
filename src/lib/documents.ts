@@ -95,12 +95,6 @@ export const DOCUMENTS_ASSOCIATION: DefinitionDocument[] = [
   },
 ];
 
-export function definitionDocument(type: TypeDocument): DefinitionDocument {
-  const trouve = [...DOCUMENTS_ENTREPRISE, ...DOCUMENTS_ASSOCIATION].find((d) => d.type === type);
-  if (!trouve) throw new Error(`Type de document inconnu : ${type}`);
-  return trouve;
-}
-
 /** Vérifie que le type de document demandé appartient bien à la liste autorisée pour ce rôle. */
 export function definitionDocumentPourRole(
   role: "ENTREPRISE" | "ASSOCIATION",
