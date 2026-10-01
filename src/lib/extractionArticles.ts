@@ -43,45 +43,65 @@ function articleExtraitValide(valeur: unknown): valeur is ArticleExtraitBrut {
   );
 }
 
+const attendre = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Gemini renvoie fréquemment un 503 "model is overloaded" sur le palier gratuit, surtout aux
+// heures de forte affluence — une erreur passagère côté Google, pas un vrai échec : quelques
+// nouvelles tentatives rapprochées suffisent presque toujours à faire passer la requête.
+const TENTATIVES_MAX = 3;
+const DELAIS_RETRY_MS = [1000, 2500];
+
 export async function extraireArticlesDepuisFichier(contenu: Buffer, contentType: string): Promise<ArticleExtrait[]> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("Extraction automatique non configurée sur ce déploiement.");
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${MODELE_GEMINI}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: PROMPT_EXTRACTION }, { inline_data: { mime_type: contentType, data: contenu.toString("base64") } }],
+  const corps = JSON.stringify({
+    contents: [
+      {
+        parts: [{ text: PROMPT_EXTRACTION }, { inline_data: { mime_type: contentType, data: contenu.toString("base64") } }],
+      },
+    ],
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: "ARRAY",
+        items: {
+          type: "OBJECT",
+          properties: {
+            designation: { type: "STRING" },
+            unites: { type: "NUMBER" },
+            poidsKg: { type: "NUMBER" },
           },
-        ],
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "ARRAY",
-            items: {
-              type: "OBJECT",
-              properties: {
-                designation: { type: "STRING" },
-                unites: { type: "NUMBER" },
-                poidsKg: { type: "NUMBER" },
-              },
-              required: ["designation", "poidsKg"],
-            },
-          },
+          required: ["designation", "poidsKg"],
         },
-      }),
-    }
-  );
+      },
+    },
+  });
 
-  if (!res.ok) {
-    throw new Error(`Extraction automatique échouée (${res.status}) : ${await res.text()}`);
+  let res: Response;
+  let texteErreur = "";
+  for (let tentative = 1; tentative <= TENTATIVES_MAX; tentative++) {
+    res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODELE_GEMINI}:generateContent?key=${apiKey}`,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: corps }
+    );
+    if (res.ok) break;
+    if (res.status !== 503 || tentative === TENTATIVES_MAX) {
+      texteErreur = await res.text().catch(() => "");
+      break;
+    }
+    await attendre(DELAIS_RETRY_MS[tentative - 1]);
   }
 
-  const data = (await res.json()) as ReponseGemini;
+  if (!res!.ok) {
+    const messageSurcharge =
+      res!.status === 503
+        ? " — le service Gemini est temporairement surchargé (fréquent sur le palier gratuit), réessaie dans une minute."
+        : "";
+    throw new Error(`Extraction automatique échouée (${res!.status})${messageSurcharge} : ${texteErreur}`);
+  }
+
+  const data = (await res!.json()) as ReponseGemini;
   const texte = data.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!texte) throw new Error("Réponse de l'IA vide ou inattendue.");
 
@@ -98,6 +118,7 @@ export async function extraireArticlesDepuisFichier(contenu: Buffer, contentType
     // Même format que la saisie manuelle ("X unité(s)" / "Vrac") plutôt que le texte libre
     // renvoyé par Gemini, pour un rendu uniforme avec les articles ajoutés autrement.
     quantiteDeclaree: item.unites != null && item.unites > 0 ? `${Math.round(item.unites)} unité(s)` : "Vrac",
-    poidsKg: Math.round(item.poidsKg * 100) / 100,
+    // Arrondi au gramme près (3 décimales), pas à la dizaine de grammes.
+    poidsKg: Math.round(item.poidsKg * 1000) / 1000,
   }));
 }
