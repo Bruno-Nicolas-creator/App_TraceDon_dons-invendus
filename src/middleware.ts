@@ -59,6 +59,13 @@ function verifierMotDePasseSite(request: NextRequest): NextResponse | null {
 }
 
 export async function middleware(request: NextRequest) {
+  // Diagnostic TEMPORAIRE (à retirer dès que le mot de passe du site fonctionne) : indique si la
+  // variable SITE_PASSWORD est bien vue ici, sans jamais révéler sa valeur.
+  if (request.nextUrl.pathname === "/__diag") {
+    const valeur = process.env.SITE_PASSWORD;
+    return new NextResponse(valeur ? `SITE_PASSWORD vue : oui (${valeur.length} caractères)` : "SITE_PASSWORD vue : non (vide ou absente)");
+  }
+
   const reponseAuth = verifierMotDePasseSite(request);
   if (reponseAuth) return reponseAuth;
 
