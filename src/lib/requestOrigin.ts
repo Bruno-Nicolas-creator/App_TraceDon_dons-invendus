@@ -7,3 +7,10 @@ export async function origineRequete(): Promise<string> {
   const host = en.get("host");
   return `${proto}://${host}`;
 }
+
+/** Adresse IP du visiteur, pour limiter la fréquence d'une action accessible sans compte
+ * (ex. inscription, recherche à l'inscription). Vercel renseigne toujours x-forwarded-for. */
+export async function adresseIpRequete(): Promise<string> {
+  const en = await headers();
+  return en.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "inconnue";
+}

@@ -7,6 +7,7 @@ import { conventionEstSignee } from "@/lib/convention";
 import { nomFichierSur } from "@/lib/documents";
 import { champTropLong } from "@/lib/validation";
 import { notifier } from "@/lib/notifications";
+import { tropDeTentatives } from "@/lib/rateLimiter";
 import {
   champLectureRole,
   estParticipantConversation,
@@ -74,11 +75,17 @@ export async function demarrerConversationAction(
   }
 }
 
+const MAX_MESSAGES = 20;
+const FENETRE_MESSAGES_MS = 5 * 60 * 1000;
+
 export async function envoyerMessageAction(
   formData: FormData
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await getSession();
   if (!session) return { ok: false, error: "Non authentifié." };
+  if (tropDeTentatives(`message:${session.userId}`, MAX_MESSAGES, FENETRE_MESSAGES_MS)) {
+    return { ok: false, error: "Trop de messages envoyés en peu de temps, merci de patienter quelques minutes." };
+  }
 
   const conversationId = String(formData.get("conversationId") ?? "");
   const contenu = String(formData.get("contenu") ?? "").trim();

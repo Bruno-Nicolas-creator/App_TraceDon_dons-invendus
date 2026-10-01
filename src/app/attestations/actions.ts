@@ -6,6 +6,10 @@ import { prisma } from "@/lib/prisma";
 import { bonsEligiblesParBeneficiaire, genererNumeroOrdreAttestation } from "@/lib/attestationFiscale";
 import { envoyerAttestationPourSignature, obtenirUrlSignatureEmbarqueeAttestation } from "@/lib/docusign";
 import { origineRequete } from "@/lib/requestOrigin";
+import { tropDeTentatives } from "@/lib/rateLimiter";
+
+const MAX_TENTATIVES_DOCUSIGN = 10;
+const FENETRE_DOCUSIGN_MS = 5 * 60 * 1000;
 
 export async function genererEtEnvoyerAttestationsAction(
   formData: FormData
@@ -74,6 +78,9 @@ export async function demarrerSignatureAttestationAction(
   if (!attestation) return { ok: false, error: "Attestation introuvable." };
   if (attestation.associationId !== session.associationId) {
     return { ok: false, error: "Vous ne pouvez signer que les attestations qui vous sont adressées." };
+  }
+  if (tropDeTentatives(`docusign:${attestationId}:${session.userId}`, MAX_TENTATIVES_DOCUSIGN, FENETRE_DOCUSIGN_MS)) {
+    return { ok: false, error: "Trop de tentatives, merci de patienter quelques minutes." };
   }
 
   try {

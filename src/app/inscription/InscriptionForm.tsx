@@ -25,6 +25,7 @@ const MESSAGES_ERREUR: Record<string, string> = {
   champ_trop_long: "Un des champs dépasse la longueur maximale autorisée.",
   siret_invalide: "Le SIRET doit contenir exactement 14 chiffres.",
   rna_invalide: "Le numéro RNA doit être au format W suivi de 9 chiffres (ex. W751234567).",
+  trop_de_tentatives: "Trop de tentatives d'inscription depuis cet appareil. Réessaie dans un peu plus tard.",
 };
 
 export default function InscriptionForm() {

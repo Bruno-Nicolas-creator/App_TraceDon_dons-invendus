@@ -4,6 +4,12 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { obtenirUrlSignatureEmbarquee, type RoleSignataire } from "@/lib/docusign";
 import { origineRequete } from "@/lib/requestOrigin";
+import { tropDeTentatives } from "@/lib/rateLimiter";
+
+// Chaque appel déclenche un aller-retour vers l'API DocuSign, même si l'enveloppe existe déjà :
+// on limite pour ne pas cogner les quotas de débit de DocuSign en cas d'appels répétés.
+const MAX_TENTATIVES_DOCUSIGN = 10;
+const FENETRE_DOCUSIGN_MS = 5 * 60 * 1000;
 
 export async function demarrerSignatureDocuSign(
   bonId: string,
@@ -11,6 +17,9 @@ export async function demarrerSignatureDocuSign(
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   const session = await getSession();
   if (!session) return { ok: false, error: "Non authentifié." };
+  if (tropDeTentatives(`docusign:${bonId}:${session.userId}`, MAX_TENTATIVES_DOCUSIGN, FENETRE_DOCUSIGN_MS)) {
+    return { ok: false, error: "Trop de tentatives, merci de patienter quelques minutes." };
+  }
 
   const bon = await prisma.bonEnlevement.findUnique({ where: { id: bonId } });
   if (!bon) return { ok: false, error: "Bon introuvable." };

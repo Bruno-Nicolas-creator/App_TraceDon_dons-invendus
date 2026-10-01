@@ -8,8 +8,18 @@ import { rechercherAdresses, type SuggestionAdresse } from "@/lib/ignAdresse";
 import { nomFichierSur, validerFichierDocument } from "@/lib/documents";
 import { champTropLong, LONGUEUR_MAX_ADRESSE, rnaValide, siretValide } from "@/lib/validation";
 import { natureActiviteValide } from "@/lib/activiteEntreprise";
+import { adresseIpRequete } from "@/lib/requestOrigin";
+import { tropDeTentatives } from "@/lib/rateLimiter";
 
 export type EtatInscription = { erreur: string } | null;
+
+// Ces trois actions sont accessibles sans compte (formulaire d'inscription public) : on limite
+// par adresse IP plutôt que par compte, pour éviter qu'un script les appelle en boucle (bourrage
+// de la base pour l'inscription, épuisement des quotas gratuits des API tierces pour la recherche).
+const MAX_RECHERCHES = 30;
+const FENETRE_RECHERCHE_MS = 60 * 1000;
+const MAX_INSCRIPTIONS = 5;
+const FENETRE_INSCRIPTION_MS = 60 * 60 * 1000;
 
 type ResultatFichier =
   | { ok: true; nomFichier: string; contentType: string; contenu: Buffer; tailleOctets: number }
@@ -38,14 +48,23 @@ export async function rechercherOrganismeAction(
   q: string,
   type: "ENTREPRISE" | "ASSOCIATION"
 ): Promise<SuggestionOrganisme[]> {
+  const ip = await adresseIpRequete();
+  if (tropDeTentatives(`recherche-organisme:${ip}`, MAX_RECHERCHES, FENETRE_RECHERCHE_MS)) return [];
   return rechercherOrganismes(q, type);
 }
 
 export async function rechercherAdresseAction(q: string): Promise<SuggestionAdresse[]> {
+  const ip = await adresseIpRequete();
+  if (tropDeTentatives(`recherche-adresse:${ip}`, MAX_RECHERCHES, FENETRE_RECHERCHE_MS)) return [];
   return rechercherAdresses(q);
 }
 
 export async function inscriptionAction(_etatPrecedent: EtatInscription, formData: FormData): Promise<EtatInscription> {
+  const ip = await adresseIpRequete();
+  if (tropDeTentatives(`inscription:${ip}`, MAX_INSCRIPTIONS, FENETRE_INSCRIPTION_MS)) {
+    return { erreur: "trop_de_tentatives" };
+  }
+
   const type = String(formData.get("type") ?? "");
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const motDePasse = String(formData.get("motDePasse") ?? "");
