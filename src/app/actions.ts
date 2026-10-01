@@ -330,7 +330,7 @@ export async function extraireArticlesAction(
   }
 
   const articles = await prisma.article.createManyAndReturn({
-    data: extraits.map((a) => ({ donId, designation: a.designation, quantiteDeclaree: a.quantite, poidsKg: a.poidsKg })),
+    data: extraits.map((a) => ({ donId, designation: a.designation, quantiteDeclaree: a.quantiteDeclaree, poidsKg: a.poidsKg })),
   });
   revalidatePath("/");
   return {
