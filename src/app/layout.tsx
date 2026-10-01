@@ -1,8 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Public_Sans } from "next/font/google";
+import { cookies } from "next/headers";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { jetonSiteAttendu, siteLockActif, SITE_PASSWORD_COOKIE } from "@/lib/sitePassword";
 import DevProfilSwitcher from "@/components/DevProfilSwitcher";
+import SiteLockScreen from "@/components/SiteLockScreen";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -29,6 +32,20 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
+  if (siteLockActif()) {
+    const magasinCookies = await cookies();
+    const debloque = magasinCookies.get(SITE_PASSWORD_COOKIE)?.value === jetonSiteAttendu();
+    if (!debloque) {
+      return (
+        <html lang="fr" className={`${fraunces.variable} ${publicSans.variable} h-full antialiased`}>
+          <body className="min-h-full flex flex-col font-sans">
+            <SiteLockScreen />
+          </body>
+        </html>
+      );
+    }
+  }
+
   let cleActive: string | null = null;
   let comptes: { kind: "ENTREPRISE" | "ASSOCIATION" | "UTILISATEUR"; id: string; nom: string; role: string }[] = [];
 
