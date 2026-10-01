@@ -1,10 +1,7 @@
+import "server-only";
 import { categorieEstNonAlimentaire } from "@/lib/categoriesDon";
 
 const BASE_URL = "https://impactco2.fr/api/v1";
-
-export function isImpactCo2Configured(): boolean {
-  return Boolean(process.env.IMPACT_CO2_API_KEY);
-}
 
 // Catégories de dons alimentaires réalistes pour ce type de plateforme
 // (viande et poisson frais sont rarement donnés, contraintes sanitaires /

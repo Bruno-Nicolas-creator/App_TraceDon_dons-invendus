@@ -1,3 +1,5 @@
+import "server-only";
+
 export type Coordonnees = { lat: number; lng: number };
 
 export function isGoogleMapsServerConfigured(): boolean {
