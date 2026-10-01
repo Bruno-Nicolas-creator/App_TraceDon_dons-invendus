@@ -359,6 +359,19 @@ export default function NouveauDonClient({
                       Retirer la pièce jointe
                     </button>
                   )}
+                  {pieceJointeNomFichier && extractionConfiguree && (
+                    <button
+                      type="button"
+                      onClick={extraireArticles}
+                      disabled={extractionEnCours}
+                      className="mt-2.5 w-full rounded-xl border border-dashed border-border bg-surface-alt py-2.5 text-xs font-semibold text-ink transition-transform active:scale-[0.98] disabled:opacity-60"
+                    >
+                      {extractionEnCours ? "Lecture de la pièce jointe…" : "✨ Extraire les articles de la pièce jointe"}
+                    </button>
+                  )}
+                  {erreurExtraction && (
+                    <div className="mt-2 rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreurExtraction}</div>
+                  )}
                 </div>
               </div>
             )}
@@ -390,20 +403,6 @@ export default function NouveauDonClient({
                   jointe, scanner ou saisir manuellement, ou attendre et scanner directement sur l&apos;écran du
                   bon d&apos;enlèvement juste avant le passage de l&apos;association.
                 </p>
-
-                {pieceJointeNomFichier && extractionConfiguree && (
-                  <button
-                    type="button"
-                    onClick={extraireArticles}
-                    disabled={extractionEnCours}
-                    className="w-full rounded-xl border border-dashed border-border bg-surface-alt py-2.5 text-xs font-semibold text-ink transition-transform active:scale-[0.98] disabled:opacity-60"
-                  >
-                    {extractionEnCours ? "Lecture de la pièce jointe…" : "✨ Extraire les articles de la pièce jointe"}
-                  </button>
-                )}
-                {erreurExtraction && (
-                  <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreurExtraction}</div>
-                )}
 
                 {articles.length > 0 && (
                   <ul className="space-y-1.5">
