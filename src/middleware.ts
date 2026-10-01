@@ -25,6 +25,12 @@ function isAllowed(role: Role, pathname: string): boolean {
 // l'application cachée des visiteurs tant qu'elle n'est pas encore ouverte au public. Tant que
 // SITE_PASSWORD n'est pas défini, ce contrôle est simplement désactivé (aucun crash, comportement
 // inchangé). Le nom d'utilisateur n'est pas vérifié, seul le mot de passe compte.
+//
+// Fichier nommé middleware.ts (et non proxy.ts, la nouvelle convention Next.js 16) : sur ce
+// déploiement Vercel, SITE_PASSWORD restait invisible (process.env.SITE_PASSWORD vide) une fois le
+// fichier nommé proxy.ts, alors que la même variable est lue normalement partout ailleurs dans
+// l'app (actions serveur, pages) — ce nom plus ancien, pris en charge depuis des années par Vercel,
+// contourne ce problème. Next.js continue de l'accepter (dépréciation annoncée, pas suppression).
 function reponseMotDePasseRequis(): NextResponse {
   return new NextResponse("Authentification requise.", {
     status: 401,
@@ -52,7 +58,7 @@ function verifierMotDePasseSite(request: NextRequest): NextResponse | null {
   return null;
 }
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const reponseAuth = verifierMotDePasseSite(request);
   if (reponseAuth) return reponseAuth;
 
