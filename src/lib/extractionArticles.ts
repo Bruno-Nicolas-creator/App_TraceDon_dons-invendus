@@ -1,6 +1,9 @@
 import "server-only";
 
-const MODELE_GEMINI = process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
+// gemini-2.0-flash a été définitivement arrêté par Google le 1er juin 2026 ; gemini-3.8-flash
+// est le modèle de remplacement recommandé. GEMINI_MODEL permet de changer de modèle sans
+// toucher au code si Google fait à nouveau évoluer sa gamme.
+const MODELE_GEMINI = process.env.GEMINI_MODEL ?? "gemini-3.8-flash";
 
 export function isExtractionConfiguree(): boolean {
   return !!process.env.GEMINI_API_KEY;
