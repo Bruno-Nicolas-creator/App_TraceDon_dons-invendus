@@ -49,19 +49,19 @@ export async function rechercherOrganismeAction(
   type: "ENTREPRISE" | "ASSOCIATION"
 ): Promise<SuggestionOrganisme[]> {
   const ip = await adresseIpRequete();
-  if (tropDeTentatives(`recherche-organisme:${ip}`, MAX_RECHERCHES, FENETRE_RECHERCHE_MS)) return [];
+  if (await tropDeTentatives(`recherche-organisme:${ip}`, MAX_RECHERCHES, FENETRE_RECHERCHE_MS)) return [];
   return rechercherOrganismes(q, type);
 }
 
 export async function rechercherAdresseAction(q: string): Promise<SuggestionAdresse[]> {
   const ip = await adresseIpRequete();
-  if (tropDeTentatives(`recherche-adresse:${ip}`, MAX_RECHERCHES, FENETRE_RECHERCHE_MS)) return [];
+  if (await tropDeTentatives(`recherche-adresse:${ip}`, MAX_RECHERCHES, FENETRE_RECHERCHE_MS)) return [];
   return rechercherAdresses(q);
 }
 
 export async function inscriptionAction(_etatPrecedent: EtatInscription, formData: FormData): Promise<EtatInscription> {
   const ip = await adresseIpRequete();
-  if (tropDeTentatives(`inscription:${ip}`, MAX_INSCRIPTIONS, FENETRE_INSCRIPTION_MS)) {
+  if (await tropDeTentatives(`inscription:${ip}`, MAX_INSCRIPTIONS, FENETRE_INSCRIPTION_MS)) {
     return { erreur: "trop_de_tentatives" };
   }
 

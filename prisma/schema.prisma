@@ -496,3 +496,15 @@ model AttestationInteretGeneral {
 
   @@unique([entrepriseId, associationId])
 }
+
+/**
+ * Compteur de limite de fréquence par clé (ex. "connexion:email@...", "lecture-document:userId").
+ * Stocké en base plutôt qu'en mémoire : contrairement à un Map en mémoire, ce compteur est partagé
+ * par toutes les instances serverless de l'application (chacune a sa propre mémoire, mais une seule
+ * base de données) — cf. src/lib/rateLimiter.ts.
+ */
+model LimiteFrequence {
+  cle          String   @id
+  compteur     Int
+  fenetreDebut DateTime
+}

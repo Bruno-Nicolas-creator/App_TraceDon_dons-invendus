@@ -21,6 +21,12 @@ export default async function BonEnlevementPage({
 
   const bonExistant = await prisma.bonEnlevement.findUnique({ where: { id: bonId } });
   if (!bonExistant) notFound();
+  // Contrôle d'appartenance fait avant tout, y compris avant la vérification DocuSign ci-dessous :
+  // sans ça, n'importe quel compte connecté pourrait déclencher une écriture et une notification
+  // sur le bon d'un autre (le bonId est visible dans le QR code imprimé sur le document).
+  if (session.role === "ASSOCIATION" && bonExistant.associationId !== session.associationId) notFound();
+  if (session.role === "ENTREPRISE" && bonExistant.entrepriseId !== session.entrepriseId) notFound();
+  if (session.role === "COORDINATEUR") notFound();
 
   // Retour depuis la cérémonie de signature DocuSign : on vérifie auprès de DocuSign
   // (jamais sur la seule foi du paramètre d'URL) avant d'enregistrer quoi que ce soit.
@@ -39,9 +45,6 @@ export default async function BonEnlevementPage({
   });
 
   if (!bon) notFound();
-  if (session.role === "ASSOCIATION" && bon.associationId !== session.associationId) notFound();
-  if (session.role === "ENTREPRISE" && bon.entrepriseId !== session.entrepriseId) notFound();
-  if (session.role === "COORDINATEUR") notFound();
 
   const benevolesMandates =
     session.role === "ASSOCIATION"

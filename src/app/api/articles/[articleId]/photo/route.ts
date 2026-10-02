@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession, estAutoriseSurRessource } from "@/lib/auth";
 import { nomFichierSur } from "@/lib/documents";
+import { tropDeLecturesDocument } from "@/lib/rateLimiter";
 
 const TYPES_MIME_SURS = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -10,6 +11,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
   const session = await getSession();
   if (!session) return new NextResponse("Non authentifié.", { status: 401 });
+  if (await tropDeLecturesDocument(session.userId)) return new NextResponse("Trop de téléchargements, réessaie plus tard.", { status: 429 });
 
   const article = await prisma.article.findUnique({ where: { id: articleId }, include: { don: true } });
   if (!article || !article.photoContenu) return new NextResponse("Introuvable.", { status: 404 });

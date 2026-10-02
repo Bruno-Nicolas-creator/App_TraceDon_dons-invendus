@@ -16,7 +16,7 @@ export async function connexionAction(formData: FormData) {
     redirect("/connexion?erreur=1");
   }
 
-  if (tropDeTentatives(`connexion:${email}`, MAX_TENTATIVES_CONNEXION, FENETRE_CONNEXION_MS)) {
+  if (await tropDeTentatives(`connexion:${email}`, MAX_TENTATIVES_CONNEXION, FENETRE_CONNEXION_MS)) {
     redirect("/connexion?erreur=trop_de_tentatives");
   }
 

@@ -17,7 +17,7 @@ export async function demarrerSignatureDocuSign(
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   const session = await getSession();
   if (!session) return { ok: false, error: "Non authentifié." };
-  if (tropDeTentatives(`docusign:${bonId}:${session.userId}`, MAX_TENTATIVES_DOCUSIGN, FENETRE_DOCUSIGN_MS)) {
+  if (await tropDeTentatives(`docusign:${bonId}:${session.userId}`, MAX_TENTATIVES_DOCUSIGN, FENETRE_DOCUSIGN_MS)) {
     return { ok: false, error: "Trop de tentatives, merci de patienter quelques minutes." };
   }
 

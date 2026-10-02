@@ -59,7 +59,7 @@ export async function demarrerSignatureInteretGeneralAction(
   if (attestation.associationId !== session.associationId) {
     return { ok: false, error: "Vous ne pouvez signer que les attestations qui vous sont adressées." };
   }
-  if (tropDeTentatives(`docusign:${attestationId}:${session.userId}`, MAX_TENTATIVES_DOCUSIGN, FENETRE_DOCUSIGN_MS)) {
+  if (await tropDeTentatives(`docusign:${attestationId}:${session.userId}`, MAX_TENTATIVES_DOCUSIGN, FENETRE_DOCUSIGN_MS)) {
     return { ok: false, error: "Trop de tentatives, merci de patienter quelques minutes." };
   }
 

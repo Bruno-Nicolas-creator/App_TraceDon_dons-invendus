@@ -83,7 +83,7 @@ export async function envoyerMessageAction(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await getSession();
   if (!session) return { ok: false, error: "Non authentifié." };
-  if (tropDeTentatives(`message:${session.userId}`, MAX_MESSAGES, FENETRE_MESSAGES_MS)) {
+  if (await tropDeTentatives(`message:${session.userId}`, MAX_MESSAGES, FENETRE_MESSAGES_MS)) {
     return { ok: false, error: "Trop de messages envoyés en peu de temps, merci de patienter quelques minutes." };
   }
 

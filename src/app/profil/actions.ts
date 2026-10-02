@@ -9,6 +9,7 @@ import { champTropLong, LONGUEUR_MAX_CHAMP_COURT } from "@/lib/validation";
 import { disponibilitesValides } from "@/lib/disponibilites";
 import { typesActiviteValides } from "@/lib/activiteAssociation";
 import { roleBenevoleValide } from "@/lib/benevoles";
+import { endpointPushValide } from "@/lib/webPush";
 
 const LONGUEUR_MAX_NOTRE_ACTION = 2000;
 
@@ -402,6 +403,13 @@ export async function enregistrerAbonnementPushAction(abonnement: {
 }) {
   const session = await getSession();
   if (!session) throw new Error("Non authentifié.");
+  // N'accepte que les adresses des vrais services de notification des navigateurs : sans ce
+  // contrôle, un appel direct à cette action (ce n'est qu'une requête HTTP, pas forcément une vraie
+  // inscription PushManager du navigateur) pourrait faire du serveur un relais vers une adresse
+  // arbitraire dès qu'une notification est envoyée à ce compte (cf. src/lib/webPush.ts).
+  if (!endpointPushValide(abonnement.endpoint)) {
+    throw new Error("Adresse d'abonnement aux notifications invalide.");
+  }
 
   await prisma.pushSubscription.upsert({
     where: { endpoint: abonnement.endpoint },

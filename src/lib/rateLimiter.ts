@@ -1,23 +1,39 @@
 import "server-only";
+import { prisma } from "@/lib/prisma";
 
 /**
- * Limiteur de débit basique en mémoire (fenêtre glissante par clé). Suffisant pour dissuader
- * le bourrage d'identifiants sur un déploiement mono-instance ; ne survit pas à un redémarrage
- * ni ne se partage entre plusieurs instances serverless — pour une protection robuste en
- * production multi-instance, remplacer par un compteur partagé (ex. Redis).
+ * Limiteur de débit par fenêtre fixe, stocké dans la table LimiteFrequence. Une seule requête SQL
+ * atomique (upsert avec incrémentation conditionnelle) : indispensable sur Vercel, où plusieurs
+ * instances serverless peuvent traiter des requêtes concurrentes sans mémoire partagée — un simple
+ * compteur en mémoire ne protégerait qu'une instance à la fois.
  */
-const tentatives = new Map<string, number[]>();
+export async function tropDeTentatives(cle: string, maxTentatives: number, fenetreMs: number): Promise<boolean> {
+  const lignes = await prisma.$queryRaw<{ compteur: number }[]>`
+    INSERT INTO "LimiteFrequence" ("cle", "compteur", "fenetreDebut")
+    VALUES (${cle}, 1, now())
+    ON CONFLICT ("cle") DO UPDATE SET
+      "compteur" = CASE
+        WHEN "LimiteFrequence"."fenetreDebut" < now() - (${fenetreMs}::text || ' milliseconds')::interval
+        THEN 1
+        ELSE "LimiteFrequence"."compteur" + 1
+      END,
+      "fenetreDebut" = CASE
+        WHEN "LimiteFrequence"."fenetreDebut" < now() - (${fenetreMs}::text || ' milliseconds')::interval
+        THEN now()
+        ELSE "LimiteFrequence"."fenetreDebut"
+      END
+    RETURNING "compteur"
+  `;
 
-export function tropDeTentatives(cle: string, maxTentatives: number, fenetreMs: number): boolean {
-  const maintenant = Date.now();
-  const historique = (tentatives.get(cle) ?? []).filter((t) => maintenant - t < fenetreMs);
+  return (lignes[0]?.compteur ?? 0) > maxTentatives;
+}
 
-  if (historique.length >= maxTentatives) {
-    tentatives.set(cle, historique);
-    return true;
-  }
+// Limite partagée par les routes qui lisent/exportent un document (PDF, photo, pièce jointe) :
+// assez généreuse pour consulter plusieurs documents de suite sans gêne, mais bloque un script
+// qui boucleraient dessus pour aspirer des données.
+const MAX_LECTURES_DOCUMENT = 60;
+const FENETRE_LECTURES_DOCUMENT_MS = 5 * 60 * 1000;
 
-  historique.push(maintenant);
-  tentatives.set(cle, historique);
-  return false;
+export function tropDeLecturesDocument(userId: string): Promise<boolean> {
+  return tropDeTentatives(`lecture-document:${userId}`, MAX_LECTURES_DOCUMENT, FENETRE_LECTURES_DOCUMENT_MS);
 }

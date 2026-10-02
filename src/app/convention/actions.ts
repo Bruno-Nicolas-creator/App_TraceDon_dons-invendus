@@ -48,7 +48,7 @@ export async function demarrerSignatureConventionAction(
     (role === "DONATEUR" && session.role === "ENTREPRISE" && convention.entrepriseId === session.entrepriseId) ||
     (role === "ASSOCIATION" && session.role === "ASSOCIATION" && convention.associationId === session.associationId);
   if (!autorise) return { ok: false, error: "Vous ne pouvez signer que pour votre propre organisation." };
-  if (tropDeTentatives(`docusign:${conventionId}:${session.userId}`, MAX_TENTATIVES_DOCUSIGN, FENETRE_DOCUSIGN_MS)) {
+  if (await tropDeTentatives(`docusign:${conventionId}:${session.userId}`, MAX_TENTATIVES_DOCUSIGN, FENETRE_DOCUSIGN_MS)) {
     return { ok: false, error: "Trop de tentatives, merci de patienter quelques minutes." };
   }
 

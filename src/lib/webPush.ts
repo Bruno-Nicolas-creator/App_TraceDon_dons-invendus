@@ -13,6 +13,29 @@ export function isPushConfigure(): boolean {
   return !!(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY);
 }
 
+// Domaines des services de notification push réellement utilisés par les navigateurs (Chrome/Edge,
+// Firefox, Safari). Sans cette liste, un abonnement forgé avec une adresse arbitraire transformerait
+// le serveur en relais HTTP vers n'importe quelle cible choisie par l'appelant (SSRF) dès qu'une
+// notification lui est envoyée.
+const HOTES_PUSH_AUTORISES = [
+  "fcm.googleapis.com",
+  "android.googleapis.com",
+  "updates.push.services.mozilla.com",
+  "web.push.apple.com",
+  "notify.windows.com",
+];
+
+export function endpointPushValide(endpoint: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(endpoint);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "https:") return false;
+  return HOTES_PUSH_AUTORISES.some((hote) => url.hostname === hote || url.hostname.endsWith(`.${hote}`));
+}
+
 /**
  * Envoie une notification push à tous les appareils d'une liste d'utilisateurs. N'échoue jamais
  * bruyamment (même logique que envoyerEmail) : un abonnement expiré est simplement supprimé.

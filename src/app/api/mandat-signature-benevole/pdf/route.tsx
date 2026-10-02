@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { tropDeLecturesDocument } from "@/lib/rateLimiter";
 import MandatSignatureBenevoleDocument from "@/lib/pdf/MandatSignatureBenevoleDocument";
 
 export async function GET() {
@@ -9,6 +10,7 @@ export async function GET() {
   if (!session || session.role !== "ASSOCIATION" || !session.associationId) {
     return new NextResponse("Réservé aux associations.", { status: 403 });
   }
+  if (await tropDeLecturesDocument(session.userId)) return new NextResponse("Trop de téléchargements, réessaie plus tard.", { status: 429 });
 
   const association = await prisma.association.findUniqueOrThrow({ where: { id: session.associationId } });
 
