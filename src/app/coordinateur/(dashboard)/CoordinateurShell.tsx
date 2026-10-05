@@ -27,8 +27,8 @@ export default function CoordinateurShell({
     <div className="flex min-h-screen flex-col bg-bg lg:flex-row">
       <aside className="hidden w-58 shrink-0 flex-col bg-brand-dark p-4 lg:flex">
         <div className="mb-6 flex items-center gap-2.5 px-2">
-          <div className="flex h-7.5 w-7.5 items-center justify-center rounded-lg bg-brand-tint font-display text-sm font-bold text-brand-dark">D</div>
-          <span className="font-display text-base font-semibold text-white">DonSolidaire</span>
+          <div className="flex h-7.5 w-7.5 items-center justify-center rounded-lg bg-brand-tint font-display text-sm font-bold text-brand-dark">T</div>
+          <span className="font-display text-base font-semibold text-white">TraceDon</span>
         </div>
         <nav className="flex flex-col gap-0.5">
           {NAV_ITEMS.map((item) => {
@@ -61,8 +61,8 @@ export default function CoordinateurShell({
       <div className="lg:hidden">
         <div className="flex items-center justify-between bg-brand-dark px-4 py-3">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-tint font-display text-sm font-bold text-brand-dark">D</div>
-            <span className="font-display text-sm font-semibold text-white">DonSolidaire</span>
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-tint font-display text-sm font-bold text-brand-dark">T</div>
+            <span className="font-display text-sm font-semibold text-white">TraceDon</span>
           </div>
           <div className="flex items-center gap-2">
             <button
