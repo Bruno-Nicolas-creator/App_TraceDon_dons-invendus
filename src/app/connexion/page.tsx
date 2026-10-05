@@ -2,6 +2,10 @@ import Link from "next/link";
 import SubmitButton from "@/components/SubmitButton";
 import { connexionAction } from "./actions";
 
+// Les comptes de démonstration (seed) existent encore en production, mais on ne les affiche
+// et ne pré-remplit leur mot de passe qu'en local, pour ne pas les exposer aux visiteurs.
+const AFFICHER_COMPTES_DEMO = process.env.NODE_ENV !== "production";
+
 const MESSAGES_ERREUR: Record<string, string> = {
   trop_de_tentatives: "Trop de tentatives de connexion. Merci de réessayer dans quelques minutes.",
 };
@@ -53,7 +57,7 @@ export default async function ConnexionPage({
             type="password"
             required
             autoComplete="current-password"
-            defaultValue="demo1234"
+            defaultValue={AFFICHER_COMPTES_DEMO ? "demo1234" : undefined}
             className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
           />
         </div>
@@ -69,15 +73,17 @@ export default async function ConnexionPage({
         </Link>
       </p>
 
-      <div className="mt-6 rounded-2xl border border-dashed border-border p-4 text-xs text-ink-muted">
-        <p className="mb-2 font-semibold text-ink">Comptes de démonstration</p>
-        <ul className="space-y-1">
-          <li>Entreprise — carrefour@exemple.fr</li>
-          <li>Association — coeur@exemple.fr</li>
-          <li>Coordinateur — bruno@exemple.fr</li>
-        </ul>
-        <p className="mt-2">Mot de passe : demo1234</p>
-      </div>
+      {AFFICHER_COMPTES_DEMO && (
+        <div className="mt-6 rounded-2xl border border-dashed border-border p-4 text-xs text-ink-muted">
+          <p className="mb-2 font-semibold text-ink">Comptes de démonstration</p>
+          <ul className="space-y-1">
+            <li>Entreprise — carrefour@exemple.fr</li>
+            <li>Association — coeur@exemple.fr</li>
+            <li>Coordinateur — bruno@exemple.fr</li>
+          </ul>
+          <p className="mt-2">Mot de passe : demo1234</p>
+        </div>
+      )}
     </div>
   );
 }
