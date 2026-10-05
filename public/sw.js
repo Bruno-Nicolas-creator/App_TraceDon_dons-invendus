@@ -2,7 +2,7 @@
 // Ne met rien en cache, ne modifie aucune requête réseau.
 
 self.addEventListener("push", (event) => {
-  let donnees = { titre: "Dons invendus", corps: "", url: "/" };
+  let donnees = { titre: "TraceDon", corps: "", url: "/" };
   if (event.data) {
     try {
       donnees = event.data.json();

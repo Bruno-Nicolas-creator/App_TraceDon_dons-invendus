@@ -1,6 +1,6 @@
 {
-  "name": "Dons invendus",
-  "short_name": "Dons invendus",
+  "name": "TraceDon",
+  "short_name": "TraceDon",
   "description": "Traçabilité des dons d'invendus alimentaires et non alimentaires entre entreprises et associations.",
   "start_url": "/",
   "display": "standalone",

@@ -21,7 +21,7 @@ const publicSans = Public_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Dons invendus",
+  title: "TraceDon",
   description:
     "Traçabilité des dons d'invendus alimentaires et non alimentaires entre entreprises et associations.",
   manifest: "/manifest.json",
