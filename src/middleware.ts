@@ -61,5 +61,7 @@ export async function middleware(request: NextRequest) {
 export const config = {
   // sw.js doit rester accessible sans authentification : c'est le navigateur (pas l'utilisateur
   // connecté) qui le récupère pour les notifications push, avant même de savoir qui est connecté.
-  matcher: ["/((?!connexion|inscription|_next/static|_next/image|favicon.ico|manifest.json|sw.js).*)"],
+  // Idem pour les icônes (onglet, écran d'accueil iPhone/Android) : ce sont des images publiques
+  // demandées par le navigateur, y compris sur la page de connexion.
+  matcher: ["/((?!connexion|inscription|_next/static|_next/image|favicon.ico|manifest.json|sw.js|apple-icon.png|icon-192.png|icon-512.png).*)"],
 };
