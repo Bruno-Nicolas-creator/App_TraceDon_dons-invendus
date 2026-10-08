@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getSession } from "@/lib/auth";
+import { getSessionLimitee as getSession } from "@/lib/sessionLimitee";
 import { prisma } from "@/lib/prisma";
 import { conventionEstSignee } from "@/lib/convention";
 import { nomFichierSur } from "@/lib/documents";

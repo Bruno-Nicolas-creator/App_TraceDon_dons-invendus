@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { getSessionLimitee as getSession } from "@/lib/sessionLimitee";
 import { rechercherProduitParCodeBarre, type ProduitScanne } from "@/lib/openFoodFacts";
 import { verifierRappel, type InfoRappel } from "@/lib/rappelConso";
 import { jourSemaineDuJour } from "@/lib/planning";
@@ -17,8 +17,9 @@ import { TOUTES_CATEGORIES_DON } from "@/lib/categoriesDon";
 import { articlesDuBon, articlesEntierementReclames, poidsTotalArticles } from "@/lib/donDivisible";
 import { notifier } from "@/lib/notifications";
 import { allergenesValides } from "@/lib/allergenes";
-import { tropDeTentatives } from "@/lib/rateLimiter";
+import { tropDeTentatives, tropDEnvoisFichiers, tropDePublications } from "@/lib/rateLimiter";
 
+const MESSAGE_TROP_D_ENVOIS = "Trop de fichiers envoyés en peu de temps, merci de réessayer dans une heure.";
 const MAX_EXTRACTIONS = 10;
 const FENETRE_EXTRACTIONS_MS = 60 * 60 * 1000;
 
@@ -126,6 +127,7 @@ export async function ajouterArticleMateriel(formData: FormData) {
   let photo: { photoNomFichier: string; photoContentType: string; photoContenu: Buffer } | null = null;
   const fichier = formData.get("photo");
   if (fichier instanceof File && fichier.size > 0) {
+    if (await tropDEnvoisFichiers(session.userId)) return { ok: false, error: MESSAGE_TROP_D_ENVOIS };
     const validation = validerPhotoArticle(fichier);
     if (!validation.ok) return { ok: false, error: validation.error };
     photo = {
@@ -208,6 +210,7 @@ export async function televerserPieceJointeDonAction(formData: FormData) {
   if (!(fichier instanceof File) || fichier.size === 0) {
     return { ok: false, error: "Aucun fichier reçu." };
   }
+  if (await tropDEnvoisFichiers(session.userId)) return { ok: false, error: MESSAGE_TROP_D_ENVOIS };
   const validation = validerFichierDocument(fichier);
   if (!validation.ok) return { ok: false, error: validation.error };
 
@@ -354,6 +357,9 @@ export async function publierDon(donId: string) {
   if (session.role !== "ENTREPRISE" || !session.entrepriseId) throw new Error("Action réservée aux entreprises.");
   const don = await prisma.don.findUniqueOrThrow({ where: { id: donId }, include: { articles: true } });
   if (don.entrepriseId !== session.entrepriseId) throw new Error("Don non autorisé.");
+  if (await tropDePublications(session.userId, "publication")) {
+    return { ok: false as const, error: "Trop de publications en peu de temps, merci de réessayer dans une heure." };
+  }
 
   // Le don matériel repose sur une liste établie à l'avance (pas de scan au moment de
   // l'enlèvement comme pour l'alimentaire) : elle doit donc être renseignée avant publication.
@@ -433,6 +439,9 @@ export async function sePositionner(
 > {
   const session = await requireSession();
   if (session.role !== "ASSOCIATION" || !session.associationId) throw new Error("Action réservée aux associations.");
+  if (await tropDePublications(session.userId, "positionnement")) {
+    return { ok: false, error: "Trop de positionnements en peu de temps, merci de réessayer dans une heure." };
+  }
 
   // Les doublons fausseraient le contrôle du nombre d'articles réservés plus bas (un article
   // listé deux fois n'est modifié qu'une fois) : on les retire avant toute validation.

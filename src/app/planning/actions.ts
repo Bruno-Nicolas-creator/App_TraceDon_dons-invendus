@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
+import { getSessionLimitee as getSession } from "@/lib/sessionLimitee";
 import { conventionEstSignee, obtenirOuCreerConvention } from "@/lib/convention";
 import { associationHabilitee, estGrandeSurface } from "@/lib/conformite";
 

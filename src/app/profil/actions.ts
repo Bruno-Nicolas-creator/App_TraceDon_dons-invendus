@@ -2,13 +2,15 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { clearSessionCookie, getSession } from "@/lib/auth";
+import { clearSessionCookie } from "@/lib/auth";
+import { getSessionLimitee as getSession } from "@/lib/sessionLimitee";
 import { prisma } from "@/lib/prisma";
 import { definitionDocumentPourRole, nomFichierSur, validerFichierDocument, type TypeDocument } from "@/lib/documents";
 import { champTropLong, LONGUEUR_MAX_CHAMP_COURT } from "@/lib/validation";
 import { disponibilitesValides } from "@/lib/disponibilites";
 import { typesActiviteValides } from "@/lib/activiteAssociation";
 import { roleBenevoleValide } from "@/lib/benevoles";
+import { tropDEnvoisFichiers } from "@/lib/rateLimiter";
 import { endpointPushValide } from "@/lib/webPush";
 
 const LONGUEUR_MAX_NOTRE_ACTION = 2000;
@@ -159,6 +161,9 @@ export async function televerserDocumentAction(
   const type = String(formData.get("type") ?? "") as TypeDocument;
   const fichier = formData.get("fichier");
   if (!(fichier instanceof File)) return { ok: false, error: "Aucun fichier sélectionné." };
+  if (await tropDEnvoisFichiers(session.userId)) {
+    return { ok: false, error: "Trop de fichiers envoyés en peu de temps, merci de réessayer dans une heure." };
+  }
 
   const validation = validerFichierDocument(fichier);
   if (!validation.ok) return validation;
