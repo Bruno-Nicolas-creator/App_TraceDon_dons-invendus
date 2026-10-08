@@ -69,7 +69,7 @@ Ce produit doit, en permanence, respecter ces règles. Si tu vois que l'une d'el
 - Le verrou « mode caché » (SITE_PASSWORD) n'est pas actif en production : la variable n'arrive pas au serveur sur Vercel, cause non élucidée. Le site est donc accessible à tous, inscription ouverte.
 - DocuSign : l'environnement local pointe vers la démo (demo.docusign.net), dont les signatures n'ont pas de valeur légale ; à vérifier côté Vercel avant l'ouverture au public.
 - TraceDon est le nom commercial de l'application (affiché partout depuis le 2026-10-05). Son site vitrine est un projet séparé (dépôt tracedon-vitrine, publié sur www.tracedon.fr).
-- Décision de Bruno (2026-10-09) : l'application sera **entièrement reconstruite** par un développeur. La référence est le cahier des charges docs/cahier-des-charges-parcours.md (parcours des trois rôles, règles R1 à R21, diagrammes, écarts de la V1 en annexe A) ; docs/manuel.html décrit la V1 et contient des inexactitudes. Toute évolution des parcours se reporte dans ce cahier des charges.
+- Décision de Bruno (2026-10-09) : l'application sera **entièrement reconstruite** par un développeur. La référence est le cahier des charges docs/cahier-des-charges-parcours.md (parcours des trois rôles, règles R1 à R21, diagrammes, écarts de la V1 en annexe A) ; docs/manuel.html décrit la V1 telle qu'elle fonctionne (mis à jour le 2026-10-09, avec ses limites connues). Toute évolution des parcours se reporte dans ce cahier des charges.
 - Décisions fonctionnelles du 2026-10-09 (détail en annexe C du cahier des charges) : le reçu fiscal est valorisé une fois par an par l'entreprise avec son propre logiciel (montant total saisi ou fichier importé), puis émis et signé par l'association, qui doit au minimum avoir auto-déclaré son intérêt général ; l'application ne calcule plus de montant. Alertes « nouveau don » par e-mail et notification (rayon et catégories choisis par l'association, pas de SMS pour l'instant). Le bénévole ne signe pas lui-même : l'association signe pour lui. Convention signée dans n'importe quel ordre et reconduite tacitement ; attestation d'intérêt général sans limite de durée. Badge « Vérifiée » informatif. Congés : dons récurrents suspendus, réactivables à la main. Plusieurs utilisateurs par organisation avec niveaux d'accès ; e-mail vérifié à l'inscription ; documents des associations visibles par les entreprises.
 
 ## Où on en est
@@ -87,7 +87,7 @@ Règles de cette rubrique (décidées par Bruno le 2026-10-08) :
 - Mise à jour : à chaque commit (le rappel automatique le demande), Claude ajoute ce qu'il a repéré et retire ce que Bruno vient de demander ou de faire. Si Bruno dit « non », la ligne passe dans « Écartées par Bruno » avec la date, et Claude ne la repropose pas. La vérification mensuelle propose de nouvelles idées dans son rapport, sans modifier ce fichier.
 - Aucun secret : des noms, jamais des valeurs.
 
-### À proposer (8 sur 15)
+### À proposer (7 sur 15)
 - [avant ouverture] Trancher le sort des comptes de démo carrefour, coeur, resto et des 25 dons de test visibles des associations — ils sont utilisables par tous avec un mot de passe connu — 1 h — repéré le 2026-10-08
 - [avant ouverture] Tester une restauration de sauvegarde Neon sur une branche isolée, et régénérer le mot de passe de la base exposé par erreur le 2026-10-02 — gestes de Bruno sur Neon, Claude le guide — 30 min — repéré le 2026-10-02
 - [avant ouverture] Vérifier dans Vercel si DocuSign pointe vers la démo (signatures sans valeur légale) ou la production — 15 min — repéré le 2026-10-08
@@ -95,7 +95,6 @@ Règles de cette rubrique (décidées par Bruno le 2026-10-08) :
 - [avant ouverture] Créer le projet PostHog (région Europe), mettre la clé phc_ dans Vercel, et citer PostHog dans la politique de confidentialité — 30 min — repéré le 2026-10-08
 - [utile] Ajouter une alerte sur les erreurs des visiteurs une fois PostHog branché — pour réagir avant qu'un utilisateur ne se plaigne — 1 h — repéré le 2026-10-08
 - [utile] Tant que la V1 reste en service pendant la reconstruction, corriger ses défauts qui touchent le flux de don (DLC dépassée contournable, PDF signé figé avant le contrôle, montant fiscal toujours à 0 €, don pris en charge republiable) — annexe A du cahier des charges — 1 à 2 jours — repéré le 2026-10-09
-- [utile] Mettre à jour ou retirer docs/manuel.html, inexact sur une dizaine de points — éviter que le développeur s'y fie à la place du cahier des charges — 1 h — repéré le 2026-10-09
 
 ### Écartées par Bruno (ne pas reproposer)
 - Resserrer la limite de téléchargement des PDF à environ 10 par minute — écarté le 2026-10-08

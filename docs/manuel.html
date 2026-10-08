@@ -1,0 +1,1004 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>TraceDon — Manuel de la version actuelle</title>
+<style>
+  /* Palette : vert de marque réel de l'app (attestations PDF), papier chaud, ambre pour les
+     points réglementaires. Typo : Fraunces (titres, caractère) + Public Sans (corps, le même
+     choix que le design system de l'État français — clin d'œil aux nombreux termes légaux). */
+  :root {
+    --bg: #FAF9F4;
+    --surface: #FFFFFF;
+    --surface-alt: #F1EFE6;
+    --ink: #1D2A22;
+    --ink-muted: #5B6960;
+    --accent: #1E4B36;
+    --accent-tint: #E4EEE7;
+    --warn: #96541A;
+    --warn-tint: #F6E9D9;
+    --border: #DDD8C9;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #131C17;
+      --surface: #1A2620;
+      --surface-alt: #20302A;
+      --ink: #EBEDE7;
+      --ink-muted: #A5B0A9;
+      --accent: #74C29A;
+      --accent-tint: #21362B;
+      --warn: #E3A462;
+      --warn-tint: #3A2A18;
+      --border: #2C3D34;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #131C17;
+    --surface: #1A2620;
+    --surface-alt: #20302A;
+    --ink: #EBEDE7;
+    --ink-muted: #A5B0A9;
+    --accent: #74C29A;
+    --accent-tint: #21362B;
+    --warn: #E3A462;
+    --warn-tint: #3A2A18;
+    --border: #2C3D34;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Public Sans", -apple-system, sans-serif;
+    line-height: 1.6;
+    padding-inline: 20px;
+    max-width: 100%;
+  }
+  .page {
+    max-width: 780px;
+    margin: 0 auto;
+    padding-block: 28px 80px;
+  }
+  h1, h2, h3 {
+    font-family: "Fraunces", Georgia, serif;
+    font-weight: 600;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+  h1 { font-size: clamp(1.7rem, 5vw, 2.4rem); margin: 0 0 6px; letter-spacing: -0.01em; }
+  h2 {
+    font-size: 1.5rem;
+    margin: 3em 0 0.9em;
+    padding-top: 0.6em;
+    border-top: 1px solid var(--border);
+  }
+  h2:first-of-type { margin-top: 1.6em; }
+  h3 { font-size: 1.08rem; margin: 1.6em 0 0.5em; color: var(--accent); }
+  p { margin: 0 0 1em; }
+  .kicker {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .subtitle { color: var(--ink-muted); font-size: 1.02rem; max-width: 60ch; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 0; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.7rem; letter-spacing: 0.03em;
+    padding: 4px 10px; border-radius: 100px;
+    background: var(--accent-tint); color: var(--accent);
+    border: 1px solid transparent;
+  }
+  .badge.role-entreprise { background: var(--accent-tint); color: var(--accent); }
+  .badge.role-association { background: #E7ECF6; color: #2C4A8C; }
+  .badge.role-coordinateur { background: #F2E7F6; color: #6B348C; }
+  .badge.role-tous { background: var(--surface-alt); color: var(--ink-muted); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .badge.role-association { background: #1F2C42; color: #9DB4E8; }
+    :root:not([data-theme="light"]) .badge.role-coordinateur { background: #33223C; color: #D9AEEC; }
+  }
+  :root[data-theme="dark"] .badge.role-association { background: #1F2C42; color: #9DB4E8; }
+  :root[data-theme="dark"] .badge.role-coordinateur { background: #33223C; color: #D9AEEC; }
+
+  nav.toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin: 28px 0 0;
+  }
+  nav.toc .toc-title {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--ink-muted); margin-bottom: 10px;
+  }
+  nav.toc ol {
+    list-style: none; margin: 0; padding: 0;
+    columns: 2; column-gap: 24px;
+  }
+  nav.toc li { break-inside: avoid; margin-bottom: 7px; }
+  nav.toc a { color: var(--ink); text-decoration: none; font-size: 0.93rem; }
+  nav.toc a:hover { color: var(--accent); }
+  nav.toc .n { color: var(--accent); font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; margin-right: 6px; }
+  @media (max-width: 480px) { nav.toc ol { columns: 1; } }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin: 16px 0;
+  }
+  .callout {
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin: 14px 0;
+    font-size: 0.95rem;
+    border: 1px solid var(--border);
+  }
+  .callout.regle { background: var(--accent-tint); border-color: transparent; }
+  .callout.cas-limite { background: var(--surface-alt); border-left: 3px solid var(--accent); }
+  .callout.legal { background: var(--warn-tint); border-color: transparent; }
+  .callout .label {
+    display: block; font-weight: 700; font-size: 0.72rem;
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px;
+  }
+  .callout.regle .label { color: var(--accent); }
+  .callout.cas-limite .label { color: var(--ink-muted); }
+  .callout.legal .label { color: var(--warn); }
+
+  ul, ol { padding-left: 1.3em; margin: 0 0 1em; }
+  li { margin-bottom: 0.45em; }
+  strong { color: var(--ink); }
+  a { color: var(--accent); }
+  code {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.87em;
+    background: var(--surface-alt);
+    padding: 0.1em 0.4em;
+    border-radius: 5px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.2em 0;
+    font-size: 0.88rem;
+  }
+  .table-wrap { overflow-x: auto; margin: 1.2em 0; }
+  .table-wrap table { margin: 0; min-width: 560px; }
+  th, td {
+    text-align: left;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+    font-weight: 500;
+  }
+  tr:last-child td { border-bottom: none; }
+  td.svc { font-weight: 600; white-space: nowrap; }
+  td.cost { font-family: "IBM Plex Mono", monospace; font-size: 0.8rem; white-space: nowrap; }
+
+  .flow { counter-reset: step; margin: 1.6em 0; padding: 0; list-style: none; }
+  .flow li {
+    counter-increment: step;
+    position: relative;
+    padding: 2px 0 20px 40px;
+    border-left: 2px solid var(--border);
+    margin: 0;
+  }
+  .flow li:last-child { border-left-color: transparent; padding-bottom: 0; }
+  .flow li::before {
+    content: counter(step);
+    position: absolute; left: -15px; top: -2px;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); color: var(--surface);
+    font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .flow strong { display: block; margin-bottom: 3px; }
+
+  .lexique dt { font-weight: 700; margin-top: 0.9em; }
+  .lexique dd { margin: 0 0 0.2em; color: var(--ink-muted); }
+
+  hr.sep { border: none; border-top: 1px dashed var(--border); margin: 2.4em 0; }
+
+  footer {
+    margin-top: 3em; padding-top: 1.4em; border-top: 1px solid var(--border);
+    font-size: 0.82rem; color: var(--ink-muted);
+  }
+</style>
+
+<div class="page">
+
+  <div class="kicker">Documentation fonctionnelle</div>
+  <h1>TraceDon</h1>
+  <p class="subtitle">
+    Ce document explique, sans jargon technique, tout ce que fait l'application aujourd'hui :
+    à qui elle s'adresse, comment un don circule d'un bout à l'autre, ce que chaque type de
+    compte peut faire, et tous les services extérieurs sur lesquels elle s'appuie. Il est écrit
+    pour quelqu'un qui n'a jamais ouvert l'application.
+  </p>
+  <div class="callout cas-limite">
+    <span class="label">Ce manuel décrit la version actuelle (V1)</span>
+    Il décrit l'application telle qu'elle fonctionne aujourd'hui, défauts compris (voir la partie 9,
+    « Limites connues »). L'application doit être reconstruite : le comportement attendu est décrit
+    dans le cahier des charges <code>docs/cahier-des-charges-parcours.md</code>, qui fait référence
+    en cas de différence avec ce manuel.
+  </div>
+  <div class="meta-row">
+    <span class="badge role-entreprise">Entreprise</span>
+    <span class="badge role-association">Association</span>
+    <span class="badge role-coordinateur">Coordinateur</span>
+    <span class="badge role-tous">Systèmes transverses</span>
+  </div>
+
+  <nav class="toc">
+    <div class="toc-title">Sommaire</div>
+    <ol>
+      <li><span class="n">01</span><a href="#vue-ensemble">Vue d'ensemble</a></li>
+      <li><span class="n">02</span><a href="#parcours">Le parcours d'un don</a></li>
+      <li><span class="n">03</span><a href="#entreprise">Côté entreprise</a></li>
+      <li><span class="n">04</span><a href="#association">Côté association</a></li>
+      <li><span class="n">05</span><a href="#coordinateur">Côté coordinateur</a></li>
+      <li><span class="n">06</span><a href="#transverse">Systèmes transverses</a></li>
+      <li><span class="n">07</span><a href="#api">Services externes utilisés</a></li>
+      <li><span class="n">08</span><a href="#donnees">Le modèle de données, en clair</a></li>
+      <li><span class="n">09</span><a href="#limites">Limites connues de la version actuelle</a></li>
+      <li><span class="n">10</span><a href="#lexique">Lexique</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="vue-ensemble">1 · Vue d'ensemble</h2>
+  <p>
+    <strong>TraceDon</strong> (nom technique : « Dons Invendus ») met en relation deux types d'organisations et un superviseur :
+  </p>
+  <ul>
+    <li><strong>Des entreprises donatrices</strong> — commerces, grande distribution, restauration —
+      qui ont des invendus alimentaires ou du matériel (mobilier, équipement, textile…) à donner
+      plutôt qu'à jeter.</li>
+    <li><strong>Des associations caritatives</strong>, notamment d'aide alimentaire, qui récupèrent
+      ces dons pour les redistribuer.</li>
+    <li><strong>Un coordinateur</strong>, qui supervise l'ensemble de la plateforme : il vérifie les
+      associations, débloque les dons orphelins, et garde une vue globale.</li>
+  </ul>
+  <p>
+    Le cœur du produit — ce qui ne doit jamais être cassé — c'est <strong>le flux de don
+    lui-même</strong> : de la déclaration d'un invendu par une entreprise jusqu'à sa remise
+    effective, tracée et signée, à une association.
+  </p>
+  <p>
+    L'application distingue deux natures de don, qui suivent chacune des règles différentes :
+  </p>
+  <ul>
+    <li><strong>Don alimentaire</strong> — nécessite un suivi de date limite de consommation, de
+      température, d'allergènes, et un contrôle de rappel produit.</li>
+    <li><strong>Don matériel</strong> — pas de suivi sanitaire, mais peut être <em>divisible</em> :
+      plusieurs associations peuvent se partager les articles d'un même don.</li>
+  </ul>
+
+  <h2 id="parcours">2 · Le parcours d'un don, pas à pas</h2>
+  <p>Voici comment un don circule dans le cas le plus complet (don matériel divisible avec plusieurs
+    associations). Un don alimentaire classique suit la même trame, en sautant les étapes propres à la
+    division du don.</p>
+
+  <ol class="flow">
+    <li>
+      <strong>L'entreprise déclare un don</strong>
+      Titre, description (à la voix ou au clavier), articles (scannés, saisis à la main, ou extraits
+      automatiquement d'une pièce jointe par IA), adresse de récupération. Rien n'est encore visible
+      des associations : c'est un brouillon.
+    </li>
+    <li>
+      <strong>Publication</strong>
+      Si un planning récurrent prévoit <em>une seule</em> association ce jour-là, le don lui est
+      assigné directement. Sinon, il est publié sur la place de marché, visible de toutes les
+      associations inscrites (sans filtre de distance). Aucune alerte n'est envoyée aux associations :
+      elles découvrent les dons en consultant la place de marché.
+    </li>
+    <li>
+      <strong>Une association se positionne</strong>
+      Elle réclame le don entier, ou — pour un don matériel divisible — seulement les articles qui
+      l'intéressent. Une convention de don signée avec cette entreprise est un préalable obligatoire.
+    </li>
+    <li>
+      <strong>Validation du donateur (dons divisibles uniquement)</strong>
+      L'entreprise doit explicitement accepter ou refuser la sélection d'articles demandée, pour
+      éviter un partage trop petit ou trop grand à son goût.
+    </li>
+    <li>
+      <strong>Le bon d'enlèvement est généré</strong>
+      Un document numérique unique à ce don (ou à cette part du don) qui va servir de registre à
+      l'enlèvement.
+    </li>
+    <li>
+      <strong>Contrôle sur place</strong>
+      L'association vérifie chaque article : quantité réelle, température, date limite constatée,
+      allergènes affichés. Elle valide ou refuse chaque article individuellement.
+    </li>
+    <li>
+      <strong>Double signature électronique</strong>
+      Le donateur signe en premier, puis l'association — jamais dans l'autre sens pour le bon
+      d'enlèvement. C'est toujours le compte de l'association qui signe ; si un bénévole mandaté
+      effectue l'enlèvement, son nom est inscrit sur le bon.
+    </li>
+    <li>
+      <strong>Confirmation de l'enlèvement</strong>
+      L'entreprise ou l'association confirme. Le poids réellement retenu est figé, l'horodatage
+      enregistré. Pour un don alimentaire, l'impact CO2 évité est affiché (il est recalculé à chaque
+      consultation, pas enregistré). Pour un don divisible, il n'est totalement clôturé que
+      lorsque toutes les associations concernées ont, elles aussi, confirmé leur part.
+    </li>
+    <li>
+      <strong>Justificatifs a posteriori</strong>
+      Périodiquement, l'entreprise génère des attestations fiscales (regroupant les bons confirmés
+      par association) et des attestations d'intérêt général — signées, cette fois, par
+      l'association.
+    </li>
+  </ol>
+
+  <div class="callout cas-limite">
+    <span class="label">Filet de sécurité</span>
+    Un don publié qu'aucune association ne réclame reste visible en priorité au coordinateur, qui
+    peut l'assigner manuellement pour qu'il ne reste jamais bloqué.
+  </div>
+
+  <h2 id="entreprise">3 · Côté entreprise <span class="badge role-entreprise">Entreprise</span></h2>
+
+  <p>Navigation en 5 onglets : <strong>Nouveau don</strong>, <strong>Planning</strong>,
+    <strong>Messages</strong>, <strong>Archives</strong>, <strong>Profil</strong>.</p>
+
+  <h3>Créer un don alimentaire</h3>
+  <p>
+    C'est l'écran d'accueil d'une entreprise ayant une activité alimentaire. Un brouillon est repris
+    ou créé automatiquement. Titre et description sont pré-remplis avec le dernier don publié pour
+    gagner du temps sur des dons qui se ressemblent d'un jour à l'autre ; on peut aussi décrire le don
+    à la voix. On peut joindre une photo ou un fichier représentant le don.
+  </p>
+  <div class="callout cas-limite">
+    <span class="label">Extraction automatique</span>
+    Si une pièce jointe est présente, un bouton « Extraire les articles » utilise une IA de lecture
+    pour transformer un document ou une photo de liste en articles structurés (désignation, quantité,
+    poids) — évite la ressaisie d'un ticket ou d'une liste papier.
+  </div>
+  <p>La liste d'articles n'est pas obligatoire à la publication : on peut aussi la constituer
+    directement sur le bon d'enlèvement, juste avant le passage de l'association.</p>
+
+  <h3>Créer un don matériel</h3>
+  <p>Pour les entreprises ayant une activité non alimentaire (mobilier, textile, high-tech…).
+    Différences avec l'alimentaire :</p>
+  <ul>
+    <li>Chaque article a une description libre, une quantité optionnelle, une photo optionnelle, et
+      peut être scanné (produit neuf) — mais <strong>pas de poids</strong> (pas de pesée fiable pour
+      ce type de don).</li>
+    <li>Il faut avoir ajouté au moins un article avant de publier — pas de scan complémentaire
+      possible plus tard comme pour l'alimentaire.</li>
+    <li>Pas de titre, de description de lot, d'adresse de récupération ni de pièce jointe : le bon
+      affiche l'adresse de l'entreprise.</li>
+  </ul>
+  <div class="callout regle">
+    <span class="label">Don divisible</span>
+    Une case à cocher permet à <strong>plusieurs associations</strong> de se partager les articles
+    d'un même don matériel. Dès qu'une association réclame une partie, une demande apparaît sur cet
+    écran : l'entreprise doit explicitement <strong>Accepter</strong> ou <strong>Refuser</strong>
+    cette sélection avant que l'association ne puisse rien signer. En cas de refus, les articles
+    redeviennent disponibles pour une autre association. Seule l'association refusée est notifiée ;
+    les autres associations ne sont pas prévenues que des articles sont de nouveau libres. Les
+    demandes en attente n'apparaissent que sur cet écran « Nouveau don matériel ».
+  </div>
+
+  <h3>Ajouter un article (scan, saisie manuelle, allergènes)</h3>
+  <ul>
+    <li><strong>Scan d'un code-barres</strong> : recherche automatique sur la base ouverte
+      <em>Open Food Facts</em> (désignation, poids unitaire, allergènes pré-remplis si connus).</li>
+    <li><strong>Saisie manuelle</strong> : désignation, quantité (optionnelle, sinon déclaré « en
+      vrac »), poids, catégorie, allergènes cochés à la main.</li>
+  </ul>
+  <div class="callout legal">
+    <span class="label">Sécurité sanitaire</span>
+    Chaque code-barres scanné est vérifié auprès des <strong>rappels officiels de produits</strong>
+    (RappelConso, base publique du gouvernement). Si le produit fait l'objet d'un rappel actif,
+    l'ajout est bloqué, motif affiché, lien vers la fiche officielle — et la vérification est refaite
+    côté serveur, impossible à contourner depuis l'écran.
+  </div>
+
+  <h3>Planning récurrent</h3>
+  <p>Associer à l'avance une ou plusieurs associations à chaque jour de la semaine, pour automatiser
+    l'attribution du don quotidien (typiquement une grande surface avec un partenaire attitré).</p>
+  <ul>
+    <li>Impossible d'ajouter une association sans convention de don déjà signée avec elle.</li>
+    <li>Si l'entreprise dépasse 400&nbsp;m² de surface de vente (loi Garot) et que l'association
+      choisie n'est pas habilitée à l'aide alimentaire, un avertissement s'affiche — mais n'empêche
+      pas de continuer.</li>
+  </ul>
+
+  <h3>Annuaire des associations à proximité</h3>
+  <p>Vue carte ou liste, avec distance réelle (si la cartographie est configurée), catégorie
+    d'éligibilité, badge « Habilitée » (affiché seulement si l'entreprise dépasse 400&nbsp;m²), badge
+    « Chaîne du froid » si l'attestation correspondante est déposée, capacité d'accueil et nombre de
+    bénéficiaires déclarés, congés en cours, et présentation libre rédigée par l'association.</p>
+  <div class="callout cas-limite">
+    <span class="label">À venir</span>
+    Une vue détaillée complète du dossier association (habilitation, chaîne du froid,
+    assurances…) au-delà de ces badges n'existe pas dans cette version ; elle est prévue dans le
+    cahier des charges de la reconstruction. L'entreprise ne peut pas consulter les documents d'une
+    association, ni proposer une convention depuis l'annuaire.
+  </div>
+
+  <h3>Messagerie</h3>
+  <p>Conversation possible avec le coordinateur (toujours) ou avec une association partenaire, à
+    condition qu'une convention soit déjà signée avec elle. Priorité par message (Normale ⭐
+    Importante 🔴 Urgente), pièce jointe possible (PDF ou image).</p>
+
+  <h3>Convention de don</h3>
+  <p>Étape obligatoire avant tout premier don avec une association donnée. Elle est créée
+    automatiquement quand l'entreprise ajoute l'association à son planning, ou quand l'association se
+    positionne sur un don. Signature électronique intégrée à l'application ; effective une fois les
+    <strong>deux parties</strong> signées. L'entreprise doit signer <strong>en premier</strong> : si
+    l'association tente de signer avant, le service de signature renvoie une erreur. Aucune
+    notification n'est envoyée à l'autre partie.</p>
+
+  <h3>Bon d'enlèvement</h3>
+  <p>Côté entreprise, on peut ajouter ou retirer des articles tant que le bon n'est pas confirmé
+    (pour l'alimentaire), même après les signatures, suivre en direct le contrôle fait par
+    l'association, signer en premier, puis confirmer l'enlèvement une fois les deux signatures
+    obtenues. L'entreprise n'a pas de liste de ses dons en cours : elle retrouve un bon par le lien
+    affiché après la publication, par une notification, ou dans les archives une fois confirmé.</p>
+  <div class="callout regle">
+    <span class="label">Verrouillage définitif</span>
+    Une fois le bon confirmé, plus aucun article ne peut être modifié par personne — c'est le
+    registre légal de ce qui a été remis.
+  </div>
+
+  <h3>Attestations fiscales (art. 200/238 bis du CGI)</h3>
+  <p>Sur une période choisie, l'application regroupe automatiquement tous les bons confirmés
+    <strong>par association bénéficiaire</strong> (nombre de bons, poids total, montant fiscal
+    estimé). Une attestation distincte par association est générée et envoyée pour signature.
+    L'association n'est pas notifiée : elle la découvre dans ses archives, avec la mention « À
+    signer ».</p>
+  <div class="callout legal">
+    <span class="label">Montant à 0 €</span>
+    Le montant est calculé à partir d'un coût de revient au kilo que l'entreprise ne peut saisir
+    nulle part dans l'application : il vaut donc 0&nbsp;€ pour toute entreprise réelle (seules les
+    données de démonstration ont un coût renseigné). Pour un don matériel, sans poids, il vaut
+    aussi 0&nbsp;€.
+  </div>
+  <div class="callout cas-limite">
+    <span class="label">Qui signe</span>
+    C'est <strong>l'association</strong> qui signe cette attestation, pas l'entreprise —
+    l'entreprise se contente de la générer et de l'envoyer.
+  </div>
+
+  <h3>Attestation d'intérêt général (art. 238 bis du CGI)</h3>
+  <p>Atteste qu'une association partenaire a bien le statut d'intérêt général. Générée par
+    l'entreprise pour chaque association déjà conventionnée, signée par l'association — une seule
+    par couple entreprise/association.</p>
+
+  <h3>Archives</h3>
+  <p>Historique complet en 3 onglets : bons d'enlèvement confirmés, attestations fiscales,
+    attestations d'intérêt général — chacun avec accès direct au PDF. Les puces « 2026 » et « Tous
+    partenaires » affichées en haut sont décoratives : elles ne filtrent rien.</p>
+
+  <h3>Profil</h3>
+  <ul>
+    <li><strong>Impact CO2 cumulé</strong> : kilos de CO2 évités grâce aux dons <em>alimentaires
+      confirmés</em> uniquement, calculé produit par catégorie (viande, crèmerie, légumes…) plutôt
+      qu'avec une moyenne unique, plus l'équivalent en kilomètres en voiture.</li>
+    <li><strong>Notifications push</strong>, activables sur l'appareil.</li>
+    <li><strong>Référent don</strong> (nom, téléphone) : seul le nom apparaît, sur le PDF du bon
+      d'enlèvement.</li>
+    <li><strong>Congés / fermeture</strong> : si la période commence immédiatement, tous les dons
+      publiés ou pris en charge sont <strong>automatiquement annulés</strong>, sans prévenir les
+      associations ; les bons de ces dons restent signables. Une période déclarée à l'avance n'annule
+      rien à son début : elle bloque seulement les nouvelles publications.</li>
+    <li><strong>Coffre-fort documentaire</strong> : l'extrait <strong>Kbis</strong> est le seul
+      document requis, et sans lui aucun don ne peut être publié.</li>
+    <li><strong>Surface de vente</strong> : détermine l'assujettissement à la loi Garot (seuil
+      400&nbsp;m²).</li>
+  </ul>
+
+  <h3>Inscription</h3>
+  <p>Recherche assistée du SIRET (base officielle des entreprises), autocomplétion d'adresse avec
+    coordonnées GPS, choix de la nature d'activité (alimentaire / non alimentaire / les deux, qui
+    détermine l'écran de don par défaut). SIRET à 14 chiffres, email unique, mot de passe 8 caractères
+    minimum.</p>
+
+  <hr class="sep" />
+
+  <h2 id="association">4 · Côté association <span class="badge role-association">Association</span></h2>
+
+  <h3>La place de marché des dons disponibles</h3>
+  <p>Écran d'accueil de l'association : tous les dons publiés sur la plateforme (sans filtre de
+    distance, de nature ou de catégorie), en vue carte ou liste, avec la distance de chacun. Le
+    bouton « Filtrer » est décoratif. Aucun détail du don (titre, articles, photos) n'est visible
+    avant de se positionner.</p>
+  <ul>
+    <li>Les dons pas encore réclamés remontent en premier, les plus anciennement publiés d'abord —
+      un badge « Publié il y a… » aide à repérer les dons en attente depuis longtemps.</li>
+    <li>Un badge orange avertit si l'entreprise donatrice est en congés.</li>
+    <li>Si l'association elle-même est en congés, elle ne peut se positionner sur aucun don pendant
+      cette période.</li>
+  </ul>
+
+  <h3>Se positionner sur un don</h3>
+  <p><strong>Don classique</strong> : un bouton « Se positionner » réclame l'intégralité du don.
+    Convention de don obligatoire au préalable (redirection automatique sinon). Avertissements non
+    bloquants si l'association n'est pas habilitée (loi Garot) ou si le poids du don dépasse sa
+    capacité d'accueil déclarée.</p>
+  <p><strong>Don matériel divisible</strong> : une liste à cocher présente les articles encore
+    libres ; l'association en sélectionne certains et envoie sa demande.</p>
+  <div class="callout regle">
+    <span class="label">Double validation</span>
+    La demande passe par un statut « en attente de validation du donateur » : rien n'est signable
+    tant que l'entreprise n'a pas explicitement accepté. Si elle refuse, les articles redeviennent
+    disponibles pour une autre association. Une seule demande à la fois par don.
+  </div>
+
+  <h3>Le bon d'enlèvement : contrôle et signature</h3>
+  <p>Pour chaque article (ou, pour un don divisible, uniquement ceux réclamés par cette
+    association) :</p>
+  <ul>
+    <li><strong>Allergènes</strong> affichés en badges s'ils sont renseignés.</li>
+    <li><strong>Quantité constatée</strong> et <strong>température</strong>, saisies par
+      l'association elle-même — ce que l'entreprise a déclaré n'est qu'indicatif.</li>
+    <li><strong>DLC/DDM constatée</strong> et case « Dépassée » (dons alimentaires uniquement).</li>
+    <li><strong>Valider</strong> ou <strong>Refuser</strong> chaque article, motif optionnel.</li>
+  </ul>
+  <div class="callout legal">
+    <span class="label">Règle sanitaire non négociable</span>
+    Si « Dépassée » est cochée sur un article encore en attente, il ne peut plus être validé — le
+    refus devient obligatoire. Attention : un article déjà validé puis marqué « Dépassée » reste
+    validé, et modifier la date limite peut décocher la case en base (voir partie 9).
+  </div>
+  <p>Si l'association a des bénévoles <strong>mandatés</strong>, elle peut désigner lequel
+    effectue cet enlèvement : son nom est inscrit sur le bon, mais c'est le compte de l'association
+    qui signe. La signature de l'association n'est possible qu'après celle du donateur. Une fois les
+    deux signatures obtenues, l'association ou l'entreprise confirme l'enlèvement : poids figé,
+    horodatage, et — pour l'alimentaire — impact CO2 affiché.</p>
+
+  <h3>Messagerie, convention, attestations</h3>
+  <p>Mêmes règles que côté entreprise (conversation possible avec le coordinateur ou une entreprise
+    conventionnée, convention à signer en premier). Sur les attestations fiscales et d'intérêt
+    général, c'est <strong>l'association qui signe</strong> — l'entreprise ne fait que les générer et
+    les envoyer.</p>
+
+  <h3>Profil association</h3>
+  <ul>
+    <li><strong>Présentation</strong> : type d'activité (épicerie sociale, distribution de colis,
+      repas/maraude), texte libre visible des entreprises.</li>
+    <li><strong>Disponibilités de retrait</strong> : grille jour × matin/après-midi, enregistrée
+      mais affichée nulle part ailleurs.</li>
+    <li><strong>Préférence d'alerte</strong> : email, SMS, ou les deux. Ce choix est enregistré mais
+      <strong>n'a aucun effet</strong> : aucune alerte de nouveau don n'est envoyée, et aucun SMS
+      n'existe.</li>
+    <li><strong>Capacité d'accueil</strong> (kg par collecte) et <strong>nombre de
+      bénéficiaires</strong> : purement déclaratif, jamais vérifié — sert uniquement à afficher un
+      avertissement non bloquant lors d'un positionnement.</li>
+    <li><strong>Coffre-fort documentaire</strong> : récépissé RNA et statuts signés sont obligatoires
+      dès l'inscription ; huit autres documents sont facultatifs mais renforcent la confiance
+      (assurance, rescrit fiscal, habilitation aide alimentaire, déclaration DDPP, PV d'assemblée
+      générale, assurance transport/stockage, attestation chaîne du froid, mandat de signature à un
+      bénévole). Deux d'entre eux proposent un modèle PDF pré-rempli téléchargeable, à faire signer
+      puis redéposer.</li>
+    <li><strong>Bénévoles</strong> : nom, téléphone, rôle (référent/collecteur), auto-déclaration
+      d'assurance responsabilité civile, et mandat de signature donné par le président pour signer
+      les bons en son nom.</li>
+    <li><strong>Habilitation & conformité</strong> : statut d'habilitation (aucune / régionale /
+      nationale) et date de fin, déclaration DDPP pour les associations manipulant des denrées
+      animales. La date de fin n'est jamais vérifiée : une habilitation expirée compte toujours.</li>
+    <li><strong>Contact rappel produit</strong> : personne à prévenir en cas de rappel officiel d'un
+      produit déjà distribué.</li>
+  </ul>
+
+  <h3>Inscription association</h3>
+  <p>Recherche assistée par dénomination dans un registre officiel d'organismes (pré-remplit adresse
+    et numéro RNA). RNA au format <code>W</code> + 9 chiffres. Récépissé RNA et statuts signés
+    obligatoires dès l'inscription.</p>
+
+  <hr class="sep" />
+
+  <h2 id="coordinateur">5 · Côté coordinateur <span class="badge role-coordinateur">Coordinateur</span></h2>
+  <p>Le coordinateur supervise toute la plateforme, sans jamais gérer d'organisation, de bénévoles ou
+    de documents en propre. Navigation : Tableau de bord, Entreprises, Associations, Dons, Archives,
+    Réseaux. La messagerie n'a pas de lien dans ce menu (adresse /messages), et la barre de recherche
+    de l'en-tête est décorative. Il n'existe pas d'inscription pour ce rôle : le compte est créé
+    directement en base.</p>
+
+  <h3>Tableau de bord</h3>
+  <ul>
+    <li><strong>5 indicateurs</strong> : poids total donné ce mois-ci, « dons réalisés » (en
+      réalité le nombre total de bons confirmés depuis toujours), taux de refus (articles refusés
+      divisés par tous les articles de la base, y compris non contrôlés), nombre d'associations en
+      attente de vérification, et impact CO2 évité (avec son équivalent en kilomètres en voiture).</li>
+    <li><strong>Courbe de tendance</strong> : poids donné sur les 6 derniers mois.</li>
+    <li><strong>Conformité loi Garot</strong> : liste des entreprises de plus de 400&nbsp;m² qui
+      n'ont aucune association habilitée parmi leurs partenaires conventionnés — donc « à risque »
+      vis-à-vis de la loi.</li>
+    <li><strong>« Dons à traiter »</strong>, mis en avant en priorité : chaque don publié que
+      personne n'a réclamé, avec un menu pour l'assigner manuellement à une association. L'assignation
+      n'exige pas de convention signée, ne prévient ni l'association ni l'entreprise, et pour un don
+      divisible elle se passe de la validation de l'entreprise.</li>
+    <li><strong>Associations à vérifier</strong> : nom, RNA, statut du rescrit fiscal, niveau
+      d'habilitation, accès aux documents, et un bouton pour basculer le badge de confiance
+      « Vérifiée ». Ce badge est purement informatif : une association non vérifiée peut se
+      positionner normalement.</li>
+  </ul>
+
+  <h3>Entreprises, Associations, Dons, Réseaux</h3>
+  <p>Des vues de supervision en lecture seule : liste de toutes les entreprises (SIRET, activité,
+    Kbis fourni ou non), toutes les associations (mêmes informations que le tableau de bord), tous
+    les dons de la plateforme (statut, poids, association attributaire), et les regroupements
+    (enseignes de plusieurs magasins, réseaux d'associations avec leurs antennes). Les enseignes et
+    réseaux n'ont aucun écran de gestion : ils n'existent que dans les données.</p>
+  <p>Chaque liste a une barre de recherche et des filtres rapides : entreprises « Grande surface
+    (loi Garot) » ou « Kbis manquant » ; associations « À vérifier » ou « Non habilitée » ; dons par
+    statut (Publié, Pris en charge, Clôturé, Annulé). Sur téléphone, un menu donne accès à tous les
+    onglets.</p>
+
+  <h3>Documents</h3>
+  <p>Consultation du dossier documentaire complet d'une entreprise ou d'une association, avec le
+    statut fourni/manquant de chaque document attendu et un lien pour les consulter — aucune
+    modification possible depuis cette vue.</p>
+
+  <div class="callout regle">
+    <span class="label">Les deux seules actions qui modifient des données</span>
+    Vérifier/dé-vérifier une association, et assigner manuellement un don resté sans preneur. Les
+    deux sont protégées côté serveur : seul un compte coordinateur peut les déclencher.
+  </div>
+
+  <hr class="sep" />
+
+  <h2 id="transverse">6 · Systèmes transverses <span class="badge role-tous">Tous rôles</span></h2>
+  <p>Fonctionnent en arrière-plan pour tout le monde, quel que soit le rôle.</p>
+
+  <h3>Connexion et sécurité des mots de passe</h3>
+  <p>Les mots de passe ne sont jamais stockés en clair : ils passent par un algorithme de hachage à
+    sens unique avant d'être enregistrés — même en cas de fuite de la base, personne ne peut
+    retrouver le mot de passe d'origine. Une session dure 7 jours, via un cookie sécurisé
+    inaccessible en JavaScript et transmis uniquement en HTTPS en production.</p>
+  <div class="callout regle">
+    <span class="label">Cloisonnement des rôles</span>
+    Chaque rôle ne peut naviguer que vers ses propres pages ; toute tentative d'accéder à une page
+    d'un autre rôle renvoie automatiquement vers sa propre page d'accueil. Pour une ressource
+    partagée entre les deux parties (bon d'enlèvement, attestation, convention) : chacune ne voit que
+    ce qui la concerne — même en modifiant l'identifiant dans l'adresse. Le coordinateur peut
+    télécharger tous les PDF et voit tout dans les archives, mais il n'a pas accès aux pages de
+    détail de ces documents.
+  </div>
+
+  <h3>Limitation de fréquence anti-abus</h3>
+  <p>Chaque action sensible a un plafond : au-delà, les tentatives suivantes sont bloquées pendant
+    un moment. Cela empêche quiconque de se servir de l'application en boucle (deviner un mot de
+    passe, aspirer des documents, inonder la messagerie…).</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Action</th><th>Plafond</th></tr></thead>
+      <tbody>
+        <tr><td>Toute action d'un utilisateur connecté</td><td>600 / 5 min</td></tr>
+        <tr><td>Connexion (par adresse email)</td><td>10 tentatives / 5 min</td></tr>
+        <tr><td>Inscription (par connexion internet)</td><td>5 / heure</td></tr>
+        <tr><td>Recherche SIRET/RNA ou adresse à l'inscription</td><td>30 / minute</td></tr>
+        <tr><td>Publication d'un don / positionnement sur un don</td><td>30 / heure chacun</td></tr>
+        <tr><td>Envoi de fichiers (documents, photos, pièces jointes de don)</td><td>30 / heure</td></tr>
+        <tr><td>Extraction d'articles par IA</td><td>10 / heure</td></tr>
+        <tr><td>Envoi de messages</td><td>20 / 5 min</td></tr>
+        <tr><td>Lancement d'une signature DocuSign (par document)</td><td>10 / 5 min</td></tr>
+        <tr><td>Téléchargement de documents (PDF, photos, pièces jointes), tous confondus</td><td>60 / 5 min</td></tr>
+        <tr><td>Saisie du mot de passe de l'écran de verrouillage</td><td>10 / 10 min</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Les compteurs sont gardés dans la base de données, et non dans la mémoire d'un seul serveur :
+    la limite reste donc valable même quand plusieurs serveurs répondent en même temps.</p>
+
+  <h3>Écran de verrouillage du site (avant ouverture au public)</h3>
+  <p>Tant que l'application n'est pas ouverte au public, un mot de passe général peut la cacher :
+    tout visiteur voit d'abord un écran de verrouillage, avant même la page de connexion. Une fois
+    le bon mot de passe saisi, le navigateur s'en souvient pendant un an ; changer ce mot de passe
+    oblige tout le monde à le ressaisir. S'il n'est pas défini, l'écran n'apparaît simplement pas.</p>
+  <div class="callout cas-limite">
+    <span class="label">Inactif en production</span>
+    En production, ce verrou ne fonctionne pas (la variable ne parvient pas au serveur, cause non
+    élucidée) : le site est accessible à tous et l'inscription est ouverte. De plus, même actif, il
+    ne protège que les pages, pas les actions ni les téléchargements.
+  </div>
+
+  <h3>Protections techniques supplémentaires</h3>
+  <ul>
+    <li>Le navigateur est obligé de toujours passer en connexion chiffrée (HTTPS).</li>
+    <li>Le site ne peut pas être affiché à l'intérieur d'un autre site (protège contre les faux
+      boutons superposés).</li>
+    <li>Les clés d'accès aux services (base de données, DocuSign…) ne peuvent techniquement pas
+      se retrouver dans le code envoyé au navigateur.</li>
+    <li>Un don ne peut jamais être attribué à deux associations à la fois, même si elles se
+      positionnent à la même seconde.</li>
+    <li>Les adresses de notification push sont vérifiées pour empêcher qu'on s'en serve pour faire
+      appeler par le serveur une adresse interne.</li>
+  </ul>
+
+  <h3>Conformité réglementaire (loi Garot)</h3>
+  <p>Seuil légal fixé à 400&nbsp;m² de surface de vente : au-delà, une entreprise doit proposer une
+    convention à au moins une association habilitée à l'aide alimentaire, sans obligation
+    d'exclusivité. Une association est « habilitée » dès qu'elle a une habilitation régionale ou
+    nationale déclarée, sans contrôle de sa date de fin. Le seuil s'applique au-delà de 400&nbsp;m²
+    (strictement).</p>
+
+  <h3>Conventions et attestations fiscales</h3>
+  <p>Une convention existe en un seul exemplaire par couple entreprise/association, créée
+    automatiquement dès leur premier lien. Le montant d'une attestation fiscale est calculé à
+    <strong>60&nbsp;% de la valeur de revient</strong> des dons remis sur la période (poids × coût de
+    revient au kilo, voir l'encadré « Montant à 0 € » en partie 3), avec un numéro d'ordre unique
+    au format <code>2026-ATT-0001</code>. Le compteur est global et ne repart pas à zéro chaque année.
+    La convention n'a pas de date d'expiration contrôlée.</p>
+
+  <h3>Notifications (email et push)</h3>
+  <p>Un événement métier prévient automatiquement, par email et par notification push, les personnes
+    concernées :</p>
+  <ul>
+    <li>demande de positionnement partiel sur un don matériel divisible → l'entreprise ;</li>
+    <li>acceptation de cette demande → l'association ;</li>
+    <li>refus de cette demande → l'association refusée ;</li>
+    <li>signature du donateur sur un bon d'enlèvement → l'association, à qui c'est le tour ;</li>
+    <li>signature de l'association → l'entreprise, qui peut alors confirmer l'enlèvement ;</li>
+    <li>nouveau message dans la messagerie → le ou les destinataires.</li>
+  </ul>
+  <p>Un envoi raté n'interrompt jamais l'action métier qui vient de réussir — la personne peut
+    simplement ne pas recevoir la notification.</p>
+  <p>Ces six cas sont les seuls. Ne sont <strong>pas</strong> notifiés : la publication d'un don,
+    le positionnement sur un don entier, l'attribution par le planning ou par le coordinateur, la
+    convention à signer ou signée, les attestations, l'annulation pour congés, la confirmation d'un
+    bon, la vérification d'une association.</p>
+
+  <h3>Messagerie interne</h3>
+  <p>Une conversation existe soit entre une entreprise et une association partenaires, soit entre
+    l'une des deux et le coordinateur — jamais entre deux entreprises ou deux associations entre
+    elles. Message limité à 4000 caractères, pièce jointe limitée à 5&nbsp;Mo (PDF, JPEG, PNG, WebP
+    uniquement).</p>
+
+  <h3>Coffre-fort documentaire</h3>
+  <p>Mêmes limites que la messagerie (5&nbsp;Mo, PDF/JPEG/PNG/WebP). Chaque type de document n'est
+    proposable qu'au rôle concerné. Le nom du fichier est nettoyé avant réaffichage pour éviter tout
+    risque.</p>
+
+  <h3>Signature électronique (DocuSign)</h3>
+  <p>Trois catégories de documents signables, directement dans l'application (pas de redirection vers
+    un site externe) :</p>
+  <ul>
+    <li><strong>Bons d'enlèvement</strong> — deux signataires, ordre imposé : le donateur d'abord,
+      l'association ensuite.</li>
+    <li><strong>Conventions de don</strong> — deux signataires, ordre imposé : l'entreprise d'abord
+      (l'écran ne l'indique pas).</li>
+    <li><strong>Attestations</strong> (fiscale ou intérêt général) — un seul signataire : l'association.</li>
+  </ul>
+  <div class="callout regle">
+    <span class="label">Anti-fraude</span>
+    Au retour d'une séance de signature, l'application ne fait jamais confiance à la seule adresse
+    de la page : elle revérifie systématiquement auprès de DocuSign que la signature a bien été
+    complétée avant de l'enregistrer.
+  </div>
+  <p>Le PDF envoyé à la signature porte un QR code de traçabilité (bon d'enlèvement) ; l'attestation
+    fiscale affiche le montant en toutes lettres à côté du chiffre, une convention usuelle sur les
+    documents financiers officiels. Le PDF du bon est figé au moment où l'entreprise lance sa
+    signature, donc en général avant le contrôle de l'association. Les documents signés ne sont pas
+    récupérés : les PDF téléchargeables dans l'application sont regénérés à partir des données. En
+    local, la signature utilise l'environnement de démonstration de DocuSign, sans valeur légale.</p>
+
+  <h3>Dictée vocale et montant en lettres</h3>
+  <p>La saisie à la voix (en français) s'appuie sur une fonctionnalité native du navigateur : si le
+    navigateur ne la propose pas, le bouton n'apparaît simplement pas. La conversion d'un montant en
+    toutes lettres (ex. « huit cent quarante-deux euros et cinquante centimes ») n'est utilisée que
+    sur l'attestation fiscale.</p>
+
+  <hr class="sep" />
+
+  <h2 id="api">7 · Services externes utilisés</h2>
+  <p>Principe appliqué systématiquement : <strong>l'absence d'un service ne fait jamais planter
+    l'application</strong> — la fonctionnalité correspondante se désactive ou s'affiche en mode
+    dégradé.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Service</th><th>À quoi ça sert</th><th>Coût</th><th>Si absent / non configuré</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="svc">DocuSign</td>
+          <td>Signature électronique des conventions, bons d'enlèvement et attestations.</td>
+          <td class="cost">Gratuit en développement, payant en production selon le volume</td>
+          <td>Boutons de signature visibles mais désactivés</td>
+        </tr>
+        <tr>
+          <td class="svc">Google Maps<br /><span style="color:var(--ink-muted); font-weight:400;">(Geocoding, Distance Matrix, Maps JS)</span></td>
+          <td>Carte interactive et distances réelles entre entreprise et association.</td>
+          <td class="cost">Payant au-delà d'un crédit gratuit mensuel</td>
+          <td>Carte et distances de secours (visuel statique, sans plantage)</td>
+        </tr>
+        <tr>
+          <td class="svc">Impact CO2 / ADEME<br /><span style="color:var(--ink-muted); font-weight:400;">(données Agribalyse)</span></td>
+          <td>Calcule le CO2 évité par un don alimentaire, catégorie de produit par catégorie.</td>
+          <td class="cost">Gratuit</td>
+          <td>Le chiffre n'est simplement pas affiché</td>
+        </tr>
+        <tr>
+          <td class="svc">Gemini<br /><span style="color:var(--ink-muted); font-weight:400;">(Google AI Studio)</span></td>
+          <td>Extrait automatiquement la liste d'articles depuis une pièce jointe (photo/PDF).</td>
+          <td class="cost">Gratuit dans l'usage courant</td>
+          <td>Le bouton d'extraction reste caché</td>
+        </tr>
+        <tr>
+          <td class="svc">Resend</td>
+          <td>Envoi des emails de notification.</td>
+          <td class="cost">Gratuit jusqu'à 3000 emails/mois</td>
+          <td>Notifications email simplement ignorées</td>
+        </tr>
+        <tr>
+          <td class="svc">Web Push<br /><span style="color:var(--ink-muted); font-weight:400;">(VAPID)</span></td>
+          <td>Notifications push sur navigateur/téléphone.</td>
+          <td class="cost">Gratuit, sans compte externe</td>
+          <td>Le bouton d'activation reste caché</td>
+        </tr>
+        <tr>
+          <td class="svc">Open Food Facts</td>
+          <td>Recherche produit au scan d'un code-barres (désignation, poids, allergènes).</td>
+          <td class="cost">Gratuit, base ouverte communautaire</td>
+          <td>« Produit non trouvé », saisie manuelle proposée</td>
+        </tr>
+        <tr>
+          <td class="svc">RappelConso<br /><span style="color:var(--ink-muted); font-weight:400;">(data.economie.gouv.fr)</span></td>
+          <td>Vérifie qu'un produit scanné ne fait pas l'objet d'un rappel officiel actif.</td>
+          <td class="cost">Gratuit, service public</td>
+          <td>Vérification ignorée sans bloquer l'ajout</td>
+        </tr>
+        <tr>
+          <td class="svc">Recherche d'entreprises<br /><span style="color:var(--ink-muted); font-weight:400;">(api.gouv.fr, SIRENE/INSEE + RNA)</span></td>
+          <td>Suggestions de SIRET/RNA à l'inscription.</td>
+          <td class="cost">Gratuit, service public</td>
+          <td>Pas de suggestion, saisie manuelle</td>
+        </tr>
+        <tr>
+          <td class="svc">Adresse<br /><span style="color:var(--ink-muted); font-weight:400;">(Géoplateforme, ex-IGN)</span></td>
+          <td>Autocomplétion d'adresse et coordonnées GPS.</td>
+          <td class="cost">Gratuit, service public</td>
+          <td>Saisie libre, sans coordonnées GPS (distance affichée « — »)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout cas-limite">
+    <span class="label">Deux services natifs du navigateur, pas de compte externe</span>
+    La <strong>dictée vocale</strong> et l'<strong>affichage des notifications push</strong>
+    s'appuient sur des fonctionnalités intégrées au navigateur lui-même, pas sur un service auquel
+    l'application est abonnée.
+  </div>
+
+  <h3>Infrastructure d'hébergement</h3>
+  <p>Base de données <strong>PostgreSQL</strong> hébergée chez <strong>Neon</strong>, application
+    déployée sur <strong>Vercel</strong>. Ce ne sont pas des fonctionnalités de l'application mais
+    l'infrastructure sur laquelle elle tourne.</p>
+
+  <hr class="sep" />
+
+  <h2 id="donnees">8 · Le modèle de données, en clair</h2>
+  <p>Sans rentrer dans le détail technique, voici les grandes notions que l'application manipule et
+    comment elles s'articulent :</p>
+  <ul>
+    <li><strong>Entreprise</strong> et <strong>Association</strong> sont les deux types
+      d'organisations ; chacune peut appartenir à un regroupement (une <strong>Enseigne</strong> pour
+      plusieurs magasins, un <strong>Réseau</strong> pour plusieurs antennes associatives).</li>
+    <li><strong>Utilisateur</strong> est une personne connectée, rattachée à une organisation (ou au
+      coordinateur), avec un rôle qui détermine ce qu'elle peut voir et faire.</li>
+    <li><strong>Don</strong> regroupe des <strong>Articles</strong> ; chaque article peut être
+      réclamé individuellement dans un don matériel divisible.</li>
+    <li><strong>Bon d'enlèvement</strong> est généré par don (ou par part de don divisible) et porte
+      les signatures, le poids retenu, et le lien vers une éventuelle attestation fiscale.</li>
+    <li><strong>Convention</strong>, <strong>Attestation fiscale</strong> et <strong>Attestation
+      d'intérêt général</strong> sont les trois documents légaux échangés entre une entreprise et une
+      association données.</li>
+    <li><strong>Conversation</strong> et <strong>Message</strong> forment la messagerie interne.</li>
+    <li><strong>Document</strong> est une pièce du coffre-fort (un type par document, un par
+      organisation).</li>
+    <li><strong>Bénévole</strong>, <strong>Période de congés</strong> et <strong>Assignation
+      récurrente</strong> (planning) complètent le profil d'une association ou d'une entreprise.</li>
+  </ul>
+
+  <hr class="sep" />
+
+  <h2 id="limites">9 · Limites connues de la version actuelle</h2>
+  <p>Défauts relevés en lisant le code le 9 octobre 2026. Ils ne doivent pas être reproduits dans la
+    reconstruction (détail en annexe A du cahier des charges).</p>
+  <ul>
+    <li><strong>Bon d'enlèvement</strong> : le document signé est figé avant le contrôle de
+      l'association ; l'entreprise peut encore modifier les articles après les signatures ; la
+      confirmation est possible avec des articles non contrôlés ; un bon d'un don annulé reste
+      signable et confirmable.</li>
+    <li><strong>Date limite dépassée</strong> : un article déjà validé reste validé, et modifier la
+      date peut décocher « Dépassée » en base.</li>
+    <li><strong>Attestations fiscales</strong> : montant à 0&nbsp;€ hors démonstration ; numérotation
+      globale non annuelle ; pas de notification ni de bouton de renvoi.</li>
+    <li><strong>Publication</strong> : un don déjà pris en charge peut être republié (deux onglets ou
+      appel direct) ; l'attribution par le planning ne revérifie ni la convention ni les congés.</li>
+    <li><strong>Don divisible</strong> : la validation de l'entreprise peut être contournée par un
+      appel direct au serveur, et par le coordinateur.</li>
+    <li><strong>Numéros de bon et d'attestation</strong> : calculés par « nombre + 1 », doublons
+      possibles (notamment après le refus d'une demande partielle, dont le bon est supprimé).</li>
+    <li><strong>Notifications</strong> : aucune alerte de nouveau don ; la plupart des événements ne
+      préviennent personne (voir partie 6).</li>
+    <li><strong>Suivi</strong> : pas de liste des dons en cours pour l'entreprise ; pas d'annulation
+      volontaire d'un don ; pas de mot de passe oublié ; un seul utilisateur par organisation ;
+      informations d'inscription non modifiables.</li>
+    <li><strong>Dates</strong> : jours du planning et périodes calculés à l'heure du serveur (UTC), pas
+      à l'heure de Paris.</li>
+    <li><strong>Données</strong> : fichiers stockés dans la base de données ; base locale partagée
+      avec la production ; le script de données de démonstration viderait la production s'il y était
+      lancé.</li>
+  </ul>
+
+  <h2 id="lexique">10 · Lexique des termes réglementaires</h2>
+  <dl class="lexique">
+    <dt>Loi Garot</dt>
+    <dd>Loi française (2016) obligeant les commerces alimentaires de plus de 400&nbsp;m² à proposer
+      une convention de don à au moins une association habilitée, plutôt que de jeter leurs
+      invendus.</dd>
+
+    <dt>Habilitation « aide alimentaire »</dt>
+    <dd>Agrément préfectoral (régional) ou ministériel (national) qui autorise une association à
+      recevoir et distribuer des denrées alimentaires.</dd>
+
+    <dt>RNA</dt>
+    <dd>Répertoire National des Associations — le numéro d'identification officiel d'une association
+      française (format <code>W</code> + 9 chiffres).</dd>
+
+    <dt>SIRET</dt>
+    <dd>Numéro d'identification officiel à 14 chiffres d'un établissement d'entreprise en France.</dd>
+
+    <dt>Kbis</dt>
+    <dd>Extrait officiel attestant l'existence légale d'une entreprise (équivalent d'une carte
+      d'identité pour une société).</dd>
+
+    <dt>DDPP</dt>
+    <dd>Direction Départementale de la Protection des Populations — déclaration obligatoire pour
+      toute association manipulant des denrées d'origine animale.</dd>
+
+    <dt>Rescrit fiscal</dt>
+    <dd>Démarche par laquelle une association demande à l'administration fiscale de confirmer son
+      éligibilité au régime du mécénat (avant de pouvoir délivrer des reçus fiscaux).</dd>
+
+    <dt>Article 200 / 238 bis du CGI</dt>
+    <dd>Articles du Code Général des Impôts qui ouvrent droit à une réduction d'impôt pour les dons
+      aux associations — 238 bis concerne spécifiquement les entreprises.</dd>
+
+    <dt>Intérêt général</dt>
+    <dd>Statut qu'une association doit avoir pour que les dons qu'elle reçoit ouvrent droit à une
+      réduction d'impôt chez le donateur.</dd>
+
+    <dt>DLC / DDM</dt>
+    <dd>Date Limite de Consommation (denrées périssables, impérative) / Date de Durabilité Minimale
+      (anciennement DLUO, indicative pour les autres produits).</dd>
+
+    <dt>Loi AGEC</dt>
+    <dd>Loi anti-gaspillage de 2020 qui étend une obligation de réemploi/don aux invendus non
+      alimentaires (textile, matériel…).</dd>
+  </dl>
+
+  <footer>
+    Document mis à jour à partir de l'état du code au 9 octobre 2026 (version actuelle, V1). Pour la
+    reconstruction, le cahier des charges <code>docs/cahier-des-charges-parcours.md</code> fait
+    référence.
+  </footer>
+
+</div>
+
+</body></html>
