@@ -86,7 +86,7 @@ export default function AssociationsProchesClient({
       </header>
 
       <main className="flex-1 space-y-3 px-5 pb-4">
-        {entrepriseGrandeSurface && (
+        {entrepriseGrandeSurface && vue === "liste" && (
           <div className="flex gap-3 rounded-2xl bg-accent-tint p-4">
             <span aria-hidden="true" className="text-lg leading-none">⚠️</span>
             <p className="text-xs leading-relaxed text-ink">
