@@ -11,6 +11,7 @@ import {
 } from "@/app/actions";
 import AjouterArticleMaterielForm, { type ArticleMaterielAjoute } from "@/components/AjouterArticleMaterielForm";
 import BottomTabBar from "@/components/BottomTabBar";
+import { suivre } from "@/lib/analytics";
 
 type Don = {
   id: string;
@@ -115,6 +116,7 @@ export default function NouveauDonMaterielClient({
       setAssigneA(resultat.assigneA);
       setBonPublieId(resultat.bonId);
       setVientDetrePublie(true);
+      suivre("don_publie", { type: "materiel" });
     });
   };
 

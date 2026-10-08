@@ -16,6 +16,7 @@ import AjouterArticleForm, { type ArticleAjoute } from "@/components/AjouterArti
 import ChevronIcon from "@/components/ChevronIcon";
 import { libelleCategorieDon } from "@/lib/categoriesDon";
 import { useDicteeVocale } from "@/lib/dicteeVocale";
+import { suivre } from "@/lib/analytics";
 
 type SectionId = "infos" | "articles" | "logistique";
 
@@ -160,6 +161,7 @@ export default function NouveauDonClient({
       setAssigneA(resultat.assigneA);
       setBonPublieId(resultat.bonId);
       setVientDetrePublie(true);
+      suivre("don_publie", { type: "alimentaire" });
       setTitre("");
       setDescription("");
       setAdresseRecuperation(adresseEntreprise);

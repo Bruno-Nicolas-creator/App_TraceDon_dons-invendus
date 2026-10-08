@@ -9,6 +9,7 @@ import TogglePill from "@/components/TogglePill";
 import MapPinIcon from "@/components/MapPinIcon";
 import { lienItineraire } from "@/lib/googleMapsLinks";
 import { sePositionner } from "@/app/actions";
+import { suivre } from "@/lib/analytics";
 
 type Vue = "carte" | "liste";
 
@@ -115,6 +116,7 @@ export default function DonsDisponiblesClient({
         return;
       }
       setBonIdLocal((prev) => ({ ...prev, [donId]: resultat.bonId }));
+      suivre("positionnement_envoye");
     });
   };
 

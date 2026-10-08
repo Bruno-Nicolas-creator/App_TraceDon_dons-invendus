@@ -4,7 +4,9 @@ import { cookies } from "next/headers";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { jetonSiteAttendu, siteLockActif, SITE_PASSWORD_COOKIE } from "@/lib/sitePassword";
+import BandeauMesureAudience from "@/components/BandeauMesureAudience";
 import DevProfilSwitcher from "@/components/DevProfilSwitcher";
+import SuiviNavigation from "@/components/SuiviNavigation";
 import SiteLockScreen from "@/components/SiteLockScreen";
 import "./globals.css";
 
@@ -80,6 +82,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col font-sans">
         {children}
+        <BandeauMesureAudience />
+        <SuiviNavigation />
         {process.env.NODE_ENV !== "production" && <DevProfilSwitcher cleActive={cleActive} comptes={comptes} />}
       </body>
     </html>

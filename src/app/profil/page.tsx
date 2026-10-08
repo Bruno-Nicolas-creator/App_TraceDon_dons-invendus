@@ -13,6 +13,7 @@ import { TYPES_ACTIVITE } from "@/lib/activiteAssociation";
 import { LABEL_ROLE_BENEVOLE, type RoleBenevole } from "@/lib/benevoles";
 import SelecteurDisponibilites from "@/components/SelecteurDisponibilites";
 import ActiverNotificationsPush from "@/components/ActiverNotificationsPush";
+import { ChoixMesureAudience } from "@/components/BandeauMesureAudience";
 import { isPushConfigure } from "@/lib/webPush";
 import CoffreFort, { type ConventionSignee, type DocumentExistant } from "./CoffreFort";
 import {
@@ -784,6 +785,8 @@ export default async function ProfilPage() {
             </p>
           </div>
         )}
+
+        <ChoixMesureAudience />
       </main>
       <BottomTabBar active="profil" role={session.role} nonLusMessages={nonLusMessages} />
     </div>
