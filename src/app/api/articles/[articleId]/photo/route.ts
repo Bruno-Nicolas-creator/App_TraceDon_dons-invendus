@@ -16,13 +16,15 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const article = await prisma.article.findUnique({ where: { id: articleId }, include: { don: true } });
   if (!article || !article.photoContenu) return new NextResponse("Introuvable.", { status: 404 });
 
+  // Don matériel divisible : l'attributaire est porté par l'article ; sinon par le don entier.
+  const associationAttributaire = article.associationAssigneeId ?? article.don.associationAssigneeId;
   const autorise =
     session.role === "COORDINATEUR" ||
     (session.role === "ENTREPRISE" && session.entrepriseId === article.don.entrepriseId) ||
-    (article.don.associationAssigneeId != null &&
+    (associationAttributaire != null &&
       estAutoriseSurRessource(session, {
         entrepriseId: article.don.entrepriseId,
-        associationId: article.don.associationAssigneeId,
+        associationId: associationAttributaire,
       }));
   if (!autorise) return new NextResponse("Non autorisé.", { status: 403 });
 

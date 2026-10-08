@@ -28,7 +28,6 @@ export type ArticleAffiche = {
   temp: string;
   dlc: string;
   bloque: boolean;
-  temperatureHorsPlage: boolean;
   statut: Statut;
   motifRefus: string;
   aUnePhoto?: boolean;
@@ -126,11 +125,20 @@ export default function BonEnlevementClient({
   };
 
   const retirer = (articleId: string) => {
+    const position = articles.findIndex((a) => a.id === articleId);
+    const articleRetire = articles[position];
     setArticles((prev) => prev.filter((a) => a.id !== articleId));
     startTransition(async () => {
       try {
         await retirerArticle(articleId);
       } catch (e) {
+        if (articleRetire) {
+          setArticles((prev) => {
+            const copie = [...prev];
+            copie.splice(Math.min(position, copie.length), 0, articleRetire);
+            return copie;
+          });
+        }
         setErreurSignature(e instanceof Error ? e.message : "Impossible de retirer cet article.");
       }
     });
@@ -428,7 +436,6 @@ export default function BonEnlevementClient({
                     temp: "—",
                     dlc: "—",
                     bloque: false,
-                    temperatureHorsPlage: false,
                     statut: "EN_ATTENTE",
                     motifRefus: "",
                     allergenes: article.allergenes,
@@ -497,7 +504,7 @@ export default function BonEnlevementClient({
                       onChange={(e) => modifierConstat(article.id, "temp", e.target.value)}
                       onBlur={() => enregistrerConstat(article.id)}
                       disabled={!peutControlerArticles}
-                      className={`w-full rounded-lg border px-2.5 py-2 text-[13px] disabled:bg-surface-alt disabled:text-ink-muted ${article.temperatureHorsPlage ? "border-[#E7C4AE] text-accent" : "border-border"}`}
+                      className={`w-full rounded-lg border px-2.5 py-2 text-[13px] disabled:bg-surface-alt disabled:text-ink-muted border-border`}
                     />
                   </div>
                 </div>

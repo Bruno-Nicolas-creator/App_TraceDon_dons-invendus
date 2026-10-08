@@ -68,7 +68,6 @@ export default async function BonEnlevementPage({
     temp: a.temperature ?? "—",
     dlc: a.dlcOuEtat ?? "—",
     bloque: a.dlcDepassee,
-    temperatureHorsPlage: a.dlcDepassee,
     statut: a.statut,
     motifRefus: a.motifRefus ?? "",
     aUnePhoto: !!a.photoContentType,

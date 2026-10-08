@@ -79,11 +79,20 @@ export default function NouveauDonMaterielClient({
 
   const retirer = (id: string) => {
     setErreurRetrait(null);
+    const position = articles.findIndex((a) => a.id === id);
+    const articleRetire = articles[position];
     setArticles((prev) => prev.filter((a) => a.id !== id));
     startTransition(async () => {
       try {
         await retirerArticle(id);
       } catch (e) {
+        if (articleRetire) {
+          setArticles((prev) => {
+            const copie = [...prev];
+            copie.splice(Math.min(position, copie.length), 0, articleRetire);
+            return copie;
+          });
+        }
         setErreurRetrait(e instanceof Error ? e.message : "Impossible de retirer ce don.");
       }
     });

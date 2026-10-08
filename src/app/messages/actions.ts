@@ -168,15 +168,3 @@ export async function envoyerMessageAction(
 
   return { ok: true };
 }
-
-export async function marquerConversationLueAction(conversationId: string) {
-  const session = await getSession();
-  if (!session) return;
-
-  const conversation = await prisma.conversation.findUnique({ where: { id: conversationId } });
-  if (!conversation || !estParticipantConversation(session, conversation)) return;
-
-  const champLecture = champLectureRole(session.role);
-  await prisma.conversation.update({ where: { id: conversationId }, data: { [champLecture]: new Date() } });
-  revalidatePath("/messages");
-}

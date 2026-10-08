@@ -13,14 +13,23 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   if (!session) return new NextResponse("Non authentifié.", { status: 401 });
   if (await tropDeLecturesDocument(session.userId)) return new NextResponse("Trop de téléchargements, réessaie plus tard.", { status: 429 });
 
-  const don = await prisma.don.findUnique({ where: { id: donId } });
+  const don = await prisma.don.findUnique({
+    where: { id: donId },
+    include: { articles: { select: { associationAssigneeId: true } } },
+  });
   if (!don || !don.pieceJointeContenu) return new NextResponse("Introuvable.", { status: 404 });
 
+  // Don matériel divisible : plusieurs associations peuvent être attributaires, chacune de ses
+  // propres articles, sans que le don entier ait d'attributaire unique.
+  const associationsAttributaires = new Set(
+    [don.associationAssigneeId, ...don.articles.map((a) => a.associationAssigneeId)].filter((id): id is string => id != null)
+  );
   const autorise =
     session.role === "COORDINATEUR" ||
     (session.role === "ENTREPRISE" && session.entrepriseId === don.entrepriseId) ||
-    (don.associationAssigneeId != null &&
-      estAutoriseSurRessource(session, { entrepriseId: don.entrepriseId, associationId: don.associationAssigneeId }));
+    [...associationsAttributaires].some((associationId) =>
+      estAutoriseSurRessource(session, { entrepriseId: don.entrepriseId, associationId })
+    );
   if (!autorise) return new NextResponse("Non autorisé.", { status: 403 });
 
   const contentType = don.pieceJointeContentType ?? "";

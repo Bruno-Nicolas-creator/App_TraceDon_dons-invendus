@@ -64,6 +64,7 @@ export default function NouveauDonClient({
   const [articles, setArticles] = useState(articlesInitiaux);
   const [extractionEnCours, setExtractionEnCours] = useState(false);
   const [erreurExtraction, setErreurExtraction] = useState<string | null>(null);
+  const [erreurRetrait, setErreurRetrait] = useState<string | null>(null);
   const [sectionsOuvertes, setSectionsOuvertes] = useState<Record<SectionId, boolean>>({
     infos: true,
     articles: articlesInitiaux.length > 0,
@@ -90,8 +91,24 @@ export default function NouveauDonClient({
   };
 
   const retirerUnArticle = (articleId: string) => {
+    setErreurRetrait(null);
+    const position = articles.findIndex((a) => a.id === articleId);
+    const articleRetire = articles[position];
     setArticles((prev) => prev.filter((a) => a.id !== articleId));
-    startTransition(() => void retirerArticle(articleId));
+    startTransition(async () => {
+      try {
+        await retirerArticle(articleId);
+      } catch (e) {
+        if (articleRetire) {
+          setArticles((prev) => {
+            const copie = [...prev];
+            copie.splice(Math.min(position, copie.length), 0, articleRetire);
+            return copie;
+          });
+        }
+        setErreurRetrait(e instanceof Error ? e.message : "Impossible de retirer cet article.");
+      }
+    });
   };
 
   const enregistrerDetailsLot = (champs: Partial<{ titre: string; description: string; adresseRecuperation: string; instructionsAcces: string }>) => {
@@ -426,6 +443,9 @@ export default function NouveauDonClient({
                       </li>
                     ))}
                   </ul>
+                )}
+                {erreurRetrait && (
+                  <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreurRetrait}</div>
                 )}
 
                 <AjouterArticleForm donId={donId} onAjoute={(article) => setArticles((prev) => [...prev, article])} />
