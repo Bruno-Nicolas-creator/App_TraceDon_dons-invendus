@@ -1,6 +1,6 @@
 # TraceDon · Cahier des charges des parcours utilisateurs
 
-> **Version 1.1 · 9 octobre 2026** (intègre les décisions de Bruno sur les questions ouvertes, voir annexe C) · rédigé pour l'équipe qui reconstruit l'application TraceDon (nom technique actuel : « Dons Invendus »).
+> **Version 1.2 · 9 octobre 2026** (intègre toutes les décisions de Bruno, voir annexe C) · rédigé pour l'équipe qui reconstruit l'application TraceDon (nom technique actuel : « Dons Invendus »).
 > Ce document décrit le **comportement attendu** de l'application, rôle par rôle. Il est indépendant de la technologie : il ne présuppose ni le framework, ni la base de données, ni l'hébergeur. L'application actuelle (V1) ne sert que de référence ; ses écarts et ses pièges sont listés en annexe pour ne pas les reproduire.
 
 ---
@@ -22,7 +22,7 @@
 
 - 🆕 **Nouveau** : n'existait pas dans la V1, à concevoir.
 - 🔧 **Corrigé** : existait dans la V1 avec un défaut ; le comportement décrit ici est le bon.
-- ❓ **À confirmer** : hypothèse raisonnable de la rédaction, à valider avec Bruno avant de coder.
+- ❓ **À confirmer** : hypothèse de la rédaction, à valider avec Bruno avant de coder (toutes ont été tranchées dans la version 1.2 ; repère conservé pour les évolutions futures).
 
 **Vocabulaire** : un *don* regroupe des *articles* ; il est remis via un *bon d'enlèvement* signé par les deux parties ; une *convention* encadre la relation entre une entreprise et une association ; le *reçu fiscal* est émis par l'association à la demande de l'entreprise.
 
@@ -164,7 +164,7 @@ Navigation principale de l'entreprise : **Nouveau don · Mes dons 🆕 · Planni
   - nom du contact, e-mail, mot de passe et confirmation.
 - **Ce qui se passe** : l'établissement et le compte utilisateur sont créés **ensemble** (tout ou rien), puis la personne est connectée et arrive sur « Nouveau don ».
 - **Règles** :
-  - SIRET : 14 chiffres, bloquant. ❓ Contrôle de validité de la clé et d'existence du SIRET dans la base officielle.
+  - SIRET : 14 chiffres, bloquant ; contrôle de la clé et de l'existence du SIRET dans la base officielle (bloquant si le SIRET n'existe pas ; si la base est indisponible, l'inscription passe).
   - E-mail unique, bloquant. Mot de passe d'au moins 8 caractères, bloquant.
   - 🆕 **Vérification de l'adresse e-mail** par lien de confirmation (décision de Bruno) ; tant qu'elle n'est pas vérifiée, le compte ne peut ni publier ni signer.
   - La personne qui crée le compte devient **administratrice** de l'organisation (voir E2).
@@ -180,7 +180,7 @@ Navigation principale de l'entreprise : **Nouveau don · Mes dons 🆕 · Planni
 - **Règles** : 10 tentatives par 5 minutes et par e-mail ; session de 7 jours maximum ; mots de passe jamais stockés en clair (hachage à sens unique).
 - 🆕 **Plusieurs utilisateurs par organisation, avec niveaux d'accès** (décision de Bruno ; valable aussi pour les associations) :
   - l'administrateur invite des collègues par e-mail, choisit leur niveau, peut le modifier ou retirer l'accès ;
-  - niveaux proposés ❓ (à valider avec Bruno) :
+  - trois niveaux (décision de Bruno) :
 
 | Niveau | Peut faire |
 |---|---|
@@ -188,7 +188,7 @@ Navigation principale de l'entreprise : **Nouveau don · Mes dons 🆕 · Planni
 | Opérateur | Le quotidien : préparer et publier des dons (entreprise) ou se positionner (association), contrôler et signer les bons, messagerie |
 | Lecture | Consulter les dons, bons, archives et l'impact, sans rien modifier |
 
-- Les notifications vont aux utilisateurs concernés par leur niveau (❓ préférences par utilisateur).
+- Les notifications vont aux utilisateurs concernés par leur niveau, et chaque utilisateur choisit lui-même celles qu'il reçoit.
 - **Recette** : après 10 échecs, l'écran indique d'attendre ; la déconnexion invalide la session ; un utilisateur en lecture ne voit aucun bouton d'action et le serveur refuse ses actions.
 
 ### E3 · Compléter son profil et sa conformité
@@ -206,7 +206,7 @@ Navigation principale de l'entreprise : **Nouveau don · Mes dons 🆕 · Planni
 - **Règles** :
   - Sans Kbis déposé, toute publication est **bloquée** (E9) avec un lien vers le coffre-fort.
   - Fichiers : PDF, JPEG, PNG ou WebP, 5 Mo maximum ; 30 envois par heure.
-  - 🔧 **Congés** (décision de Bruno) : pendant la période, les **dons récurrents** (attributions automatiques du planning, E4) sont **suspendus automatiquement**, y compris pour une période déclarée à l'avance (un traitement planifié s'en charge au premier jour). L'entreprise peut **réactiver manuellement** un jour ou une association du planning pendant la période. Les associations concernées sont prévenues de la suspension. Les dons ponctuels déjà publiés ou pris en charge ne sont pas annulés automatiquement : l'entreprise peut les annuler (E13). ❓ Publication d'un don ponctuel pendant les congés : autorisée avec un avertissement « vous êtes en congés ».
+  - 🔧 **Congés** (décision de Bruno) : pendant la période, les **dons récurrents** (attributions automatiques du planning, E4) sont **suspendus automatiquement**, y compris pour une période déclarée à l'avance (un traitement planifié s'en charge au premier jour). L'entreprise peut **réactiver manuellement** un jour ou une association du planning pendant la période. Les associations concernées sont prévenues de la suspension. Les dons ponctuels déjà publiés ou pris en charge ne sont pas annulés automatiquement : l'entreprise peut les annuler (E13). La publication d'un don ponctuel reste possible pendant les congés, avec un avertissement « vous êtes en congés ».
   - Toutes les dates s'entendent dans le fuseau **Europe/Paris**.
 - **Recette** : publier sans Kbis affiche le blocage et le lien ; avec des congés du lundi au mercredi, l'association planifiée le mardi ne reçoit pas de don le mardi, sauf si l'entreprise a réactivé ce jour-là.
 
@@ -226,7 +226,7 @@ Navigation principale de l'entreprise : **Nouveau don · Mes dons 🆕 · Planni
 
 - **Objectif** : choisir des partenaires de confiance.
 - **Écran** : carte ou liste des associations, triées par distance réelle, avec badges : catégorie, « Habilitée » (affiché si l'entreprise dépasse 400 m²), « Chaîne du froid », « Vérifiée » par TraceDon, « Reconnue d'utilité publique » 🆕, capacité d'accueil (kg par collecte), nombre de bénéficiaires, congés en cours, présentation.
-- 🆕 **Dossier détaillé** (en ouvrant une association) : habilitation (niveau, date de fin), déclaration DDPP, attestation chaîne du froid, assurances, statut fiscal (intérêt général, rescrit, RUP), disponibilités de retrait (jours × matin/après-midi), bénévoles référents (sans coordonnées personnelles ❓), et **les documents du coffre-fort de l'association, consultables** (décision de Bruno).
+- 🆕 **Dossier détaillé** (en ouvrant une association) : habilitation (niveau, date de fin), déclaration DDPP, attestation chaîne du froid, assurances, statut fiscal (intérêt général, rescrit, RUP), disponibilités de retrait (jours × matin/après-midi), bénévoles (nom et rôle, sans téléphone), et **les documents du coffre-fort de l'association, consultables** (décision de Bruno).
 - 🆕 Actions depuis la fiche : « Proposer une convention », « Écrire » (si convention signée), « Ajouter au planning ».
 - **Règles** : les documents sont consultables en lecture seule par les entreprises connectées ; chaque consultation est comptée dans la limite de téléchargements (7.2). L'association est informée, sur son coffre-fort, que ses documents sont visibles des entreprises.
 - **Recette** : depuis la fiche d'une association, l'entreprise peut proposer une convention sans passer par le planning.
@@ -239,7 +239,7 @@ Navigation principale de l'entreprise : **Nouveau don · Mes dons 🆕 · Planni
   - 🔧 **Ordre de signature libre** : l'une ou l'autre partie peut signer en premier.
   - Statut « Signée » quand les deux ont signé.
   - 🆕 Notifications : l'autre partie est prévenue qu'une convention l'attend, puis que la convention est signée.
-  - **Reconduction tacite** (décision de Bruno) : une fois signée, la convention reste valable sans date de fin ; ❓ prévoir une résiliation par l'une ou l'autre partie.
+  - **Reconduction tacite** (décision de Bruno) : une fois signée, la convention reste valable sans date de fin. Chaque partie peut la **résilier avec un préavis d'un mois** (décision de Bruno) ; l'autre partie est notifiée, aucun nouveau don n'est possible entre elles après la fin du préavis, et les dons déjà en cours vont à leur terme.
   - Une convention peut aussi être créée par le coordinateur lors d'une attribution manuelle (C3) : elle est alors envoyée automatiquement aux deux parties pour signature.
 - **Recette** : l'association peut signer en premier sans erreur ; chaque partie est notifiée de la signature de l'autre.
 
@@ -265,7 +265,7 @@ Navigation principale de l'entreprise : **Nouveau don · Mes dons 🆕 · Planni
 ### E8 · Préparer un don matériel
 
 - **Objectif** : donner du matériel plutôt que le détruire (loi AGEC).
-- **Écran** : articles avec description libre, quantité, photo facultative, code-barres facultatif ; case **« Don divisible »** (plusieurs associations peuvent se partager les articles) ; 🔧 titre, description, adresse de récupération et pièce jointe comme pour l'alimentaire ; 🆕 poids estimé facultatif ❓.
+- **Écran** : articles avec description libre, quantité, photo facultative, code-barres facultatif ; case **« Don divisible »** (plusieurs associations peuvent se partager les articles) ; 🔧 titre, description, adresse de récupération et pièce jointe comme pour l'alimentaire ; 🆕 poids estimé facultatif (sert au calcul du CO₂ et à l'avertissement de capacité).
 - **Règles** : au moins un article pour publier (bloquant). Pas de suivi sanitaire.
 - **Recette** : publier un don matériel sans article est refusé avec un message clair.
 
@@ -306,7 +306,7 @@ Navigation principale de l'entreprise : **Nouveau don · Mes dons 🆕 · Planni
 - **Objectif** : garder la main sur le partage d'un don matériel.
 - **Ce qui se passe** : quand une association réclame une partie des articles, l'entreprise est notifiée et voit la sélection.
   - **Accepter** : le bon devient signable ; l'association est notifiée.
-  - **Refuser** : les articles redeviennent disponibles ; l'association est notifiée ; 🔧 le bon refusé est **conservé dans l'historique** avec le statut « Refusé » (pas supprimé), et ❓ les autres associations intéressées sont prévenues que des articles sont de nouveau libres.
+  - **Refuser** : les articles redeviennent disponibles ; l'association est notifiée ; 🔧 le bon refusé est **conservé dans l'historique** avec le statut « Refusé » (pas supprimé), et les autres associations intéressées sont prévenues que des articles sont de nouveau libres.
 - **Règles** : tant que la demande n'est pas acceptée, rien n'est signable ni contrôlable côté association. La demande peut être validée **par l'entreprise ou par le coordinateur** (décision de Bruno) ; la première décision prise s'applique et l'autre partie en est informée.
 - **Recette** : après un refus, les articles réapparaissent sur la place de marché et l'historique garde la trace de la demande.
 
@@ -427,19 +427,19 @@ Navigation principale de l'association : **Dons · Mes enlèvements 🆕 · Mess
 | 🆕 Informations de l'association | Dénomination, adresse, catégories modifiables (RNA fixe) | — |
 
 - **Règles** :
-  - 🔧 Une habilitation dont la date de fin est dépassée compte comme **non habilitée**, et l'association est prévenue 30 jours avant ❓.
-  - 🔧 Déposer le mandat signé d'un bénévole coche son mandat ; déposer l'habilitation propose de mettre à jour le niveau ❓.
+  - 🔧 Une habilitation dont la date de fin est dépassée compte comme **non habilitée**, et l'association est prévenue 30 jours avant.
+  - 🔧 Déposer le mandat signé d'un bénévole coche son mandat ; déposer l'habilitation propose de mettre à jour le niveau.
   - Mêmes règles de fichiers que pour l'entreprise.
 
 ### A3 · Être alertée d'un nouveau don 🆕
 
 - **Objectif** : ne pas rater un don, surtout un don frais à récupérer vite.
 - **Déclencheur** : un don est publié sur la place de marché (E9), ou des articles d'un don divisible redeviennent libres.
-- **Destinataires** : les associations dont le **rayon** et les **catégories**, réglés par elles-mêmes dans leur profil (décision de Bruno), correspondent au don, et qui ne sont pas en congés. L'inscription invite l'association à faire ce réglage ; tant qu'elle ne l'a pas fait, ❓ elle reçoit toutes les alertes.
+- **Destinataires** : les associations dont le **rayon** et les **catégories**, réglés par elles-mêmes dans leur profil (décision de Bruno), correspondent au don, et qui ne sont pas en congés. L'inscription invite l'association à faire ce réglage ; tant qu'elle ne l'a pas fait, elle reçoit toutes les alertes.
 - **Canaux** : **e-mail** et **notification sur l'appareil** si activée. Le message contient l'entreprise, la distance, la nature et le poids estimé, et un lien direct vers le don.
 - **Règles** :
   - Envoi à toute heure (décision de Bruno : pas de plage horaire).
-  - Une seule alerte par don et par association ; ❓ regroupement si plusieurs dons sont publiés en peu de temps.
+  - Une seule alerte par don et par association ; si une même entreprise publie plusieurs dons en moins de 15 minutes, ils sont regroupés dans une seule alerte.
   - Lien de désinscription dans chaque e-mail.
   - Le SMS n'est **pas retenu pour l'instant** (annexe B) ; prévoir que l'ajout d'un canal plus tard ne demande pas de refonte.
 - **Recette** : une association à 10 km, réglée sur 15 km et la catégorie du don, reçoit l'e-mail et la notification dans la minute qui suit la publication ; une association réglée sur 5 km ou en congés ne reçoit rien.
@@ -497,7 +497,7 @@ Voir E6 : ordre de signature **libre**, notification à l'autre partie.
 - **Règles** :
   - **Bloquant** : une association qui n'a pas, au minimum, **auto-déclaré son intérêt général** ne peut pas émettre ni signer de reçu fiscal (décision de Bruno).
   - **Modèle** : un modèle libre est accepté à condition de reprendre toutes les mentions obligatoires du Cerfa n° 16216 (décision de Bruno).
-  - ❓ **Mentions obligatoires et numérotation propre à l'association** (séquentielle par année) : à **valider par un juriste** avant la mise en production.
+  - **Mentions obligatoires et numérotation propre à l'association** (séquentielle par année) : à **valider par un juriste** avant la mise en production.
   - L'association n'accède qu'aux demandes qui lui sont adressées.
 - **Recette** : le reçu émis reprend exactement le montant de la demande ; une contestation revient chez l'entreprise avec son motif.
 
@@ -534,7 +534,7 @@ Navigation : **Tableau de bord · Entreprises · Associations · Dons · Message
 
 ### C1 · Avoir un compte coordinateur
 
-- Aucune inscription publique pour ce rôle. 🆕 Un coordinateur existant peut inviter un autre coordinateur par e-mail ❓ ; le premier compte est créé par l'administrateur technique.
+- Aucune inscription publique pour ce rôle. 🆕 Un coordinateur existant peut inviter un autre coordinateur par e-mail ; le premier compte est créé par l'administrateur technique.
 - Les coordinateurs partagent la même boîte de messagerie « support ».
 
 ### C2 · Piloter avec le tableau de bord
@@ -548,7 +548,7 @@ Navigation : **Tableau de bord · Entreprises · Associations · Dons · Message
 | CO₂ évité | Somme des CO₂ **enregistrés** à la confirmation des bons, avec équivalent kilomètres |
 | Tendance | Poids donné par mois sur 6 mois |
 | Conformité loi Garot | Entreprises > 400 m² sans aucune association habilitée **en cours de validité** parmi leurs conventions signées |
-| Dons sans preneur | Dons publiés depuis plus de X heures ❓ sans association, les plus anciens en premier |
+| Dons sans preneur | Dons publiés sans association depuis plus de **2 heures** (alimentaire) ou **48 heures** (matériel), les plus anciens en premier |
 
 - 🆕 Sélecteur de période (mois, trimestre, année) et export.
 
@@ -566,7 +566,7 @@ Navigation : **Tableau de bord · Entreprises · Associations · Dons · Message
 
 - Le coordinateur consulte le dossier documentaire, puis bascule le badge **« Vérifiée »** (avec date et nom du vérificateur).
 - Le badge est **informatif** (décision de Bruno) : il rassure les entreprises, il ne bloque rien.
-- 🆕 L'association est notifiée de la vérification. ❓ Le badge est retiré automatiquement si un document obligatoire est remplacé.
+- 🆕 L'association est notifiée de la vérification. Le badge est retiré automatiquement si un document obligatoire (récépissé RNA ou statuts) est remplacé, jusqu'à une nouvelle vérification.
 
 ### C5 · Consulter les listes et les dossiers
 
@@ -587,7 +587,7 @@ Le coordinateur voit toutes les conversations « support » et peut écrire à t
 
 ### C8 · Enseignes et réseaux
 
-Regroupements de plusieurs établissements (enseigne) ou antennes associatives (réseau), avec abonnement. Dans la V1, ces données existent sans écran de gestion : ❓ **hors périmètre** de la reconstruction tant que le modèle commercial n'est pas défini (voir annexe B).
+Regroupements de plusieurs établissements (enseigne) ou antennes associatives (réseau), avec abonnement. Dans la V1, ces données existent sans écran de gestion : **hors périmètre** (décision de Bruno) de la reconstruction tant que le modèle commercial n'est pas défini (voir annexe B).
 
 ---
 
@@ -757,6 +757,8 @@ stateDiagram-v2
     [*] --> AProposer
     AProposer --> UneSignature: une partie signe (ordre libre)
     UneSignature --> Signee: l'autre partie signe
+    Signee --> EnPreavis: une partie résilie
+    EnPreavis --> Resiliee: après un mois
   }
   state "Demande de reçu fiscal" as RF {
     [*] --> EnPreparation
@@ -789,7 +791,7 @@ stateDiagram-v2
 | R11 | Après la signature de l'entreprise, la liste d'articles du bon est gelée | Bloquant |
 | R12 | Confirmation : deux signatures et aucun article en attente | Bloquant |
 | R13 | Bon confirmé : définitivement non modifiable (registre légal) | Bloquant |
-| R14 | Convention : ordre de signature libre, reconduction tacite sans date de fin | — |
+| R14 | Convention : ordre de signature libre, reconduction tacite sans date de fin, résiliation avec préavis d'un mois | — |
 | R15 | Un bon confirmé ne figure que dans une seule demande de reçu fiscal | Bloquant |
 | R16 | Numéros (bons, demandes, reçus) uniques et séquentiels par année, sans doublon possible | Bloquant |
 | R17 | Toutes les dates et jours de la semaine en fuseau Europe/Paris | — |
@@ -875,7 +877,7 @@ Principe : **l'absence d'un service ne fait jamais planter l'application**.
 
 ### 7.6 Données personnelles
 
-Consentement préalable à toute mesure d'audience, modifiable à tout moment ; aucune donnée personnelle dans les adresses de pages ; durées de conservation à définir ❓ (les bons et reçus relèvent des obligations comptables) ; 🆕 export et suppression du compte sur demande.
+Consentement préalable à toute mesure d'audience, modifiable à tout moment ; aucune donnée personnelle dans les adresses de pages ; durées de conservation : bons et reçus 10 ans (obligations comptables), messages 3 ans, compte supprimé effacé sous 30 jours sauf les documents légaux, **à faire valider par le juriste** ; 🆕 export et suppression du compte sur demande.
 
 ---
 
@@ -933,14 +935,14 @@ Consentement préalable à toute mesure d'audience, modifiable à tout moment ; 
 | 9 | Plusieurs utilisateurs par organisation | Oui, avec plusieurs niveaux d'accès |
 | 10 | Vérification de l'e-mail à l'inscription | Oui |
 
-### Points restant à préciser
+### Décisions complémentaires du 9 octobre 2026
 
-1. **Juriste** : mentions obligatoires du reçu fiscal et numérotation propre à l'association.
-2. **Développeur → Bruno** : comparatif des niveaux de signature électronique et recommandation.
-3. **Niveaux d'accès** : valider la liste proposée en E2 (administrateur, opérateur, lecture) et les préférences de notification par utilisateur.
-4. **Congés** : publication d'un don ponctuel pendant les congés (proposé : autorisée avec avertissement).
-5. **Alertes** : comportement tant que l'association n'a pas réglé son rayon (proposé : toutes les alertes) ; regroupement de plusieurs dons publiés en peu de temps.
-6. **Convention** : modalités de résiliation par l'une des parties.
+Toutes les propositions de la rédaction ont été acceptées par Bruno, avec deux précisions : un don alimentaire est signalé « sans preneur » au coordinateur au bout de **2 heures** (48 heures pour un don matériel), et la résiliation d'une convention se fait avec un **préavis d'un mois** et une notification à l'autre partie. Elles sont intégrées dans le texte : vérification du SIRET, trois niveaux d'accès, notifications choisies par chaque utilisateur, invitation des coordinateurs, publication possible pendant les congés avec avertissement, poids estimé facultatif pour le matériel, alerte des autres associations après un refus, alertes reçues avant réglage du rayon, regroupement des alertes sur 15 minutes, prévenance 30 jours avant la fin d'une habilitation, liens entre documents déposés et profil, bénévoles affichés sans téléphone, retrait du badge « Vérifiée » au remplacement d'un document obligatoire, enseignes et réseaux hors périmètre, durées de conservation proposées.
+
+### Points restant à faire valider par des tiers
+
+1. **Juriste** : mentions obligatoires et numérotation du reçu fiscal ; durées de conservation des données.
+2. **Développeur → Bruno** : comparatif des niveaux de signature électronique (simple, avancée, qualifiée) et recommandation, avant de coder.
 
 ## Annexe D · Repères dans le code de la V1
 
