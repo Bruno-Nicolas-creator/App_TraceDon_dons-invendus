@@ -68,12 +68,16 @@ Ce produit doit, en permanence, respecter ces règles. Si tu vois que l'une d'el
 - Décision de Bruno (2026-10-08) : on garde les comptes de démo carrefour, coeur, resto et les données de test en production, pour l'instant. À trancher avant toute ouverture au public.
 - Le verrou « mode caché » (SITE_PASSWORD) n'est pas actif en production : la variable n'arrive pas au serveur sur Vercel, cause non élucidée. Le site est donc accessible à tous, inscription ouverte.
 - DocuSign : l'environnement local pointe vers la démo (demo.docusign.net), dont les signatures n'ont pas de valeur légale ; à vérifier côté Vercel avant l'ouverture au public.
+- TraceDon est le nom commercial de l'application (affiché partout depuis le 2026-10-05). Son site vitrine est un projet séparé (dépôt tracedon-vitrine, publié sur www.tracedon.fr).
+- Décision de Bruno (2026-10-09) : l'application sera **entièrement reconstruite** par un développeur. La référence est le cahier des charges docs/cahier-des-charges-parcours.md (parcours des trois rôles, règles R1 à R21, diagrammes, écarts de la V1 en annexe A) ; docs/manuel.html décrit la V1 et contient des inexactitudes. Toute évolution des parcours se reporte dans ce cahier des charges.
+- Décisions fonctionnelles du 2026-10-09 (détail en annexe C du cahier des charges) : le reçu fiscal est valorisé une fois par an par l'entreprise avec son propre logiciel (montant total saisi ou fichier importé), puis émis et signé par l'association, qui doit au minimum avoir auto-déclaré son intérêt général ; l'application ne calcule plus de montant. Alertes « nouveau don » par e-mail et notification (rayon et catégories choisis par l'association, pas de SMS pour l'instant). Le bénévole ne signe pas lui-même : l'association signe pour lui. Convention signée dans n'importe quel ordre et reconduite tacitement ; attestation d'intérêt général sans limite de durée. Badge « Vérifiée » informatif. Congés : dons récurrents suspendus, réactivables à la main. Plusieurs utilisateurs par organisation avec niveaux d'accès ; e-mail vérifié à l'inscription ; documents des associations visibles par les entreprises.
 
 ## Où on en est
 - Dernière fonctionnalité livrée : l'attestation intérêt général signée par DocuSign (art. 238 bis du CGI), sur le même principe que l'attestation fiscale existante.
 - Dernières évolutions (2026-10-08) : durcissement sécurité (SSRF, contrôle d'accès du bon, limites de fréquence partout, dépendances), mesure d'audience PostHog avec consentement (inactive tant que la clé n'est pas dans Vercel), archive des audits et surveillance planifiée.
 - Avant l'ouverture au public : lire le registre des points ouverts dans docs/audits/README.md (sauvegarde Neon à tester, mot de passe Neon à régénérer, comptes de démo, verrou du site, DocuSign, clé PostHog).
-- Prochaine étape en attente : la vue détaillée du "dossier association" (habilitation, chaîne du froid, assurances...) affichée au donateur après qu'il se soit positionné sur un don — actuellement seul un badge résumé apparaît dans la liste des associations.
+- Cahier des charges de la reconstruction rédigé le 2026-10-09 : docs/cahier-des-charges-parcours.md, et sa version illustrée partageable au développeur (page privée https://claude.ai/artifact/Je2vwCwVEZZF6fxeKwfu94, à partager depuis le bouton Partager). Restent à préciser : mentions et numérotation du reçu fiscal (juriste), niveau de signature électronique (le développeur explique à Bruno), niveaux d'accès, publication pendant les congés, alertes avant réglage du rayon, résiliation de la convention.
+- Prochaine étape : transmettre le cahier des charges au développeur. Le « dossier association » détaillé, ancienne prochaine étape, fait désormais partie du cahier des charges (étape E5).
 
 ## Idées de Claude, pas encore demandées (toujours en dernière rubrique)
 Règles de cette rubrique (décidées par Bruno le 2026-10-08) :
@@ -83,19 +87,15 @@ Règles de cette rubrique (décidées par Bruno le 2026-10-08) :
 - Mise à jour : à chaque commit (le rappel automatique le demande), Claude ajoute ce qu'il a repéré et retire ce que Bruno vient de demander ou de faire. Si Bruno dit « non », la ligne passe dans « Écartées par Bruno » avec la date, et Claude ne la repropose pas. La vérification mensuelle propose de nouvelles idées dans son rapport, sans modifier ce fichier.
 - Aucun secret : des noms, jamais des valeurs.
 
-### À proposer (12 sur 15)
+### À proposer (8 sur 15)
 - [avant ouverture] Trancher le sort des comptes de démo carrefour, coeur, resto et des 25 dons de test visibles des associations — ils sont utilisables par tous avec un mot de passe connu — 1 h — repéré le 2026-10-08
 - [avant ouverture] Tester une restauration de sauvegarde Neon sur une branche isolée, et régénérer le mot de passe de la base exposé par erreur le 2026-10-02 — gestes de Bruno sur Neon, Claude le guide — 30 min — repéré le 2026-10-02
 - [avant ouverture] Vérifier dans Vercel si DocuSign pointe vers la démo (signatures sans valeur légale) ou la production — 15 min — repéré le 2026-10-08
 - [avant ouverture] Faire marcher le verrou « mode caché » (SITE_PASSWORD) ou y renoncer : le site est public avec l'inscription ouverte — il faut une capture des variables Vercel — 1 h — repéré le 2026-10-01
 - [avant ouverture] Créer le projet PostHog (région Europe), mettre la clé phc_ dans Vercel, et citer PostHog dans la politique de confidentialité — 30 min — repéré le 2026-10-08
 - [utile] Ajouter une alerte sur les erreurs des visiteurs une fois PostHog branché — pour réagir avant qu'un utilisateur ne se plaigne — 1 h — repéré le 2026-10-08
-- [utile] Mettre en cache les distances Google Maps des pages /associations et /dons — économise le quota Google et accélère l'affichage — 2 à 3 h — repéré le 2026-10-08
-- [utile] Mettre en place des tests automatiques du flux de don sur une base séparée de la production — prérequis pour tout gros nettoyage du code sans casser le don — 1 à 2 jours — repéré le 2026-10-08
-- [utile] Afficher le « dossier association » détaillé au donateur après son positionnement (c'est la « prochaine étape en attente » ci-dessus) — il manque aujourd'hui un détail sur l'habilitation et la chaîne du froid — 1 à 2 jours — repéré le 2026-09-29
-- [confort] Fusionner les quatre copies du code de signature DocuSign (docusign.tsx, 839 lignes) — une correction n'aurait plus à être répétée — 2 à 3 jours, après les tests automatiques — repéré le 2026-10-08
-- [confort] Découper les gros écrans profil/page.tsx (791 lignes) et BonEnlevementClient.tsx (723 lignes) — modifications plus sûres — 1 à 2 jours, après les tests automatiques — repéré le 2026-10-08
-- [confort] Regrouper la politique de fichiers (5 Mo, formats) aujourd'hui répétée en plusieurs endroits — ajouter un format ne demanderait qu'une modification — 1 jour — repéré le 2026-10-08
+- [utile] Tant que la V1 reste en service pendant la reconstruction, corriger ses défauts qui touchent le flux de don (DLC dépassée contournable, PDF signé figé avant le contrôle, montant fiscal toujours à 0 €, don pris en charge republiable) — annexe A du cahier des charges — 1 à 2 jours — repéré le 2026-10-09
+- [utile] Mettre à jour ou retirer docs/manuel.html, inexact sur une dizaine de points — éviter que le développeur s'y fie à la place du cahier des charges — 1 h — repéré le 2026-10-09
 
 ### Écartées par Bruno (ne pas reproposer)
 - Resserrer la limite de téléchargement des PDF à environ 10 par minute — écarté le 2026-10-08
