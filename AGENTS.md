@@ -30,6 +30,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Avant de te lancer sur quelque chose de gros, dis-moi ton plan en clair et attends mon feu vert.
 - À chaque fois que tu touches à Git ou GitHub (commit, branche, pull request, workflow), dis-moi en UNE phrase simple ce que tu fais et à quoi ça sert — je veux comprendre mon poste de contrôle.
 
+## Habitude : garder ce fichier à jour
+- À la fin de chaque tâche, et AVANT chaque commit, Claude se demande si AGENTS.md doit changer : nouvelle règle ou convention, décision de Bruno, nouvelle variable d'environnement, tâche planifiée créée ou modifiée, point ouvert ou résolu, section « Où on en est ». Si oui, il le met à jour dans le même commit ; si non, il le dit en une phrase.
+- Rappel automatique : un réglage du projet (.claude/settings.json, script .claude/hooks/rappel-agents-md.js) rappelle cette question à Claude quand il commite du code ou de la configuration sans toucher à AGENTS.md. Il ne bloque jamais.
+- Filet de sécurité : la vérification mensuelle (tâche planifiée verification-mensuelle-securite) contrôle aussi que ce fichier reflète l'état réel du projet.
+- Jamais de secret dans ce fichier : seulement des noms de variables, jamais leurs valeurs.
+
 ## RÈGLE VIVANTE
 Chaque fois qu'une ligne de ce fichier me gêne à l'usage — trop de questions, pas assez, du jargon, des explications inutiles — je te demande de la modifier ici, et tu t'y tiens ensuite. Ce brief s'ajuste à moi, pas l'inverse.
 
@@ -57,6 +63,14 @@ Ce produit doit, en permanence, respecter ces règles. Si tu vois que l'une d'el
 - Style de commit : phrase en français à l'impératif, pas de conventional commits.
 - Mesure d'audience PostHog : soumise au consentement (bandeau + choix modifiable dans le profil), inactive tant que NEXT_PUBLIC_POSTHOG_KEY est absente, aucune requête vers PostHog avant accord ni après refus. L'enregistrement d'écran reste désactivé (NEXT_PUBLIC_POSTHOG_REPLAY) tant que Bruno ne l'active pas explicitement. Ne jamais mettre de clé personnelle PostHog (phx_) dans le code, un fichier versionné ou une variable NEXT_PUBLIC_.
 
+- Limites de fréquence (règle 6) : stockées en base (table LimiteFrequence, src/lib/rateLimiter.ts), partagées entre toutes les instances Vercel. Toute action serveur doit récupérer la session avec getSessionLimitee (src/lib/sessionLimitee.ts, importée sous le nom getSession dans les fichiers d'actions), jamais avec getSession de src/lib/auth.ts ; toute route de téléchargement appelle tropDeLecturesDocument ; les envois de fichiers, la publication et le positionnement ont leurs limites dédiées. Toute nouvelle action ou route doit suivre ce modèle.
+- Audits : les rapports sont archivés dans docs/audits/ (index et registre des points ouverts dans docs/audits/README.md), sans aucun secret. Deux tâches planifiées existent (visibles dans la section « Scheduled » de l'application Claude) : verification-mensuelle-securite (le 1er de chaque mois à 9 h, écrit un rapport sans commit) et surveillance-quotidienne-tracedon (chaque matin à 8 h, alerte seulement en cas de problème). Elles ne tournent que si l'application Claude est ouverte.
+- Décision de Bruno (2026-10-08) : on garde les comptes de démo carrefour, coeur, resto et les données de test en production, pour l'instant. À trancher avant toute ouverture au public.
+- Le verrou « mode caché » (SITE_PASSWORD) n'est pas actif en production : la variable n'arrive pas au serveur sur Vercel, cause non élucidée. Le site est donc accessible à tous, inscription ouverte.
+- DocuSign : l'environnement local pointe vers la démo (demo.docusign.net), dont les signatures n'ont pas de valeur légale ; à vérifier côté Vercel avant l'ouverture au public.
+
 ## Où on en est
 - Dernière fonctionnalité livrée : l'attestation intérêt général signée par DocuSign (art. 238 bis du CGI), sur le même principe que l'attestation fiscale existante.
+- Dernières évolutions (2026-10-08) : durcissement sécurité (SSRF, contrôle d'accès du bon, limites de fréquence partout, dépendances), mesure d'audience PostHog avec consentement (inactive tant que la clé n'est pas dans Vercel), archive des audits et surveillance planifiée.
+- Avant l'ouverture au public : lire le registre des points ouverts dans docs/audits/README.md (sauvegarde Neon à tester, mot de passe Neon à régénérer, comptes de démo, verrou du site, DocuSign, clé PostHog).
 - Prochaine étape en attente : la vue détaillée du "dossier association" (habilitation, chaîne du froid, assurances...) affichée au donateur après qu'il se soit positionné sur un don — actuellement seul un badge résumé apparaît dans la liste des associations.
