@@ -32,7 +32,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Habitude : garder ce fichier à jour
 - À la fin de chaque tâche, et AVANT chaque commit, Claude se demande si AGENTS.md doit changer : nouvelle règle ou convention, décision de Bruno, nouvelle variable d'environnement, tâche planifiée créée ou modifiée, point ouvert ou résolu, section « Où on en est ». Si oui, il le met à jour dans le même commit ; si non, il le dit en une phrase.
-- Rappel automatique : un réglage du projet (.claude/settings.json, script .claude/hooks/rappel-agents-md.js) rappelle cette question à Claude quand il commite du code ou de la configuration sans toucher à AGENTS.md. Il ne bloque jamais.
+- Rappel automatique : un réglage du projet (.claude/settings.json, script .claude/hooks/rappel-agents-md.js) rappelle cette question à Claude quand il commite du code ou de la configuration (et rappelle aussi la rubrique des idées en dernière partie du fichier, même si AGENTS.md est déjà modifié). Il ne bloque jamais.
 - Filet de sécurité : la vérification mensuelle (tâche planifiée verification-mensuelle-securite) contrôle aussi que ce fichier reflète l'état réel du projet.
 - Jamais de secret dans ce fichier : seulement des noms de variables, jamais leurs valeurs.
 
@@ -74,3 +74,29 @@ Ce produit doit, en permanence, respecter ces règles. Si tu vois que l'une d'el
 - Dernières évolutions (2026-10-08) : durcissement sécurité (SSRF, contrôle d'accès du bon, limites de fréquence partout, dépendances), mesure d'audience PostHog avec consentement (inactive tant que la clé n'est pas dans Vercel), archive des audits et surveillance planifiée.
 - Avant l'ouverture au public : lire le registre des points ouverts dans docs/audits/README.md (sauvegarde Neon à tester, mot de passe Neon à régénérer, comptes de démo, verrou du site, DocuSign, clé PostHog).
 - Prochaine étape en attente : la vue détaillée du "dossier association" (habilitation, chaîne du froid, assurances...) affichée au donateur après qu'il se soit positionné sur un don — actuellement seul un badge résumé apparaît dans la liste des associations.
+
+## Idées de Claude, pas encore demandées (toujours en dernière rubrique)
+Règles de cette rubrique (décidées par Bruno le 2026-10-08) :
+- Elle liste ce que Claude a repéré d'utile et que Bruno n'a pas encore demandé. Claude n'exécute RIEN de cette liste sans que Bruno le demande.
+- Plafond : 15 lignes au maximum dans « À proposer ». Quand c'est plein, Claude regroupe des lignes ou demande à Bruno de trancher.
+- Une ligne = une phrase : `[urgence] action — pourquoi — effort — repéré le AAAA-MM-JJ`. Urgences : « avant ouverture », « utile », « confort ». Classées de la plus urgente à la moins urgente. La sécurité détaillée reste dans docs/audits/README.md ; cette rubrique le référence sans le dupliquer.
+- Mise à jour : à chaque commit (le rappel automatique le demande), Claude ajoute ce qu'il a repéré et retire ce que Bruno vient de demander ou de faire. Si Bruno dit « non », la ligne passe dans « Écartées par Bruno » avec la date, et Claude ne la repropose pas. La vérification mensuelle propose de nouvelles idées dans son rapport, sans modifier ce fichier.
+- Aucun secret : des noms, jamais des valeurs.
+
+### À proposer (12 sur 15)
+- [avant ouverture] Trancher le sort des comptes de démo carrefour, coeur, resto et des 25 dons de test visibles des associations — ils sont utilisables par tous avec un mot de passe connu — 1 h — repéré le 2026-10-08
+- [avant ouverture] Tester une restauration de sauvegarde Neon sur une branche isolée, et régénérer le mot de passe de la base exposé par erreur le 2026-10-02 — gestes de Bruno sur Neon, Claude le guide — 30 min — repéré le 2026-10-02
+- [avant ouverture] Vérifier dans Vercel si DocuSign pointe vers la démo (signatures sans valeur légale) ou la production — 15 min — repéré le 2026-10-08
+- [avant ouverture] Faire marcher le verrou « mode caché » (SITE_PASSWORD) ou y renoncer : le site est public avec l'inscription ouverte — il faut une capture des variables Vercel — 1 h — repéré le 2026-10-01
+- [avant ouverture] Créer le projet PostHog (région Europe), mettre la clé phc_ dans Vercel, et citer PostHog dans la politique de confidentialité — 30 min — repéré le 2026-10-08
+- [utile] Ajouter une alerte sur les erreurs des visiteurs une fois PostHog branché — pour réagir avant qu'un utilisateur ne se plaigne — 1 h — repéré le 2026-10-08
+- [utile] Mettre en cache les distances Google Maps des pages /associations et /dons — économise le quota Google et accélère l'affichage — 2 à 3 h — repéré le 2026-10-08
+- [utile] Mettre en place des tests automatiques du flux de don sur une base séparée de la production — prérequis pour tout gros nettoyage du code sans casser le don — 1 à 2 jours — repéré le 2026-10-08
+- [utile] Afficher le « dossier association » détaillé au donateur après son positionnement (c'est la « prochaine étape en attente » ci-dessus) — il manque aujourd'hui un détail sur l'habilitation et la chaîne du froid — 1 à 2 jours — repéré le 2026-09-29
+- [confort] Fusionner les quatre copies du code de signature DocuSign (docusign.tsx, 839 lignes) — une correction n'aurait plus à être répétée — 2 à 3 jours, après les tests automatiques — repéré le 2026-10-08
+- [confort] Découper les gros écrans profil/page.tsx (791 lignes) et BonEnlevementClient.tsx (723 lignes) — modifications plus sûres — 1 à 2 jours, après les tests automatiques — repéré le 2026-10-08
+- [confort] Regrouper la politique de fichiers (5 Mo, formats) aujourd'hui répétée en plusieurs endroits — ajouter un format ne demanderait qu'une modification — 1 jour — repéré le 2026-10-08
+
+### Écartées par Bruno (ne pas reproposer)
+- Resserrer la limite de téléchargement des PDF à environ 10 par minute — écarté le 2026-10-08
+- Supprimer ou changer le mot de passe des comptes de démo autres que le coordinateur — écarté pour l'instant le 2026-10-08 (voir la première ligne ci-dessus : à retrancher avant l'ouverture)

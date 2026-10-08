@@ -24,13 +24,19 @@ process.stdin.on("end", () => {
 
     const codeOuConfiguration = fichiers.some((f) => FICHIERS_CONCERNES.test(f));
     const agentsModifie = fichiers.includes("AGENTS.md");
-    if (!codeOuConfiguration || agentsModifie) return;
+    if (!codeOuConfiguration) return;
 
-    const rappel =
-      "Rappel (habitude du projet) : tu es sur le point de commiter du code ou de la configuration sans modification d'AGENTS.md. " +
-      "Avant de commiter, demande-toi si AGENTS.md doit changer : nouvelle règle ou convention, décision de Bruno, nouvelle variable d'environnement, " +
-      "tâche planifiée, point ouvert ou résolu, ou la section « Où on en est ». Si oui, mets-le à jour avant ce commit (sans aucun secret) ; " +
-      "si non, dis-le en une phrase dans ta réponse à Bruno.";
+    const questionIdees =
+      "Rubrique « Idées de Claude, pas encore demandées » (dernière rubrique d'AGENTS.md, 15 lignes maximum) : " +
+      "as-tu repéré pendant ce travail une action utile que Bruno n'a pas demandée (à ajouter, avec urgence, effort et date) ? " +
+      "Bruno vient-il d'en demander ou d'en faire une de la liste (à retirer), ou d'en refuser une (à déplacer dans « Écartées par Bruno » avec la date) ? " +
+      "N'exécute jamais une idée de cette liste sans demande de Bruno.";
+    const rappel = agentsModifie
+      ? "Rappel (habitude du projet) : AGENTS.md est modifié dans ce commit, bien. Vérifie seulement la rubrique des idées. " + questionIdees
+      : "Rappel (habitude du projet) : tu es sur le point de commiter du code ou de la configuration sans modification d'AGENTS.md. " +
+        "Avant de commiter, demande-toi si AGENTS.md doit changer : nouvelle règle ou convention, décision de Bruno, nouvelle variable d'environnement, " +
+        "tâche planifiée, point ouvert ou résolu, section « Où on en est ». Si oui, mets-le à jour avant ce commit (sans aucun secret) ; " +
+        "si non, dis-le en une phrase dans ta réponse à Bruno. " + questionIdees;
     process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", additionalContext: rappel } }));
   } catch {
     // Ne jamais bloquer ni perturber un commit à cause de ce rappel.
