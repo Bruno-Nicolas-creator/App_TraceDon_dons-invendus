@@ -17,6 +17,10 @@ import { TOUTES_CATEGORIES_DON } from "@/lib/categoriesDon";
 import { articlesDuBon, articlesEntierementReclames, poidsTotalArticles } from "@/lib/donDivisible";
 import { notifier } from "@/lib/notifications";
 import { allergenesValides } from "@/lib/allergenes";
+import { tropDeTentatives } from "@/lib/rateLimiter";
+
+const MAX_EXTRACTIONS = 10;
+const FENETRE_EXTRACTIONS_MS = 60 * 60 * 1000;
 
 async function requireSession() {
   const session = await getSession();
@@ -319,6 +323,12 @@ export async function extraireArticlesAction(
     return { ok: false, error: "Aucune pièce jointe à analyser." };
   }
 
+  // Chaque appel déclenche un traitement IA payant : sans limite, un compte pourrait le relancer
+  // en boucle (coût, quota partagé, et articles en double ajoutés au don à chaque fois).
+  if (await tropDeTentatives(`extraction:${session.userId}`, MAX_EXTRACTIONS, FENETRE_EXTRACTIONS_MS)) {
+    return { ok: false, error: "Trop d'analyses de pièce jointe en peu de temps, merci de réessayer dans une heure." };
+  }
+
   let extraits;
   try {
     extraits = await extraireArticlesDepuisFichier(Buffer.from(don.pieceJointeContenu), don.pieceJointeContentType);
@@ -424,6 +434,10 @@ export async function sePositionner(
   const session = await requireSession();
   if (session.role !== "ASSOCIATION" || !session.associationId) throw new Error("Action réservée aux associations.");
 
+  // Les doublons fausseraient le contrôle du nombre d'articles réservés plus bas (un article
+  // listé deux fois n'est modifié qu'une fois) : on les retire avant toute validation.
+  articleIds = articleIds ? Array.from(new Set(articleIds)) : null;
+
   const donCible = await prisma.don.findUniqueOrThrow({ where: { id: donId }, include: { articles: true } });
 
   // Don matériel divisible : on réclame seulement les articles choisis, pas le don entier.
@@ -510,6 +524,12 @@ export async function sePositionner(
       data: { associationAssigneeId: associationId },
     });
     if (count !== articleIds!.length) {
+      // Réservation partielle (un autre article a été pris entre-temps) : on libère ceux qu'on
+      // vient de réserver, sinon ils resteraient bloqués sans aucun bon d'enlèvement associé.
+      await prisma.article.updateMany({
+        where: { id: { in: articleIds! }, donId, associationAssigneeId: associationId },
+        data: { associationAssigneeId: null },
+      });
       return { ok: false, error: "Certains articles viennent d'être réclamés par une autre association, merci de rafraîchir la page." };
     }
     const donMisAJour = await prisma.don.findUniqueOrThrow({ where: { id: donId }, include: { articles: true } });
@@ -573,7 +593,11 @@ async function requireControleAssociation(articleId: string) {
   const article = await prisma.article.findUniqueOrThrow({
     where: { id: articleId },
     include: {
-      don: { include: { bonsEnlevement: { select: { associationId: true, confirme: true, enAttenteValidationDonateur: true } } } },
+      don: {
+        include: {
+          bonsEnlevement: { select: { associationId: true, confirme: true, enAttenteValidationDonateur: true, signatureAssociationLe: true } },
+        },
+      },
     },
   });
   // Don divisible : l'attributaire est porté par l'article. Don non divisible : par le don entier.
@@ -586,6 +610,12 @@ async function requireControleAssociation(articleId: string) {
     throw new Error("Le donateur doit d'abord valider votre demande de positionnement.");
   }
   assurerBonNonConfirme(bonAssocie);
+  // L'association signe en dernier, après avoir contrôlé les articles : une fois sa signature
+  // posée, modifier quantités, températures ou statuts ferait diverger le registre du document
+  // réellement signé sur DocuSign.
+  if (bonAssocie?.signatureAssociationLe) {
+    throw new Error("Vous avez déjà signé le bon d'enlèvement : le contrôle des articles ne peut plus être modifié.");
+  }
   return { article, associationId: proprietaireId };
 }
 
