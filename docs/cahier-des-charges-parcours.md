@@ -24,7 +24,23 @@
 - 🔧 **Corrigé** : existait dans la V1 avec un défaut ; le comportement décrit ici est le bon.
 - ❓ **À confirmer** : hypothèse raisonnable de la rédaction, à valider avec Bruno avant de coder.
 
-**Vocabulaire** : un *don* regroupe des *articles* ; il est remis via un *bon d'enlèvement* signé par les deux parties ; une *convention* encadre la relation entre une entreprise et une association ; le *reçu fiscal* est émis par l'association à la demande de l'entreprise. Le lexique réglementaire (loi Garot, AGEC, RNA, DDPP, RUP…) est en fin de document.
+**Vocabulaire** : un *don* regroupe des *articles* ; il est remis via un *bon d'enlèvement* signé par les deux parties ; une *convention* encadre la relation entre une entreprise et une association ; le *reçu fiscal* est émis par l'association à la demande de l'entreprise.
+
+### Lexique
+
+- **Loi Garot (2016)** : oblige les commerces alimentaires de plus de 400 m² à proposer une convention de don à au moins une association habilitée.
+- **Loi AGEC (2020)** : interdit la destruction des invendus non alimentaires neufs.
+- **Habilitation aide alimentaire** : autorisation régionale ou nationale de distribuer des denrées.
+- **RNA** : Répertoire national des associations (W + 9 chiffres).
+- **SIRET** : identifiant d'établissement à 14 chiffres. **Kbis** : extrait d'immatriculation d'une société.
+- **DDPP** : Direction départementale de la protection des populations ; déclaration obligatoire pour manipuler des denrées d'origine animale.
+- **Rescrit fiscal** : confirmation par l'administration de l'éligibilité d'une association au mécénat.
+- **Intérêt général** : statut ouvrant droit à la réduction d'impôt de 60 % (art. 238 bis du CGI) pour l'entreprise donatrice.
+- **RUP** : association reconnue d'utilité publique ; les dons qui lui sont faits sont dispensés de régularisation de la TVA déduite à l'achat.
+- **DLC / DDM** : date limite de consommation / date de durabilité minimale.
+- **Bon d'enlèvement** : registre signé de ce qui a été remis, article par article.
+- **Convention de don** : contrat cadre entre une entreprise et une association.
+- **Reçu fiscal** : document émis par l'association, permettant à l'entreprise de justifier sa réduction d'impôt.
 
 ---
 
@@ -946,19 +962,3 @@ Pour consulter le comportement d'origine (application Next.js, base PostgreSQL v
 | CO₂, rappels, produits, adresses | `src/lib/impactCo2.ts`, `src/lib/rappelConso.ts`, `src/lib/openFoodFacts.ts`, `src/lib/ignAdresse.ts` |
 | Manuel fonctionnel de la V1 | `docs/manuel.html` |
 | Audits de sécurité | `docs/audits/` |
-
-## Lexique
-
-- **Loi Garot (2016)** : oblige les commerces alimentaires de plus de 400 m² à proposer une convention de don à au moins une association habilitée.
-- **Loi AGEC (2020)** : interdit la destruction des invendus non alimentaires neufs.
-- **Habilitation aide alimentaire** : autorisation régionale ou nationale de distribuer des denrées.
-- **RNA** : Répertoire national des associations (W + 9 chiffres).
-- **SIRET** : identifiant d'établissement à 14 chiffres. **Kbis** : extrait d'immatriculation d'une société.
-- **DDPP** : Direction départementale de la protection des populations ; déclaration obligatoire pour manipuler des denrées d'origine animale.
-- **Rescrit fiscal** : confirmation par l'administration de l'éligibilité d'une association au mécénat.
-- **Intérêt général** : statut ouvrant droit à la réduction d'impôt de 60 % (art. 238 bis du CGI) pour l'entreprise donatrice.
-- **RUP** : association reconnue d'utilité publique ; les dons qui lui sont faits sont dispensés de régularisation de la TVA déduite à l'achat.
-- **DLC / DDM** : date limite de consommation / date de durabilité minimale.
-- **Bon d'enlèvement** : registre signé de ce qui a été remis, article par article.
-- **Convention de don** : contrat cadre entre une entreprise et une association.
-- **Reçu fiscal** : document émis par l'association, permettant à l'entreprise de justifier sa réduction d'impôt.
