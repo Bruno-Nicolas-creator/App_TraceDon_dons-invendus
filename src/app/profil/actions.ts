@@ -10,6 +10,7 @@ import { definitionDocumentPourRole, nomFichierSur, validerFichierDocument, type
 import { champTropLong, LONGUEUR_MAX_CHAMP_COURT } from "@/lib/validation";
 import { disponibilitesValides } from "@/lib/disponibilites";
 import { typesActiviteValides } from "@/lib/activiteAssociation";
+import { IDS_FAMILLES_ALERTE, RAYONS_ALERTE_KM } from "@/lib/famillesAlerte";
 import { roleBenevoleValide } from "@/lib/benevoles";
 import { tropDEnvoisFichiers } from "@/lib/rateLimiter";
 import { endpointPushValide } from "@/lib/webPush";
@@ -350,30 +351,21 @@ export async function definirCapaciteAction(formData: FormData) {
   revalidatePath("/associations");
 }
 
-export async function definirPreferenceAlerteAction(formData: FormData) {
+/** Réglages des alertes « nouveau don » de l'association (cf. src/lib/alertesDon.ts). */
+export async function definirAlertesAction(formData: FormData) {
   const session = await getSession();
   if (!session || session.role !== "ASSOCIATION" || !session.associationId) {
     throw new Error("Action réservée aux associations.");
   }
 
-  const preferenceAlerte = String(formData.get("preferenceAlerte") ?? "EMAIL");
-  if (!["EMAIL", "SMS", "SMS_EMAIL"].includes(preferenceAlerte)) {
-    throw new Error("Préférence d'alerte invalide.");
-  }
-  const telephoneAlerteSms = String(formData.get("telephoneAlerteSms") ?? "").trim();
-  if (champTropLong(telephoneAlerteSms, LONGUEUR_MAX_CHAMP_COURT)) {
-    throw new Error("Numéro de téléphone trop long.");
-  }
-  if (preferenceAlerte !== "EMAIL" && !telephoneAlerteSms) {
-    throw new Error("Un numéro de téléphone est requis pour recevoir des alertes par SMS.");
-  }
+  const rayonBrut = String(formData.get("alerteRayonKm") ?? "");
+  const rayon = rayonBrut === "" ? null : Number(rayonBrut);
+  if (rayon !== null && !(RAYONS_ALERTE_KM as readonly number[]).includes(rayon)) throw new Error("Rayon invalide.");
+  const familles = [...new Set(formData.getAll("alerteFamilles").map(String))].filter((f) => IDS_FAMILLES_ALERTE.has(f));
 
   await prisma.association.update({
     where: { id: session.associationId },
-    data: {
-      preferenceAlerte: preferenceAlerte as "EMAIL" | "SMS" | "SMS_EMAIL",
-      telephoneAlerteSms: telephoneAlerteSms || null,
-    },
+    data: { alertesActives: formData.get("alertesActives") === "on", alerteRayonKm: rayon, alerteFamilles: familles },
   });
   revalidatePath("/profil");
 }

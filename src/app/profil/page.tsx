@@ -15,6 +15,7 @@ import SelecteurDisponibilites from "@/components/SelecteurDisponibilites";
 import ActiverNotificationsPush from "@/components/ActiverNotificationsPush";
 import { ChoixMesureAudience } from "@/components/BandeauMesureAudience";
 import { isPushConfigure } from "@/lib/webPush";
+import { FAMILLES_ALERTE, RAYONS_ALERTE_KM } from "@/lib/famillesAlerte";
 import CoffreFort, { type ConventionSignee, type DocumentExistant } from "./CoffreFort";
 import {
   ajouterBenevoleAction,
@@ -25,7 +26,7 @@ import {
   definirCapaciteAction,
   definirConformiteAssociationAction,
   definirContactRappelAction,
-  definirPreferenceAlerteAction,
+  definirAlertesAction,
   definirPresentationAction,
   definirReferentDonAction,
   definirSurfaceVenteAction,
@@ -68,8 +69,9 @@ export default async function ProfilPage() {
   let disponibilitesRetrait: string[] = [];
   let typesActivite: string[] = [];
   let notreAction = "";
-  let preferenceAlerte: "EMAIL" | "SMS" | "SMS_EMAIL" = "EMAIL";
-  let telephoneAlerteSms = "";
+  let alertesActives = true;
+  let alerteRayonKm: number | null = null;
+  let alerteFamilles: string[] = [];
   let contactRappelNom = "";
   let contactRappelTelephone = "";
   let contactRappelEmail = "";
@@ -124,8 +126,9 @@ export default async function ProfilPage() {
     disponibilitesRetrait = association?.disponibilitesRetrait ?? [];
     typesActivite = association?.typesActivite ?? [];
     notreAction = association?.notreAction ?? "";
-    preferenceAlerte = association?.preferenceAlerte ?? "EMAIL";
-    telephoneAlerteSms = association?.telephoneAlerteSms ?? "";
+    alertesActives = association?.alertesActives ?? true;
+    alerteRayonKm = association?.alerteRayonKm ?? null;
+    alerteFamilles = association?.alerteFamilles ?? [];
     contactRappelNom = association?.contactRappelNom ?? "";
     contactRappelTelephone = association?.contactRappelTelephone ?? "";
     contactRappelEmail = association?.contactRappelEmail ?? "";
@@ -402,30 +405,48 @@ export default async function ProfilPage() {
         </div>
 
         {session.role === "ASSOCIATION" && (
-          <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4">
+          <div id="alertes" className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4">
             <div>
-              <h2 className="text-sm font-semibold">Préférences d&apos;alerte</h2>
+              <h2 className="text-sm font-semibold">Alertes nouveaux dons</h2>
               <p className="mt-0.5 text-xs text-ink-muted">
-                Comment souhaitez-vous être prévenu(e) des nouveaux dons disponibles ?
+                Recevez un e-mail (et une notification sur votre appareil, si vous les avez activées) dès qu&apos;un don
+                correspondant à vos réglages est publié. Sans réglage, vous recevez toutes les alertes.
               </p>
             </div>
-            <form action={definirPreferenceAlerteAction} className="space-y-2.5">
-              <select
-                name="preferenceAlerte"
-                defaultValue={preferenceAlerte}
-                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-              >
-                <option value="EMAIL">Email uniquement</option>
-                <option value="SMS">SMS uniquement</option>
-                <option value="SMS_EMAIL">SMS et email</option>
-              </select>
-              <input
-                type="tel"
-                name="telephoneAlerteSms"
-                defaultValue={telephoneAlerteSms}
-                placeholder="Numéro pour réception SMS"
-                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-              />
+            <form action={definirAlertesAction} className="space-y-3">
+              <label className="flex items-center gap-2.5 text-sm font-semibold">
+                <input type="checkbox" name="alertesActives" defaultChecked={alertesActives} className="h-4 w-4" />
+                Recevoir les alertes
+              </label>
+              <label className="block space-y-1">
+                <span className="text-xs font-semibold">Rayon autour de votre adresse</span>
+                <select
+                  name="alerteRayonKm"
+                  defaultValue={alerteRayonKm ?? ""}
+                  className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                >
+                  <option value="">Partout</option>
+                  {RAYONS_ALERTE_KM.map((km) => (
+                    <option key={km} value={km}>
+                      {km} km
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <fieldset className="space-y-1.5">
+                <legend className="text-xs font-semibold">Types de dons qui vous intéressent (aucun coché = tous)</legend>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {FAMILLES_ALERTE.map((f) => (
+                    <label
+                      key={f.id}
+                      className="flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-surface-alt px-3 py-1.5 text-xs has-[:checked]:border-brand has-[:checked]:bg-brand-tint has-[:checked]:font-semibold"
+                    >
+                      <input type="checkbox" name="alerteFamilles" value={f.id} defaultChecked={alerteFamilles.includes(f.id)} className="h-3.5 w-3.5" />
+                      {f.label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
               <button
                 type="submit"
                 className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"

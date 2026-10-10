@@ -305,8 +305,8 @@
       Si un planning récurrent prévoit <em>une seule</em> association ce jour-là, le don lui est
       assigné directement (à condition qu'une convention signée existe avec elle et qu'elle ne soit pas
       en congés), et elle en est prévenue. Sinon, il est publié sur la place de marché, visible de toutes les
-      associations inscrites (sans filtre de distance). Aucune alerte n'est envoyée aux associations :
-      elles découvrent les dons en consultant la place de marché.
+      associations inscrites (sans filtre de distance). Les associations concernées reçoivent une
+      alerte « nouveau don » selon leurs réglages (voir partie 4).
     </li>
     <li>
       <strong>Une association se positionne</strong>
@@ -607,9 +607,16 @@
       repas/maraude), texte libre visible des entreprises.</li>
     <li><strong>Disponibilités de retrait</strong> : grille jour × matin/après-midi, enregistrée
       mais affichée nulle part ailleurs.</li>
-    <li><strong>Préférence d'alerte</strong> : email, SMS, ou les deux. Ce choix est enregistré mais
-      <strong>n'a aucun effet</strong> : aucune alerte de nouveau don n'est envoyée, et aucun SMS
-      n'existe.</li>
+    <li><strong>Alertes nouveaux dons</strong> (depuis le 10 octobre 2026) : interrupteur, rayon
+      autour de l'adresse (partout, 5, 10, 15, 25 ou 50&nbsp;km) et types de dons suivis (frais ;
+      fruits, légumes et boulangerie ; épicerie et boissons ; non alimentaire ; matériel). Sans
+      réglage, l'association reçoit toutes les alertes. Dès qu'un don est publié sur la place de
+      marché — ou que des articles d'un don à partager redeviennent libres —, chaque association
+      concernée reçoit un e-mail et une notification : alertes activées, don dans son rayon (distance
+      à vol d'oiseau ; si une adresse est introuvable, elle est prévenue quand même), type suivi, pas
+      en congés, pas déjà positionnée. Une alerte par don, sans regroupement ; pas d'alerte quand le
+      planning attribue directement le don. L'ancien choix « e-mail / SMS » a été retiré (pas de
+      SMS).</li>
     <li><strong>Capacité d'accueil</strong> (kg par collecte) et <strong>nombre de
       bénéficiaires</strong> : purement déclaratif, jamais vérifié — sert uniquement à afficher un
       avertissement non bloquant lors d'un positionnement.</li>
@@ -790,12 +797,13 @@
       l'autre partie, prévenue ;</li>
     <li>demande de reçu fiscal, modifiée ou retirée → l'association ; demande contestée ou reçu émis
       et signé → l'entreprise ;</li>
+    <li>nouveau don publié sur la place de marché, ou articles d'un don à partager de nouveau libres →
+      les associations concernées, selon leurs réglages d'alerte (partie 4) ;</li>
     <li>nouveau message dans la messagerie → le ou les destinataires.</li>
   </ul>
   <p>Un envoi raté n'interrompt jamais l'action métier qui vient de réussir — la personne peut
     simplement ne pas recevoir la notification.</p>
-  <p>Ne sont <strong>pas</strong> notifiés : la publication d'un don, le positionnement sur un don
-    entier, les attestations d'intérêt général, l'annulation pour congés, la confirmation d'un bon, la vérification d'une
+  <p>Ne sont <strong>pas</strong> notifiés : le positionnement sur un don entier, les attestations d'intérêt général, l'annulation pour congés, la confirmation d'un bon, la vérification d'une
     association.</p>
 
   <h3>Messagerie interne</h3>
@@ -966,11 +974,14 @@
     charge, attribution par le planning (convention et congés revérifiés), contournement de la
     validation d'un don divisible par appel direct, numéros de bon et d'attestation (annuels, sans
     doublon), notifications d'attribution et de convention, dates à l'heure de Paris, filtres des
-    archives. Puis, le même jour, reçu fiscal valorisé par l'entreprise et émis par l'association.
+    archives. Puis, le même jour, reçu fiscal valorisé par l'entreprise et émis par l'association, et
+    alertes « nouveau don » pour les associations.
   </div>
   <ul>
-    <li><strong>Notifications</strong> : aucune alerte de nouveau don aux associations ; la préférence
-      d'alerte du profil n'a pas d'effet.</li>
+    <li><strong>Alertes</strong> : pas de regroupement des dons publiés à quelques minutes
+      d'intervalle ; le lien de l'e-mail renvoie vers les réglages du profil (connexion nécessaire),
+      pas de désinscription en un clic. Les e-mails ne partent que si l'adresse d'expédition Resend
+      est configurée sur le serveur.</li>
     <li><strong>Suivi</strong> : pas de liste des dons en cours pour l'entreprise ; pas d'annulation
       volontaire d'un don ; pas de mot de passe oublié ; un seul utilisateur par organisation ;
       informations d'inscription non modifiables.</li>

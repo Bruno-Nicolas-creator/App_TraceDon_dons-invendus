@@ -1,6 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { origineRequete } from "@/lib/requestOrigin";
+import { alerterNouveauDon } from "@/lib/alertesDon";
 import { prisma } from "@/lib/prisma";
 import { getSessionLimitee as getSession } from "@/lib/sessionLimitee";
 import { rechercherProduitParCodeBarre, type ProduitScanne } from "@/lib/openFoodFacts";
@@ -453,6 +456,10 @@ export async function publierDon(donId: string) {
       data: { statut: "PUBLIE", publieLe: new Date() },
     });
     if (count === 0) return { ok: false as const, error: "Ce don a déjà été publié." };
+    // Alertes « nouveau don » aux associations concernées, envoyées après la réponse pour ne pas
+    // ralentir la publication (pas d'alerte quand le planning attribue le don directement).
+    const origineSite = await origineRequete();
+    after(() => alerterNouveauDon(donId, "PUBLICATION", origineSite));
   }
 
   revalidatePath("/");
@@ -867,6 +874,8 @@ export async function refuserPositionnementAction(bonId: string) {
     `${bon.entreprise.raisonSociale} a refusé votre demande de positionnement. Les articles sont de nouveau disponibles pour une autre association.`,
     "/dons"
   );
+  const origineSite = await origineRequete();
+  after(() => alerterNouveauDon(bon.donId, "ARTICLES_LIBERES", origineSite));
 }
 
 export async function verifierAssociation(associationId: string, verifiee: boolean) {

@@ -180,8 +180,14 @@ model Association {
   capaciteAccueilKg          Float?
   // Purement informatif, visible par les entreprises donatrices pour choisir leurs partenaires.
   nombreBeneficiaires        Int?
+  // Ancien choix e-mail/SMS, sans effet (le SMS n'est pas retenu) : remplacé par les réglages ci-dessous.
   preferenceAlerte           PreferenceAlerte            @default(EMAIL)
   telephoneAlerteSms         String?
+  // Alertes « nouveau don » (chantier C2, 2026-10-10) : rayon en km (null = partout) et familles
+  // de dons suivies (src/lib/alertesDon.ts ; vide = toutes).
+  alertesActives             Boolean                     @default(true)
+  alerteRayonKm              Int?
+  alerteFamilles             String[]                    @default([])
   declarationInteretGeneral  Boolean                     @default(false)
   rescritStatut              StatutRescrit               @default(NON_DEPOSE)
   rescritDateDepot           DateTime?
