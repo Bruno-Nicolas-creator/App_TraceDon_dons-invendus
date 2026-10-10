@@ -66,6 +66,11 @@ const styles = StyleSheet.create({
   qrFooter: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 12 },
   qr: { width: 56, height: 56 },
   qrText: { fontSize: 7.5, color: "#6B6459", flex: 1 },
+
+  // Description du lot (titre, description, adresse de récupération, accès)
+  lotBloc: { border: "1pt solid #201F1B", padding: 8, gap: 4 },
+  lotLigne: { fontSize: 8.5, lineHeight: 1.35 },
+  lotLabel: { fontFamily: "Helvetica-Bold" },
 });
 
 export type ArticlePdf = {
@@ -81,6 +86,14 @@ export type ArticlePdf = {
 
 export type BonEnlevementPdfData = {
   numero: string;
+  typeDon: "ALIMENTAIRE" | "MATERIEL";
+  lot: {
+    titre: string | null;
+    description: string | null;
+    adresseRecuperation: string | null;
+    instructionsAcces: string | null;
+    aUnePieceJointe: boolean;
+  };
   entreprise: { raisonSociale: string; adresse: string; siret: string; referentDonNom: string | null };
   association: { denomination: string; rna: string; habilitationLabel: string };
   benevoleCollecteurNom: string | null;
@@ -123,11 +136,15 @@ function LigneIdentite({
 
 export default function BonEnlevementDocument({ data }: { data: BonEnlevementPdfData }) {
   const nombreValides = data.articles.filter((a) => a.statut === "VALIDE").length;
+  const { lot } = data;
+  const lotRenseigne = !!(lot.titre || lot.description || lot.adresseRecuperation || lot.instructionsAcces || lot.aUnePieceJointe);
 
   return (
     <Document title={`Bordereau de collecte ${data.numero}`}>
       <Page size="A4" style={styles.page}>
-        <Text style={styles.title}>BORDEREAU DE COLLECTE DE DONS ALIMENTAIRES</Text>
+        <Text style={styles.title}>
+          BORDEREAU DE COLLECTE DE DONS {data.typeDon === "MATERIEL" ? "MATÉRIELS" : "ALIMENTAIRES"}
+        </Text>
         <Text style={styles.subtitle}>Document établi en application de la convention de don en vigueur entre les parties</Text>
 
         <Text style={styles.sectionTitle}>1. Identification des parties</Text>
@@ -170,6 +187,44 @@ export default function BonEnlevementDocument({ data }: { data: BonEnlevementPdf
             dernier
           />
         </View>
+
+        {lotRenseigne && (
+          <>
+            <Text style={styles.sectionTitle}>Description du lot</Text>
+            <View style={styles.lotBloc}>
+              {lot.titre && (
+                <Text style={styles.lotLigne}>
+                  <Text style={styles.lotLabel}>Titre : </Text>
+                  {lot.titre}
+                </Text>
+              )}
+              {lot.description && (
+                <Text style={styles.lotLigne}>
+                  <Text style={styles.lotLabel}>Description : </Text>
+                  {lot.description}
+                </Text>
+              )}
+              {lot.adresseRecuperation && (
+                <Text style={styles.lotLigne}>
+                  <Text style={styles.lotLabel}>Adresse de récupération : </Text>
+                  {lot.adresseRecuperation}
+                </Text>
+              )}
+              {lot.instructionsAcces && (
+                <Text style={styles.lotLigne}>
+                  <Text style={styles.lotLabel}>Accès : </Text>
+                  {lot.instructionsAcces}
+                </Text>
+              )}
+              {lot.aUnePieceJointe && (
+                <Text style={styles.lotLigne}>
+                  <Text style={styles.lotLabel}>Pièce jointe : </Text>
+                  consultable sur le bon d&apos;enlèvement dans l&apos;application.
+                </Text>
+              )}
+            </View>
+          </>
+        )}
 
         <Text style={styles.sectionTitle}>2. Détail des produits collectés ou liste jointe</Text>
         <View style={styles.table}>

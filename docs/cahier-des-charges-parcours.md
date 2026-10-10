@@ -906,7 +906,7 @@ Consentement préalable à toute mesure d'audience, modifiable à tout moment ; 
 | Création de compte | Organisation et utilisateur créés séparément | Tout ou rien |
 | Habilitation | Date de fin ignorée | Prise en compte (R4) |
 | CO₂ | Recalculé à chaque affichage, jamais enregistré | Enregistré à la confirmation |
-| Don matériel | Ni titre, ni description, ni adresse de récupération, ni pièce jointe ; le bon affichait l'adresse de l'entreprise | Mêmes informations de lot que l'alimentaire, visibles partout (E8) |
+| Don matériel | Ni titre, ni description, ni adresse de récupération, ni pièce jointe (corrigé dans la V1 le 2026-10-10 sur l'écran et le PDF du bon) | Mêmes informations de lot que l'alimentaire, visibles partout (E8) |
 | Fuseau horaire | Heure du serveur (jour du planning faux en soirée) | Europe/Paris (R17) |
 | Distances | Depuis l'adresse de l'entreprise, sans cache | Depuis l'adresse de récupération, avec cache |
 | Coordinateur | Pas de page de détail des bons, recherche factice, pas de lien Messages | Détail en lecture, recherche, messagerie |

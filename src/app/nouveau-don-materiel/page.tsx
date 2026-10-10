@@ -47,6 +47,10 @@ export default async function NouveauDonMaterielPage() {
     <NouveauDonMaterielClient
       don={{
         id: don.id,
+        titre: don.titre ?? "",
+        description: don.description ?? "",
+        adresseRecuperation: don.adresseRecuperation ?? "",
+        pieceJointeNomFichier: don.pieceJointeNomFichier,
         divisible: don.divisible,
         instructionsAcces: don.instructionsAcces ?? "",
         articles: don.articles.map((a) => ({ id: a.id, designation: a.designation, quantiteDeclaree: a.quantiteDeclaree, aUnePhoto: !!a.photoContentType })),
@@ -58,6 +62,7 @@ export default async function NouveauDonMaterielPage() {
           .filter((a) => a.associationAssigneeId === bon.associationId)
           .map((a) => ({ designation: a.designation, quantiteDeclaree: a.quantiteDeclaree })),
       }))}
+      adresseEntreprise={entreprise.adresse}
       peutDonnerAlimentaireAussi={entreprise.natureActivite === "ALIMENTAIRE_ET_NON_ALIMENTAIRE"}
       congesJusquau={congesEnCours ? formaterDateConges(congesEnCours.fin) : null}
       nonLusMessages={nonLusMessages}

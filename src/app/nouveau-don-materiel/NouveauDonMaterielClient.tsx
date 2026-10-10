@@ -4,17 +4,26 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import {
   definirDetailsDonMaterielAction,
+  definirDetailsLotAction,
   publierDon,
   refuserPositionnementAction,
   retirerArticle,
+  retirerPieceJointeDonAction,
+  televerserPieceJointeDonAction,
   validerPositionnementAction,
 } from "@/app/actions";
 import AjouterArticleMaterielForm, { type ArticleMaterielAjoute } from "@/components/AjouterArticleMaterielForm";
 import BottomTabBar from "@/components/BottomTabBar";
+import BoutonDictee from "@/components/BoutonDictee";
 import { suivre } from "@/lib/analytics";
+import { useDicteeVocale } from "@/lib/dicteeVocale";
 
 type Don = {
   id: string;
+  titre: string;
+  description: string;
+  adresseRecuperation: string;
+  pieceJointeNomFichier: string | null;
   divisible: boolean;
   instructionsAcces: string;
   articles: ArticleMaterielAjoute[];
@@ -29,12 +38,14 @@ export type DemandePositionnement = {
 export default function NouveauDonMaterielClient({
   don,
   demandesEnAttente,
+  adresseEntreprise,
   peutDonnerAlimentaireAussi,
   congesJusquau,
   nonLusMessages = 0,
 }: {
   don: Don;
   demandesEnAttente: DemandePositionnement[];
+  adresseEntreprise: string;
   peutDonnerAlimentaireAussi: boolean;
   congesJusquau: string | null;
   nonLusMessages?: number;
@@ -43,6 +54,13 @@ export default function NouveauDonMaterielClient({
   const [articles, setArticles] = useState<ArticleMaterielAjoute[]>(don.articles);
   const [divisible, setDivisible] = useState(don.divisible);
   const [instructionsAcces, setInstructionsAcces] = useState(don.instructionsAcces);
+  // Informations du lot : mêmes champs que pour un don alimentaire (titre, description, adresse de
+  // récupération, pièce jointe), sans pré-remplissage puisqu'un don matériel change à chaque fois.
+  const [titre, setTitre] = useState(don.titre);
+  const [description, setDescription] = useState(don.description);
+  const [adresseRecuperation, setAdresseRecuperation] = useState(don.adresseRecuperation || adresseEntreprise);
+  const [pieceJointeNomFichier, setPieceJointeNomFichier] = useState(don.pieceJointeNomFichier);
+  const [erreurPieceJointe, setErreurPieceJointe] = useState<string | null>(null);
   const [erreurPublication, setErreurPublication] = useState<string | null>(null);
   const [manqueKbis, setManqueKbis] = useState(false);
   const [erreurRetrait, setErreurRetrait] = useState<string | null>(null);
@@ -53,6 +71,38 @@ export default function NouveauDonMaterielClient({
   const [demandesTraitees, setDemandesTraitees] = useState<Record<string, boolean>>({});
   const [erreurDemande, setErreurDemande] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const { dictaphoneDisponible, dictEeEnCours, basculerDictee } = useDicteeVocale((texte) =>
+    setDescription((prev) => (prev ? `${prev} ${texte}` : texte))
+  );
+
+  const enregistrerDetailsLot = (champs: Partial<{ titre: string; description: string; adresseRecuperation: string }>) => {
+    const suivant = { titre, description, adresseRecuperation, ...champs };
+    startTransition(() => {
+      void definirDetailsLotAction(donId, suivant.titre, suivant.description, suivant.adresseRecuperation, instructionsAcces);
+    });
+  };
+
+  const televerserFichier = (fichier: File) => {
+    setErreurPieceJointe(null);
+    const formData = new FormData();
+    formData.set("donId", donId);
+    formData.set("fichier", fichier);
+    startTransition(async () => {
+      const resultat = await televerserPieceJointeDonAction(formData);
+      if (!resultat.ok) {
+        setErreurPieceJointe(resultat.error ?? "Impossible d'envoyer ce fichier.");
+        return;
+      }
+      setPieceJointeNomFichier(fichier.name);
+    });
+  };
+
+  const retirerFichier = () => {
+    setPieceJointeNomFichier(null);
+    startTransition(() => {
+      void retirerPieceJointeDonAction(donId);
+    });
+  };
 
   const traiterDemande = (bonId: string, accepter: boolean) => {
     setErreurDemande(null);
@@ -113,6 +163,10 @@ export default function NouveauDonMaterielClient({
       setArticles([]);
       setDivisible(false);
       setInstructionsAcces("");
+      setTitre("");
+      setDescription("");
+      setAdresseRecuperation(adresseEntreprise);
+      setPieceJointeNomFichier(null);
       setAssigneA(resultat.assigneA);
       setBonPublieId(resultat.bonId);
       setVientDetrePublie(true);
@@ -231,6 +285,112 @@ export default function NouveauDonMaterielClient({
           </div>
         )}
 
+        <section className="space-y-3.5 rounded-xl border border-border bg-surface p-3.5">
+          <h2 className="text-sm font-semibold">Informations du lot</h2>
+          <div>
+            <label htmlFor="titreLot" className="mb-1 block text-xs text-ink-muted">
+              Titre du lot
+            </label>
+            <input
+              id="titreLot"
+              type="text"
+              value={titre}
+              onChange={(e) => setTitre(e.target.value)}
+              onBlur={() => enregistrerDetailsLot({ titre })}
+              placeholder="Ex. Mobilier de bureau — fin de bail"
+              className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
+            />
+          </div>
+
+          <div>
+            <div className="mb-1 flex items-center justify-between">
+              <label htmlFor="descriptionLot" className="text-xs text-ink-muted">
+                Description — optionnel
+              </label>
+              <BoutonDictee disponible={dictaphoneDisponible} enCours={dictEeEnCours} onClick={basculerDictee} />
+            </div>
+            <textarea
+              id="descriptionLot"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              onBlur={() => enregistrerDetailsLot({ description })}
+              placeholder="Ex. Bureaux, chaises et armoires en bon état, à récupérer avant la fin du mois"
+              rows={3}
+              className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
+            />
+          </div>
+
+          <div>
+            <div className="mb-1 flex items-center justify-between gap-2 text-xs text-ink-muted">
+              <span>Joindre ou prendre une photo du lot ou d&apos;une liste</span>
+              {pieceJointeNomFichier && (
+                <a
+                  href={`/api/dons/${donId}/piece-jointe`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="truncate underline decoration-dotted underline-offset-2"
+                >
+                  {pieceJointeNomFichier}
+                </a>
+              )}
+            </div>
+            {erreurPieceJointe && (
+              <div className="mb-2 rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreurPieceJointe}</div>
+            )}
+            <div className="flex items-center gap-2.5">
+              <label className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-border bg-surface-alt px-2.5 py-3 text-xs font-semibold text-ink transition-transform active:scale-95">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M8 4H14L19 9V19C19 20.1 18.1 21 17 21H8C6.9 21 6 20.1 6 19V6C6 4.9 6.9 4 8 4Z"
+                    stroke="#201F1B"
+                    strokeWidth="1.6"
+                    strokeLinejoin="round"
+                  />
+                  <path d="M14 4V9H19" stroke="#201F1B" strokeWidth="1.6" strokeLinejoin="round" />
+                </svg>
+                Joindre un fichier
+                <input
+                  type="file"
+                  accept="application/pdf,image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const fichier = e.target.files?.[0];
+                    if (fichier) televerserFichier(fichier);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              <label className="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-border bg-surface-alt px-2.5 py-3 text-xs font-semibold text-ink transition-transform active:scale-95">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M4 8.5C4 7.4 4.9 6.5 6 6.5H8L9.2 4.5H14.8L16 6.5H18C19.1 6.5 20 7.4 20 8.5V17C20 18.1 19.1 19 18 19H6C4.9 19 4 18.1 4 17V8.5Z"
+                    stroke="#201F1B"
+                    strokeWidth="1.6"
+                  />
+                  <circle cx="12" cy="12.5" r="3.4" stroke="#201F1B" strokeWidth="1.6" />
+                </svg>
+                Prendre une photo
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => {
+                    const fichier = e.target.files?.[0];
+                    if (fichier) televerserFichier(fichier);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+            {pieceJointeNomFichier && (
+              <button type="button" onClick={retirerFichier} className="mt-2 text-xs font-semibold text-ink-muted underline">
+                Retirer la pièce jointe
+              </button>
+            )}
+          </div>
+        </section>
+
         <section>
           <div className="mb-2.5 flex items-baseline justify-between">
             <h2 className="text-sm font-semibold">Dons ajoutés</h2>
@@ -318,6 +478,21 @@ export default function NouveauDonMaterielClient({
               </span>
             </span>
           </label>
+
+          <div>
+            <label htmlFor="adresseRecuperation" className="mb-1 block text-xs text-ink-muted">
+              Adresse de récupération
+            </label>
+            <input
+              id="adresseRecuperation"
+              type="text"
+              value={adresseRecuperation}
+              onChange={(e) => setAdresseRecuperation(e.target.value)}
+              onBlur={() => enregistrerDetailsLot({ adresseRecuperation })}
+              placeholder={adresseEntreprise}
+              className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
+            />
+          </div>
 
           <div>
             <label htmlFor="instructionsAcces" className="mb-1 block text-xs text-ink-muted">

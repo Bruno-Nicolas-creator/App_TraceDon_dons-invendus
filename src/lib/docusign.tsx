@@ -130,6 +130,14 @@ export async function genererPdfBon(bonId: string, origin: string): Promise<Buff
     <BonEnlevementDocument
       data={{
         numero: bon.numero,
+        typeDon: bon.don.type,
+        lot: {
+          titre: bon.don.titre,
+          description: bon.don.description,
+          adresseRecuperation: bon.don.adresseRecuperation ?? bon.entreprise.adresse,
+          instructionsAcces: bon.don.instructionsAcces,
+          aUnePieceJointe: !!bon.don.pieceJointeContentType,
+        },
         entreprise: {
           raisonSociale: bon.entreprise.raisonSociale,
           adresse: bon.entreprise.adresse,
