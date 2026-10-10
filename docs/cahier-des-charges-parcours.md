@@ -265,7 +265,12 @@ Navigation principale de l'entreprise : **Nouveau don · Mes dons 🆕 · Planni
 ### E8 · Préparer un don matériel
 
 - **Objectif** : donner du matériel plutôt que le détruire (loi AGEC).
-- **Écran** : articles avec description libre, quantité, photo facultative, code-barres facultatif ; case **« Don divisible »** (plusieurs associations peuvent se partager les articles) ; 🔧 titre, description, adresse de récupération et pièce jointe comme pour l'alimentaire ; 🆕 poids estimé facultatif (sert au calcul du CO₂ et à l'avertissement de capacité).
+- **Écran** :
+  - 🔧 **les mêmes informations de lot que pour un don alimentaire** (décision de Bruno) : titre, description (au clavier ou à la voix), adresse de récupération (par défaut celle de l'établissement), instructions d'accès et pièce jointe (photo ou document) ;
+  - articles avec description libre, quantité, photo facultative, code-barres facultatif ;
+  - case **« Don divisible »** (plusieurs associations peuvent se partager les articles) ;
+  - 🆕 poids estimé facultatif (sert au calcul du CO₂ et à l'avertissement de capacité).
+- **Ce qui se passe** : titre, description, adresse de récupération, instructions d'accès et pièce jointe apparaissent **partout où le don est montré** : place de marché et alertes côté association, bon d'enlèvement (écran et PDF), « Mes dons » côté entreprise, listes du coordinateur.
 - **Règles** : au moins un article pour publier (bloquant). Pas de suivi sanitaire.
 - **Recette** : publier un don matériel sans article est refusé avec un message clair.
 
@@ -901,6 +906,7 @@ Consentement préalable à toute mesure d'audience, modifiable à tout moment ; 
 | Création de compte | Organisation et utilisateur créés séparément | Tout ou rien |
 | Habilitation | Date de fin ignorée | Prise en compte (R4) |
 | CO₂ | Recalculé à chaque affichage, jamais enregistré | Enregistré à la confirmation |
+| Don matériel | Ni titre, ni description, ni adresse de récupération, ni pièce jointe ; le bon affichait l'adresse de l'entreprise | Mêmes informations de lot que l'alimentaire, visibles partout (E8) |
 | Fuseau horaire | Heure du serveur (jour du planning faux en soirée) | Europe/Paris (R17) |
 | Distances | Depuis l'adresse de l'entreprise, sans cache | Depuis l'adresse de récupération, avec cache |
 | Coordinateur | Pas de page de détail des bons, recherche factice, pas de lien Messages | Détail en lecture, recherche, messagerie |
