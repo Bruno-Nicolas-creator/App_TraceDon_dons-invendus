@@ -55,6 +55,9 @@ export type BonAffiche = {
   aUnePieceJointe?: boolean;
   benevoleCollecteurId?: string | null;
   benevoleCollecteurNom?: string | null;
+  /** Don annulé par l'entreprise : plus rien n'est modifiable ni signable sur ce bon. */
+  donAnnule?: boolean;
+  motifAnnulation?: string | null;
 };
 
 type ImpactCarbone = { co2EviteKg: number; equivalenceKm: number | null };
@@ -88,7 +91,7 @@ export default function BonEnlevementClient({
   const associationSigne = bon.associationSigne;
   // Ordre de signature libre ; la liste reste modifiable tant que les deux n'ont pas signé, et
   // toute modification annule la signature déjà posée (cf. src/lib/bonSignature.ts).
-  const verrouille = bon.confirme || (donateurSigne && associationSigne);
+  const verrouille = bon.confirme || (donateurSigne && associationSigne) || !!bon.donAnnule;
   const uneSignaturePosee = !verrouille && (donateurSigne || associationSigne);
   const peutControlerArticles = role === "ASSOCIATION" && !verrouille;
   // Le don matériel repose sur une liste établie avant publication : contrairement à
@@ -430,6 +433,13 @@ export default function BonEnlevementClient({
       </header>
 
       <main className="flex-1 space-y-5 overflow-y-auto px-5 pb-4">
+        {bon.donAnnule && (
+          <div className="rounded-2xl bg-accent-tint p-4 text-xs text-accent">
+            <div className="font-semibold">Don annulé par l&apos;entreprise</div>
+            {bon.motifAnnulation && <div className="mt-1">Motif : « {bon.motifAnnulation} »</div>}
+            <div className="mt-1">Aucun enlèvement n&apos;est à prévoir ; ce bon reste consultable pour mémoire.</div>
+          </div>
+        )}
         {peutAjouterArticles && (
           <section>
             <h2 className="mb-2.5 text-sm font-semibold">Ajouter un article</h2>
@@ -672,7 +682,7 @@ export default function BonEnlevementClient({
               <button
                 type="button"
                 onClick={() => demarrerSignature("DONATEUR")}
-                disabled={donateurSigne || !docusignConfigure || signatureEnCours !== null}
+                disabled={donateurSigne || !!bon.donAnnule || !docusignConfigure || signatureEnCours !== null}
                 className={`flex-1 rounded-xl border-[1.5px] border-dashed border-[#C7C1B0] py-3.5 text-xs font-semibold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
                   donateurSigne ? "bg-brand-tint text-brand-dark" : "bg-surface"
                 }`}
@@ -692,7 +702,7 @@ export default function BonEnlevementClient({
               <button
                 type="button"
                 onClick={() => demarrerSignature("ASSOCIATION")}
-                disabled={associationSigne || !docusignConfigure || signatureEnCours !== null}
+                disabled={associationSigne || !!bon.donAnnule || !docusignConfigure || signatureEnCours !== null}
                 className={`flex-1 rounded-xl border-[1.5px] border-dashed border-[#C7C1B0] py-3.5 text-xs font-semibold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
                   associationSigne ? "bg-brand-tint text-brand-dark" : "bg-surface"
                 }`}
@@ -719,7 +729,7 @@ export default function BonEnlevementClient({
               devront alors signer la version à jour.
             </div>
           )}
-          {verrouille && !bon.confirme && (
+          {verrouille && !bon.confirme && !bon.donAnnule && (
             <div className="rounded-lg bg-brand-tint px-3 py-2 text-[11.5px] leading-snug text-brand-dark">
               Signé par les deux parties : la liste est verrouillée. Vous pouvez confirmer l&apos;enlèvement.
             </div>
@@ -738,7 +748,7 @@ export default function BonEnlevementClient({
         <button
           type="button"
           onClick={confirmer}
-          disabled={confirmationEnCours}
+          disabled={confirmationEnCours || !!bon.donAnnule}
           className="w-full rounded-full bg-brand py-3.5 text-[15px] font-bold text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {confirmationEnCours ? "Confirmation…" : "Confirmer l'enlèvement"}

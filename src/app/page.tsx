@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { jourSemaineDuJour } from "@/lib/planning";
 import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
 import { compterMessagesNonLus } from "@/lib/messagerie";
+import { compterDonsATraiter } from "@/lib/mesDons";
 import { peutDonnerAlimentaire, peutDonnerMateriel } from "@/lib/activiteEntreprise";
 import { isExtractionConfiguree } from "@/lib/extractionArticles";
 import NouveauDonClient from "./NouveauDonClient";
@@ -68,6 +69,7 @@ export default async function NouveauDonPage() {
       associationsAujourdhui={associationsAujourdhui}
       congesJusquau={congesEnCours ? formaterDateConges(congesEnCours.fin) : null}
       nonLusMessages={nonLusMessages}
+      donsATraiter={await compterDonsATraiter(session.entrepriseId)}
       peutDonnerMaterielAussi={peutDonnerMateriel(entreprise.natureActivite)}
       extractionConfiguree={isExtractionConfiguree()}
     />

@@ -98,6 +98,8 @@ export default async function BonEnlevementPage({
     divisible: bon.don.divisible,
     instructionsAcces: bon.don.instructionsAcces,
     titre: bon.don.titre,
+    donAnnule: bon.don.statut === "ANNULE",
+    motifAnnulation: bon.don.motifAnnulation,
     description: bon.don.description,
     adresseRecuperation: bon.don.adresseRecuperation ?? bon.entreprise.adresse,
     aUnePieceJointe: !!bon.don.pieceJointeContentType,

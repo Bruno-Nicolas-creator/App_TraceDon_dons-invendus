@@ -503,6 +503,22 @@
     l'entreprise pour chaque association déjà conventionnée, signée par l'association — une seule
     par couple entreprise/association.</p>
 
+  <h3>Mes dons et annulation</h3>
+  <p>Depuis le 10 octobre 2026, un bouton « Mes dons » en haut des écrans de nouveau don (avec une
+    pastille indiquant le nombre de dons qui attendent une action) ouvre la liste des dons publiés,
+    pris en charge, et annulés depuis moins de 30 jours. Filtres « Tous / À traiter / En cours /
+    Annulés ». Chaque don affiche son état (« Publié, en attente d'une association (il y a 3h) »,
+    « Demande partielle à valider », « Pris en charge, à signer », « Signé par l'association, à vous de
+    signer », « Signé par vous, en attente de l'association », « Signé par les deux, à confirmer »,
+    « Annulé » avec son motif) et un lien vers chacun de ses bons. Les enlèvements confirmés restent
+    dans les Archives.</p>
+  <p><strong>Annuler un don</strong> : motif obligatoire et confirmation. Possible tant qu'aucun bon
+    n'est signé ni confirmé : le don quitte la place de marché, les associations concernées sont
+    prévenues avec le motif, une séance de signature DocuSign ouverte est fermée, et le bon affiche
+    « Don annulé par l'entreprise » (signature et confirmation désactivées). Dès qu'un bon est signé
+    par au moins une partie, l'annulation est impossible : on refuse les articles au contrôle, ou on
+    contacte le coordinateur.</p>
+
   <h3>Archives</h3>
   <p>Historique complet en 3 onglets : bons d'enlèvement confirmés, reçus fiscaux (avec les demandes
     en cours et leur étiquette : « Demandé », « Contesté », « En signature »), attestations d'intérêt
@@ -517,9 +533,10 @@
     <li><strong>Notifications push</strong>, activables sur l'appareil.</li>
     <li><strong>Référent don</strong> (nom, téléphone) : seul le nom apparaît, sur le PDF du bon
       d'enlèvement.</li>
-    <li><strong>Congés / fermeture</strong> : si la période commence immédiatement, tous les dons
-      publiés ou pris en charge sont <strong>automatiquement annulés</strong>, sans prévenir les
-      associations ; les bons de ces dons restent signables. Une période déclarée à l'avance n'annule
+    <li><strong>Congés / fermeture</strong> : si la période commence immédiatement, les dons publiés
+      ou pris en charge encore annulables sont <strong>automatiquement annulés</strong> avec le motif
+      « Fermeture pour congés jusqu'au … », et les associations concernées sont prévenues ; un don dont
+      le bon est déjà signé n'est pas touché. Une période déclarée à l'avance n'annule
       rien à son début : elle bloque seulement les nouvelles publications.</li>
     <li><strong>Coffre-fort documentaire</strong> : l'extrait <strong>Kbis</strong> est le seul
       document requis, et sans lui aucun don ne peut être publié.</li>
@@ -799,11 +816,12 @@
       et signé → l'entreprise ;</li>
     <li>nouveau don publié sur la place de marché, ou articles d'un don à partager de nouveau libres →
       les associations concernées, selon leurs réglages d'alerte (partie 4) ;</li>
+    <li>don annulé par l'entreprise (ou pour congés) → les associations concernées, avec le motif ;</li>
     <li>nouveau message dans la messagerie → le ou les destinataires.</li>
   </ul>
   <p>Un envoi raté n'interrompt jamais l'action métier qui vient de réussir — la personne peut
     simplement ne pas recevoir la notification.</p>
-  <p>Ne sont <strong>pas</strong> notifiés : le positionnement sur un don entier, les attestations d'intérêt général, l'annulation pour congés, la confirmation d'un bon, la vérification d'une
+  <p>Ne sont <strong>pas</strong> notifiés : le positionnement sur un don entier, les attestations d'intérêt général, la confirmation d'un bon, la vérification d'une
     association.</p>
 
   <h3>Messagerie interne</h3>
@@ -975,15 +993,17 @@
     validation d'un don divisible par appel direct, numéros de bon et d'attestation (annuels, sans
     doublon), notifications d'attribution et de convention, dates à l'heure de Paris, filtres des
     archives. Puis, le même jour, reçu fiscal valorisé par l'entreprise et émis par l'association, et
-    alertes « nouveau don » pour les associations.
+    alertes « nouveau don » pour les associations, et « Mes dons » avec l'annulation d'un don.
   </div>
   <ul>
     <li><strong>Alertes</strong> : pas de regroupement des dons publiés à quelques minutes
       d'intervalle ; le lien de l'e-mail renvoie vers les réglages du profil (connexion nécessaire),
-      pas de désinscription en un clic. Les e-mails ne partent que si l'adresse d'expédition Resend
-      est configurée sur le serveur.</li>
-    <li><strong>Suivi</strong> : pas de liste des dons en cours pour l'entreprise ; pas d'annulation
-      volontaire d'un don ; pas de mot de passe oublié ; un seul utilisateur par organisation ;
+      pas de désinscription en un clic.</li>
+    <li><strong>E-mails</strong> : ils ne partent que si un domaine est vérifié chez Resend et que
+      l'adresse d'expédition (<code>RESEND_FROM_EMAIL</code>) l'utilise ; sinon Resend ne livre qu'au
+      propriétaire du compte (constaté en local le 10 octobre 2026).</li>
+    <li><strong>Suivi</strong> : « Mes dons » sans filtre par période ni compteur sur l'onglet du bas ;
+      pas de mot de passe oublié ; un seul utilisateur par organisation ;
       informations d'inscription non modifiables.</li>
     <li><strong>Données</strong> : fichiers stockés dans la base de données ; base locale partagée
       avec la production ; le script de données de démonstration viderait la production s'il y était

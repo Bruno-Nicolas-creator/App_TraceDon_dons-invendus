@@ -2,6 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { debutJourParis, finJourParis } from "@/lib/dateParis";
+import { annulerDonsPourConges } from "@/lib/annulationDon";
+import { formaterDateConges } from "@/lib/conges";
 import { revalidatePath } from "next/cache";
 import { clearSessionCookie } from "@/lib/auth";
 import { getSessionLimitee as getSession } from "@/lib/sessionLimitee";
@@ -238,13 +240,11 @@ export async function ajouterPeriodeCongesAction(formData: FormData) {
     await prisma.periodeConges.create({
       data: { entrepriseId: session.entrepriseId, debut, fin, motif: motif || null },
     });
-    // Une fermeture déjà en cours annule immédiatement les dons actifs : l'entreprise ne
-    // sera pas là pour honorer l'enlèvement pendant sa période de congés.
+    // Une fermeture déjà en cours annule immédiatement les dons encore annulables (motif
+    // « Fermeture pour congés », associations prévenues) : l'entreprise ne sera pas là pour honorer
+    // l'enlèvement. Un don dont le bon est déjà signé n'est pas touché (cf. src/lib/annulationDon.ts).
     if (debut <= new Date()) {
-      await prisma.don.updateMany({
-        where: { entrepriseId: session.entrepriseId, statut: { in: ["PUBLIE", "PRIS_EN_CHARGE"] } },
-        data: { statut: "ANNULE" },
-      });
+      await annulerDonsPourConges(session.entrepriseId, formaterDateConges(fin));
     }
   } else if (session.role === "ASSOCIATION" && session.associationId) {
     await prisma.periodeConges.create({

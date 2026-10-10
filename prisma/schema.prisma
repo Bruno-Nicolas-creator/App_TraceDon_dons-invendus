@@ -378,6 +378,9 @@ model Don {
   bonsEnlevement         BonEnlevement[]
   createdAt              DateTime        @default(now())
   publieLe               DateTime?
+  // Annulation par l'entreprise (ou automatique pour congés), cf. src/lib/annulationDon.ts.
+  annuleLe               DateTime?
+  motifAnnulation        String?
 }
 
 model Article {

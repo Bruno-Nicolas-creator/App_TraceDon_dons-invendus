@@ -42,6 +42,7 @@ export default function NouveauDonMaterielClient({
   peutDonnerAlimentaireAussi,
   congesJusquau,
   nonLusMessages = 0,
+  donsATraiter = 0,
 }: {
   don: Don;
   demandesEnAttente: DemandePositionnement[];
@@ -49,6 +50,7 @@ export default function NouveauDonMaterielClient({
   peutDonnerAlimentaireAussi: boolean;
   congesJusquau: string | null;
   nonLusMessages?: number;
+  donsATraiter?: number;
 }) {
   const [donId, setDonId] = useState(don.id);
   const [articles, setArticles] = useState<ArticleMaterielAjoute[]>(don.articles);
@@ -187,7 +189,17 @@ export default function NouveauDonMaterielClient({
           </svg>
         </button>
         <h1 className="flex-1 font-display text-xl font-semibold">Nouveau don matériel</h1>
-        <span className="rounded-full border border-border px-2.5 py-1 text-xs text-ink-muted">Brouillon</span>
+        <Link
+          href="/mes-dons"
+          className="relative rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold"
+        >
+          Mes dons
+          {donsATraiter > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-white">
+              {donsATraiter}
+            </span>
+          )}
+        </Link>
       </header>
 
       {peutDonnerAlimentaireAussi && (

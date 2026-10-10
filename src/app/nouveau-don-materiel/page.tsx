@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { peutDonnerMateriel } from "@/lib/activiteEntreprise";
 import { formaterDateConges, periodeCongesActive } from "@/lib/conges";
 import { compterMessagesNonLus } from "@/lib/messagerie";
+import { compterDonsATraiter } from "@/lib/mesDons";
 import NouveauDonMaterielClient from "./NouveauDonMaterielClient";
 
 export const dynamic = "force-dynamic";
@@ -66,6 +67,7 @@ export default async function NouveauDonMaterielPage() {
       peutDonnerAlimentaireAussi={entreprise.natureActivite === "ALIMENTAIRE_ET_NON_ALIMENTAIRE"}
       congesJusquau={congesEnCours ? formaterDateConges(congesEnCours.fin) : null}
       nonLusMessages={nonLusMessages}
+      donsATraiter={await compterDonsATraiter(session.entrepriseId)}
     />
   );
 }

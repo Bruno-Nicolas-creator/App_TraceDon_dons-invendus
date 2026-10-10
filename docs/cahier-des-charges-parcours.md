@@ -679,7 +679,7 @@ Chaque notification part par **e-mail** et par **notification sur l'appareil** (
 | Une partie a signé le bon (ordre libre) | L'autre partie | Existe |
 | Signature du bon annulée par une modification | La partie dont la signature tombe | Existe depuis le 2026-10-10 |
 | Enlèvement confirmé | Les deux parties | 🆕 |
-| Don annulé par l'entreprise | Association attributaire | 🆕 |
+| Don annulé par l'entreprise | Association attributaire | Existe depuis le 2026-10-10 |
 | Planning suspendu par des congés, ou réactivé | Associations planifiées | 🆕 |
 | Convention envoyée par le coordinateur | Les deux parties | Existe depuis le 2026-10-10 |
 | Demande partielle validée par le coordinateur | Entreprise | 🆕 |
@@ -893,8 +893,8 @@ Consentement préalable à toute mesure d'audience, modifiable à tout moment ; 
 |---|---|---|
 | Valeur des dons | Calculait un montant (poids × coût au kilo jamais saisissable → 0 €) ; remplacé dans la V1 le 2026-10-10 par une version simple de E14/A9 (valeur annuelle saisie, justificatif facultatif, contestation, émission par l'association, PDF sur le modèle du Cerfa n° 16216) | Valorisation par l'entreprise, reçu émis par l'association (E14, A9) |
 | Alerte nouveau don | Aucune, malgré une préférence e-mail/SMS dans le profil ; ajoutée dans la V1 le 2026-10-10 (rayon à vol d'oiseau, familles de dons, sans regroupement ni désinscription en un clic) | E-mail, SMS, notification (A3) |
-| Suivi entreprise | Aucune liste des dons en cours | « Mes dons » (E10) |
-| Annulation | Seulement via les congés, sans prévenir personne | Annulation avec motif et notification (E13) |
+| Suivi entreprise | Aucune liste des dons en cours ; « Mes dons » ajouté dans la V1 le 2026-10-10 (sans filtre par période ni compteur sur l'onglet) | « Mes dons » (E10) |
+| Annulation | Seulement via les congés, sans prévenir personne ; annulation avec motif et notification ajoutée dans la V1 le 2026-10-10 (congés compris) | Annulation avec motif et notification (E13) |
 | PDF signé du bon | Figé au premier clic de signature, avant le contrôle de l'association (corrigé dans la V1 le 2026-10-10) : une modification annule la séance de signature | Généré au moment de la signature, archivé (E12) |
 | Liste d'articles après signature | Modifiable jusqu'à la confirmation (corrigé dans la V1 le 2026-10-10) | Modifiable jusqu'à la seconde signature, avec re-signature (R11) |
 | Confirmation | Possible avec des articles non contrôlés (corrigé dans la V1 le 2026-10-10) | Bloquée (R12) |
@@ -953,6 +953,7 @@ Toutes les propositions de la rédaction ont été acceptées par Bruno, avec de
 - **Notifications** : l'attribution par le planning ou par le coordinateur, la convention à signer et la convention signée sont notifiées.
 - Ces décisions, et la correction des limites connues simples, ont été **appliquées aussi dans la V1** (exception au gel décidée par Bruno).
 - **Alertes nouveau don** (même jour) : version simple de A3 livrée dans la V1 — réglages dans le profil (interrupteur, rayon, familles de dons : les quatre groupes de catégories alimentaires et le matériel), sans regroupement sur 15 minutes et avec un lien vers les réglages plutôt qu'une désinscription en un clic (décision de Bruno). Le regroupement et la désinscription en un clic restent attendus dans la reconstruction.
+- **Mes dons et annulation** (même jour) : version simple de E10 et E13 livrée dans la V1 (accès par un bouton sur l'écran de nouveau don, pastille du nombre de dons à traiter, filtres par état ; annulation avec motif tant qu'aucun bon n'est signé). Les congés annulent désormais avec un motif et préviennent les associations, sans toucher aux dons dont le bon est signé.
 - **Reçu fiscal** (même jour) : une version simple de E14/A9 est livrée dans la V1. Le numéro d'ordre n'est attribué qu'à l'émission par l'association (pas de trou si la demande est contestée ou retirée) ; la séquence reste commune à la plateforme et annuelle, à faire valider par le juriste (une séquence propre à chaque association est possible).
 
 ### Points restant à faire valider par des tiers
