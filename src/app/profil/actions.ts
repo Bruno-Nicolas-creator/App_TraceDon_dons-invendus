@@ -7,10 +7,14 @@ import { formaterDateConges } from "@/lib/conges";
 import { revalidatePath } from "next/cache";
 import { clearSessionCookie, createSessionCookie, hashPassword, verifyPassword } from "@/lib/auth";
 import { avertirChangementMotDePasse, erreurMotDePasse } from "@/lib/reinitialisation";
+import { demanderChangementEmail } from "@/lib/changementEmail";
+import { natureActiviteValide } from "@/lib/activiteEntreprise";
+import { geocoderAdresse, isGoogleMapsServerConfigured } from "@/lib/googleMaps";
+import { origineRequete } from "@/lib/requestOrigin";
 import { getSessionLimitee as getSession } from "@/lib/sessionLimitee";
 import { prisma } from "@/lib/prisma";
 import { definitionDocumentPourRole, nomFichierSur, validerFichierDocument, type TypeDocument } from "@/lib/documents";
-import { champTropLong, LONGUEUR_MAX_CHAMP_COURT } from "@/lib/validation";
+import { champTropLong, LONGUEUR_MAX_ADRESSE, LONGUEUR_MAX_CHAMP_COURT } from "@/lib/validation";
 import { disponibilitesValides } from "@/lib/disponibilites";
 import { typesActiviteValides } from "@/lib/activiteAssociation";
 import { IDS_FAMILLES_ALERTE, RAYONS_ALERTE_KM } from "@/lib/famillesAlerte";
@@ -387,6 +391,106 @@ export async function changerMotDePasseAction(
   await createSessionCookie(charge);
   await avertirChangementMotDePasse(utilisateur.email, utilisateur.nom);
   return { ok: true };
+}
+
+type ResultatFormulaire = { ok: true } | { ok: false; error: string } | null;
+
+/** Position sur la carte d'une nouvelle adresse (null si le service de cartographie est absent ou ne la trouve pas). */
+async function coordonneesAdresse(adresse: string) {
+  const c = isGoogleMapsServerConfigured() ? await geocoderAdresse(adresse) : null;
+  return { latitude: c?.lat ?? null, longitude: c?.lng ?? null };
+}
+
+/**
+ * Informations de l'organisation modifiables par ses utilisateurs (chantier C4b, 2026-10-10).
+ * Le nom, le SIRET et le RNA n'en font pas partie : identité officielle, corrigée par le
+ * coordinateur (décision de Bruno, option A) — les PDF étant refabriqués à chaque téléchargement,
+ * un renommage modifierait aussi les documents déjà signés.
+ */
+export async function modifierInformationsOrganisationAction(_etat: ResultatFormulaire, formData: FormData): Promise<ResultatFormulaire> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "Non authentifié." };
+  const texte = (nom: string) => String(formData.get(nom) ?? "").trim();
+  const adresse = texte("adresse");
+  if (!adresse) return { ok: false, error: "L'adresse est obligatoire." };
+  if (champTropLong(adresse, LONGUEUR_MAX_ADRESSE)) return { ok: false, error: "Adresse trop longue." };
+
+  if (session.role === "ENTREPRISE" && session.entrepriseId) {
+    const formeJuridique = texte("formeJuridique");
+    const secteurActivite = texte("secteurActivite");
+    const natureActivite = texte("natureActivite");
+    if (champTropLong(formeJuridique) || champTropLong(secteurActivite)) return { ok: false, error: "Un champ est trop long." };
+    if (!natureActiviteValide(natureActivite)) return { ok: false, error: "Nature des dons invalide." };
+    const actuelle = await prisma.entreprise.findUniqueOrThrow({ where: { id: session.entrepriseId }, select: { adresse: true } });
+    await prisma.entreprise.update({
+      where: { id: session.entrepriseId },
+      data: {
+        formeJuridique: formeJuridique || null,
+        secteurActivite: secteurActivite || null,
+        natureActivite,
+        adresse,
+        ...(adresse !== actuelle.adresse ? await coordonneesAdresse(adresse) : {}),
+      },
+    });
+  } else if (session.role === "ASSOCIATION" && session.associationId) {
+    const categorieEligibilite = texte("categorieEligibilite");
+    const categoriesDon = texte("categoriesDon")
+      .split(",")
+      .map((c) => c.trim())
+      .filter((c) => c.length > 0);
+    if (champTropLong(categorieEligibilite) || categoriesDon.some((c) => champTropLong(c, 60)) || categoriesDon.length > 30) {
+      return { ok: false, error: "Un champ est trop long." };
+    }
+    const actuelle = await prisma.association.findUniqueOrThrow({ where: { id: session.associationId }, select: { adresse: true } });
+    await prisma.association.update({
+      where: { id: session.associationId },
+      data: {
+        categorieEligibilite: categorieEligibilite || null,
+        categoriesDon,
+        adresse,
+        ...(adresse !== actuelle.adresse ? await coordonneesAdresse(adresse) : {}),
+      },
+    });
+  } else {
+    return { ok: false, error: "Action réservée aux entreprises et associations." };
+  }
+
+  revalidatePath("/profil");
+  revalidatePath("/");
+  revalidatePath("/dons");
+  revalidatePath("/associations");
+  return { ok: true };
+}
+
+/** Nom affiché de l'utilisateur connecté (la session est renouvelée pour l'afficher partout). */
+export async function modifierNomAction(_etat: ResultatFormulaire, formData: FormData): Promise<ResultatFormulaire> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "Non authentifié." };
+  const nom = String(formData.get("nom") ?? "").trim();
+  if (!nom) return { ok: false, error: "Indiquez votre nom." };
+  if (champTropLong(nom, 100)) return { ok: false, error: "Nom trop long." };
+  await prisma.user.update({ where: { id: session.userId }, data: { nom } });
+  const { sv: _version, ...charge } = session;
+  void _version;
+  await createSessionCookie({ ...charge, nom });
+  revalidatePath("/profil");
+  return { ok: true };
+}
+
+/** Changement d'adresse e-mail : envoie un lien de confirmation à la nouvelle adresse. */
+export async function demanderChangementEmailAction(_etat: ResultatFormulaire, formData: FormData): Promise<ResultatFormulaire> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "Non authentifié." };
+  if (await tropDeTentatives(`changement-email:${session.userId}`, 5, 60 * 60 * 1000)) {
+    return { ok: false, error: "Trop de demandes. Merci de réessayer plus tard." };
+  }
+  const erreur = await demanderChangementEmail(
+    session.userId,
+    String(formData.get("motDePasse") ?? ""),
+    String(formData.get("nouvelEmail") ?? ""),
+    await origineRequete()
+  );
+  return erreur ? { ok: false, error: erreur } : { ok: true };
 }
 
 export async function definirAlertesAction(formData: FormData) {

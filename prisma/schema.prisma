@@ -98,16 +98,19 @@ model User {
   createdAt              DateTime                @default(now())
 }
 
-// Lien « mot de passe oublié » : seule l'empreinte (SHA-256) du jeton envoyé par e-mail est
-// stockée ; valable 1 heure, utilisable une seule fois (cf. src/lib/reinitialisation.ts).
+// Lien envoyé par e-mail : « mot de passe oublié » (nouvelEmail vide) ou confirmation d'un
+// changement d'adresse e-mail (nouvelEmail = adresse à confirmer). Seule l'empreinte (SHA-256) du
+// jeton est stockée ; valable 1 heure, utilisable une seule fois (cf. src/lib/reinitialisation.ts
+// et src/lib/changementEmail.ts).
 model JetonReinitialisation {
-  id        String    @id @default(cuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  empreinte String    @unique
-  expireLe  DateTime
-  utiliseLe DateTime?
-  createdAt DateTime  @default(now())
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  empreinte   String    @unique
+  nouvelEmail String?
+  expireLe    DateTime
+  utiliseLe   DateTime?
+  createdAt   DateTime  @default(now())
 
   @@index([userId])
 }

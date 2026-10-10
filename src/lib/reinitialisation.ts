@@ -16,7 +16,7 @@ export const LONGUEUR_MIN_MOT_DE_PASSE = 8;
 export const LONGUEUR_MAX_MOT_DE_PASSE = 72;
 const DUREE_VALIDITE_MS = 60 * 60 * 1000;
 
-const empreinte = (jeton: string) => crypto.createHash("sha256").update(jeton).digest("hex");
+export const empreinte = (jeton: string) => crypto.createHash("sha256").update(jeton).digest("hex");
 
 /** Message d'erreur si le mot de passe ne respecte pas les règles, sinon null. */
 export function erreurMotDePasse(motDePasse: string, confirmation: string): string | null {
@@ -37,7 +37,7 @@ export async function envoyerLienReinitialisation(email: string, origineSite: st
   const jeton = crypto.randomBytes(32).toString("base64url");
   await prisma.$transaction([
     // Un seul lien valable à la fois : une nouvelle demande annule les précédentes.
-    prisma.jetonReinitialisation.deleteMany({ where: { userId: utilisateur.id, utiliseLe: null } }),
+    prisma.jetonReinitialisation.deleteMany({ where: { userId: utilisateur.id, utiliseLe: null, nouvelEmail: null } }),
     prisma.jetonReinitialisation.create({
       data: { userId: utilisateur.id, empreinte: empreinte(jeton), expireLe: new Date(Date.now() + DUREE_VALIDITE_MS) },
     }),
@@ -55,7 +55,7 @@ export async function envoyerLienReinitialisation(email: string, origineSite: st
 export async function jetonValide(jeton: string): Promise<boolean> {
   if (!jeton) return false;
   const ligne = await prisma.jetonReinitialisation.findUnique({ where: { empreinte: empreinte(jeton) } });
-  return !!ligne && !ligne.utiliseLe && ligne.expireLe > new Date();
+  return !!ligne && !ligne.nouvelEmail && !ligne.utiliseLe && ligne.expireLe > new Date();
 }
 
 /** Remplace le mot de passe ; renvoie null si c'est fait, sinon le motif du refus. */
@@ -67,7 +67,7 @@ export async function reinitialiserMotDePasse(jeton: string, motDePasse: string,
   const fait = await prisma.$transaction(async (tx) => {
     // Consommation conditionnelle : deux envois simultanés du même lien ne passent pas tous les deux.
     const ligne = await tx.jetonReinitialisation.findUnique({ where: { empreinte: empreinte(jeton) } });
-    if (!ligne) return null;
+    if (!ligne || ligne.nouvelEmail) return null;
     const { count } = await tx.jetonReinitialisation.updateMany({
       where: { id: ligne.id, utiliseLe: null, expireLe: { gt: new Date() } },
       data: { utiliseLe: new Date() },

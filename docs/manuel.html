@@ -526,6 +526,16 @@
     filtrent par année (à l'heure de Paris) et par partenaire ; un lien « Effacer » les remet à zéro.</p>
 
   <h3>Profil</h3>
+  <p><strong>Mon compte et informations de l'organisation</strong> (depuis le 10 octobre 2026, aussi
+    pour les associations ; « Mon compte » aussi pour le coordinateur) : chacun modifie son nom et peut
+    changer son adresse e-mail de connexion — mot de passe actuel exigé, lien de confirmation envoyé à
+    la nouvelle adresse (1 heure, usage unique), changement effectif au clic sur « Confirmer ma
+    nouvelle adresse », ancienne adresse prévenue, adresse déjà prise refusée. Le bloc « Informations
+    de l'organisation » permet de modifier l'adresse (position sur la carte recalculée), la forme
+    juridique, le secteur et la nature des dons (entreprise) ou la catégorie d'éligibilité et les
+    catégories de dons (association). Le nom de l'organisation, le SIRET et le RNA ne se modifient
+    pas ici : on écrit au coordinateur (décision de Bruno). Avertissement : les documents déjà établis
+    afficheront la nouvelle adresse s'ils sont téléchargés à nouveau.</p>
   <ul>
     <li><strong>Impact CO2 cumulé</strong> : kilos de CO2 évités grâce aux dons <em>alimentaires
       confirmés</em> uniquement, calculé produit par catégorie (viande, crèmerie, légumes…) plutôt
@@ -1004,18 +1014,18 @@
     validation d'un don divisible par appel direct, numéros de bon et d'attestation (annuels, sans
     doublon), notifications d'attribution et de convention, dates à l'heure de Paris, filtres des
     archives. Puis, le même jour, reçu fiscal valorisé par l'entreprise et émis par l'association, et
-    alertes « nouveau don » pour les associations, et « Mes dons » avec l'annulation d'un don.
+    alertes « nouveau don » pour les associations, « Mes dons » avec l'annulation d'un don, envoi réel
+    des e-mails depuis notifications@tracedon.fr, mot de passe oublié, et informations du compte et de
+    l'organisation modifiables.
   </div>
   <ul>
     <li><strong>Alertes</strong> : pas de regroupement des dons publiés à quelques minutes
       d'intervalle ; le lien de l'e-mail renvoie vers les réglages du profil (connexion nécessaire),
       pas de désinscription en un clic.</li>
-    <li><strong>E-mails</strong> : ils ne partent que si un domaine est vérifié chez Resend et que
-      l'adresse d'expédition (<code>RESEND_FROM_EMAIL</code>) l'utilise ; sinon Resend ne livre qu'au
-      propriétaire du compte (constaté en local le 10 octobre 2026).</li>
     <li><strong>Suivi</strong> : « Mes dons » sans filtre par période ni compteur sur l'onglet du bas ;
-      un seul utilisateur par organisation ;
-      informations d'inscription non modifiables.</li>
+      un seul utilisateur par organisation ; nom, SIRET et RNA modifiables seulement par une correction
+      du coordinateur (les PDF étant refabriqués à chaque téléchargement, un renommage changerait aussi
+      les documents déjà signés).</li>
     <li><strong>Données</strong> : fichiers stockés dans la base de données ; base locale partagée
       avec la production ; le script de données de démonstration viderait la production s'il y était
       lancé.</li>
@@ -1069,7 +1079,7 @@
   </dl>
 
   <footer>
-    Document mis à jour à partir de l'état du code au 10 octobre 2026 (version actuelle, V1). Pour la
+    Document mis à jour à partir de l'état du code au 11 octobre 2026 (version actuelle, V1). Pour la
     reconstruction, le cahier des charges <code>docs/cahier-des-charges-parcours.md</code> fait
     référence.
   </footer>

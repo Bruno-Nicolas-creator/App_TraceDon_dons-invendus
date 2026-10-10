@@ -18,6 +18,7 @@ import { isPushConfigure } from "@/lib/webPush";
 import { FAMILLES_ALERTE, RAYONS_ALERTE_KM } from "@/lib/famillesAlerte";
 import CoffreFort, { type ConventionSignee, type DocumentExistant } from "./CoffreFort";
 import ChangerMotDePasse from "./ChangerMotDePasse";
+import InformationsCompte, { type OrganisationModifiable } from "./InformationsCompte";
 import {
   ajouterBenevoleAction,
   ajouterPeriodeCongesAction,
@@ -159,6 +160,33 @@ export default async function ProfilPage() {
     if (impact) impactCumule = { ...impact, poidsTotalKg };
   }
 
+  // Compte et informations modifiables de l'organisation (chantier C4b).
+  const compte = await prisma.user.findUniqueOrThrow({ where: { id: session.userId }, select: { nom: true, email: true } });
+  let organisationModifiable: OrganisationModifiable | null = null;
+  if (session.role === "ENTREPRISE" && session.entrepriseId) {
+    const e = await prisma.entreprise.findUniqueOrThrow({ where: { id: session.entrepriseId } });
+    organisationModifiable = {
+      type: "ENTREPRISE",
+      nom: e.raisonSociale,
+      identifiant: e.siret,
+      adresse: e.adresse,
+      formeJuridique: e.formeJuridique ?? "",
+      secteurActivite: e.secteurActivite ?? "",
+      natureActivite: e.natureActivite,
+    };
+  } else if (session.role === "ASSOCIATION" && session.associationId) {
+    const a = await prisma.association.findUniqueOrThrow({ where: { id: session.associationId } });
+    organisationModifiable = {
+      type: "ASSOCIATION",
+      nom: a.denomination,
+      identifiant: a.rna,
+      adresse: a.adresse,
+      categorieEligibilite: a.categorieEligibilite ?? "",
+      categoriesDon: a.categoriesDon.join(", "),
+    };
+  }
+  const informationsCompte = <InformationsCompte nom={compte.nom} email={compte.email} organisation={organisationModifiable} />;
+
   const carte = (
     <div className="space-y-5 rounded-2xl border border-border bg-surface p-6">
       <div className="flex items-center gap-3">
@@ -193,6 +221,7 @@ export default async function ProfilPage() {
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-4 px-6">
         <h1 className="font-display text-xl font-semibold">Mon profil</h1>
         {carte}
+        {informationsCompte}
         {isPushConfigure() && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && (
           <ActiverNotificationsPush vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
         )}
@@ -207,6 +236,7 @@ export default async function ProfilPage() {
       </header>
       <main className="flex-1 space-y-4 px-5 pb-4">
         {carte}
+        {informationsCompte}
 
         {isPushConfigure() && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && (
           <ActiverNotificationsPush vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
