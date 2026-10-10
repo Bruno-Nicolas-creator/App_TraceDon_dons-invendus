@@ -86,11 +86,15 @@ export default function BonEnlevementClient({
   );
   const donateurSigne = bon.donateurSigne;
   const associationSigne = bon.associationSigne;
-  const peutControlerArticles = role === "ASSOCIATION";
+  // Ordre de signature libre ; la liste reste modifiable tant que les deux n'ont pas signé, et
+  // toute modification annule la signature déjà posée (cf. src/lib/bonSignature.ts).
+  const verrouille = bon.confirme || (donateurSigne && associationSigne);
+  const uneSignaturePosee = !verrouille && (donateurSigne || associationSigne);
+  const peutControlerArticles = role === "ASSOCIATION" && !verrouille;
   // Le don matériel repose sur une liste établie avant publication : contrairement à
   // l'alimentaire, il n'y a pas de scan complémentaire à faire au moment de l'enlèvement.
-  const peutAjouterArticles = role === "ENTREPRISE" && !bon.confirme && bon.typeDon !== "MATERIEL";
-  const peutChoisirBenevole = role === "ASSOCIATION" && !associationSigne && !bon.confirme;
+  const peutAjouterArticles = role === "ENTREPRISE" && !verrouille && bon.typeDon !== "MATERIEL";
+  const peutChoisirBenevole = role === "ASSOCIATION" && !verrouille;
   const [benevoleCollecteurId, setBenevoleCollecteurId] = useState(bon.benevoleCollecteurId ?? "");
   const [erreurSignature, setErreurSignature] = useState<string | null>(null);
   const [signatureEnCours, setSignatureEnCours] = useState<"DONATEUR" | "ASSOCIATION" | null>(null);
@@ -165,9 +169,11 @@ export default function BonEnlevementClient({
 
   const enregistrerDlc = (articleId: string) => {
     const valeur = dlcs[articleId] ?? "";
+    // On renvoie l'état actuel de la case « Dépassée » : modifier la date ne doit jamais la décocher.
+    const depassee = articles.find((a) => a.id === articleId)?.bloque ?? false;
     startTransition(async () => {
       try {
-        await constaterDlcAction(articleId, valeur, false);
+        await constaterDlcAction(articleId, valeur, depassee);
         setArticles((prev) => prev.map((a) => (a.id === articleId ? { ...a, dlc: valeur || "—" } : a)));
       } catch (e) {
         setErreurSignature(e instanceof Error ? e.message : "Impossible d'enregistrer la DLC.");
@@ -177,7 +183,11 @@ export default function BonEnlevementClient({
 
   const basculerDlcDepassee = (article: ArticleAffiche) => {
     const nouvelleValeur = !article.bloque;
-    setArticles((prev) => prev.map((a) => (a.id === article.id ? { ...a, bloque: nouvelleValeur } : a)));
+    // DLC dépassée : l'article passe automatiquement en refusé (même s'il était validé).
+    setArticles((prev) =>
+      prev.map((a) => (a.id === article.id ? { ...a, bloque: nouvelleValeur, ...(nouvelleValeur ? { statut: "REFUSE" as const } : {}) } : a))
+    );
+    if (nouvelleValeur) setMotifs((prev) => ({ ...prev, [article.id]: prev[article.id] || "DLC dépassée" }));
     startTransition(async () => {
       try {
         await constaterDlcAction(article.id, dlcs[article.id] ?? "", nouvelleValeur);
@@ -682,18 +692,16 @@ export default function BonEnlevementClient({
               <button
                 type="button"
                 onClick={() => demarrerSignature("ASSOCIATION")}
-                disabled={associationSigne || !donateurSigne || !docusignConfigure || signatureEnCours !== null}
+                disabled={associationSigne || !docusignConfigure || signatureEnCours !== null}
                 className={`flex-1 rounded-xl border-[1.5px] border-dashed border-[#C7C1B0] py-3.5 text-xs font-semibold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
                   associationSigne ? "bg-brand-tint text-brand-dark" : "bg-surface"
                 }`}
               >
                 {associationSigne
                   ? "Association signé"
-                  : !donateurSigne
-                    ? "En attente du donateur"
-                    : signatureEnCours === "ASSOCIATION"
-                      ? "Ouverture…"
-                      : "Signer (association)"}
+                  : signatureEnCours === "ASSOCIATION"
+                    ? "Ouverture…"
+                    : "Signer (association)"}
               </button>
             ) : (
               <div
@@ -705,8 +713,19 @@ export default function BonEnlevementClient({
               </div>
             )}
           </div>
+          {uneSignaturePosee && (
+            <div className="rounded-lg bg-accent-tint px-3 py-2 text-[11.5px] leading-snug text-accent">
+              Une signature est déjà posée. Toute modification de la liste l&apos;annulera : les deux parties
+              devront alors signer la version à jour.
+            </div>
+          )}
+          {verrouille && !bon.confirme && (
+            <div className="rounded-lg bg-brand-tint px-3 py-2 text-[11.5px] leading-snug text-brand-dark">
+              Signé par les deux parties : la liste est verrouillée. Vous pouvez confirmer l&apos;enlèvement.
+            </div>
+          )}
           <p className="text-[11px] text-ink-muted">
-            Votre signature ouvre la cérémonie de signature électronique qualifiée DocuSign, directement dans
+            Les deux parties signent dans l&apos;ordre de leur choix. Votre signature ouvre la cérémonie de signature électronique qualifiée DocuSign, directement dans
             l&apos;application.
           </p>
         </div>

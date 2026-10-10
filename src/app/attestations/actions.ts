@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { debutJourParis, finJourParis } from "@/lib/dateParis";
 import { getSessionLimitee as getSession } from "@/lib/sessionLimitee";
 import { prisma } from "@/lib/prisma";
-import { bonsEligiblesParBeneficiaire, genererNumeroOrdreAttestation } from "@/lib/attestationFiscale";
+import { bonsEligiblesParBeneficiaire } from "@/lib/attestationFiscale";
+import { creerAttestationFiscale } from "@/lib/numerotation";
 import { envoyerAttestationPourSignature, obtenirUrlSignatureEmbarqueeAttestation } from "@/lib/docusign";
 import { origineRequete } from "@/lib/requestOrigin";
 import { tropDeTentatives } from "@/lib/rateLimiter";
@@ -25,9 +27,9 @@ export async function genererEtEnvoyerAttestationsAction(
   if (!debutBrut || !finBrut) return { ok: false, error: "Les dates de début et de fin sont requises." };
   if (associationIds.length === 0) return { ok: false, error: "Sélectionnez au moins une association." };
 
-  const periodeDebut = new Date(debutBrut);
-  const periodeFin = new Date(`${finBrut}T23:59:59`);
-  if (Number.isNaN(periodeDebut.getTime()) || Number.isNaN(periodeFin.getTime()) || periodeFin < periodeDebut) {
+  const periodeDebut = debutJourParis(debutBrut);
+  const periodeFin = finJourParis(finBrut);
+  if (!periodeDebut || !periodeFin || periodeFin < periodeDebut) {
     return { ok: false, error: "Période invalide." };
   }
 
@@ -40,17 +42,13 @@ export async function genererEtEnvoyerAttestationsAction(
 
   let nombreCreees = 0;
   for (const groupe of groupes) {
-    const numeroOrdre = await genererNumeroOrdreAttestation();
-    const attestation = await prisma.attestationFiscale.create({
-      data: {
-        numeroOrdre,
-        entrepriseId: session.entrepriseId,
-        associationId: groupe.associationId,
-        periodeDebut,
-        periodeFin,
-        montantCalcule: groupe.montantEstime,
-        bonsEnlevement: { connect: groupe.bonIds.map((id) => ({ id })) },
-      },
+    const attestation = await creerAttestationFiscale({
+      entrepriseId: session.entrepriseId,
+      associationId: groupe.associationId,
+      periodeDebut,
+      periodeFin,
+      montantCalcule: groupe.montantEstime,
+      bonsEnlevement: { connect: groupe.bonIds.map((id) => ({ id })) },
     });
     try {
       await envoyerAttestationPourSignature(attestation.id);

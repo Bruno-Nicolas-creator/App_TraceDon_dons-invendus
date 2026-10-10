@@ -303,7 +303,8 @@
     <li>
       <strong>Publication</strong>
       Si un planning récurrent prévoit <em>une seule</em> association ce jour-là, le don lui est
-      assigné directement. Sinon, il est publié sur la place de marché, visible de toutes les
+      assigné directement (à condition qu'une convention signée existe avec elle et qu'elle ne soit pas
+      en congés), et elle en est prévenue. Sinon, il est publié sur la place de marché, visible de toutes les
       associations inscrites (sans filtre de distance). Aucune alerte n'est envoyée aux associations :
       elles découvrent les dons en consultant la place de marché.
     </li>
@@ -329,13 +330,15 @@
     </li>
     <li>
       <strong>Double signature électronique</strong>
-      Le donateur signe en premier, puis l'association — jamais dans l'autre sens pour le bon
-      d'enlèvement. C'est toujours le compte de l'association qui signe ; si un bénévole mandaté
+      Le donateur et l'association signent dans l'ordre de leur choix. Tant que les deux n'ont pas
+      signé, la liste reste modifiable ; toute modification après une première signature l'annule, et
+      les deux parties signent la version à jour. Une fois les deux signatures posées, le bon ne peut
+      plus être modifié. C'est toujours le compte de l'association qui signe ; si un bénévole mandaté
       effectue l'enlèvement, son nom est inscrit sur le bon.
     </li>
     <li>
       <strong>Confirmation de l'enlèvement</strong>
-      L'entreprise ou l'association confirme. Le poids réellement retenu est figé, l'horodatage
+      L'entreprise ou l'association confirme, une fois chaque article contrôlé (validé ou refusé). Le poids réellement retenu est figé, l'horodatage
       enregistré. Pour un don alimentaire, l'impact CO2 évité est affiché (il est recalculé à chaque
       consultation, pas enregistré). Pour un don divisible, il n'est totalement clôturé que
       lorsque toutes les associations concernées ont, elles aussi, confirmé leur part.
@@ -427,9 +430,8 @@
 
   <h3>Annuaire des associations à proximité</h3>
   <p>Vue carte ou liste, avec distance réelle (si la cartographie est configurée), catégorie
-    d'éligibilité, badge « Habilitée » (affiché seulement si l'entreprise dépasse 400&nbsp;m²), badge
-    « Chaîne du froid » si l'attestation correspondante est déposée, capacité d'accueil et nombre de
-    bénéficiaires déclarés, congés en cours, et présentation libre rédigée par l'association.</p>
+    d'éligibilité, badge « Habilitée » (affiché seulement si l'entreprise dépasse 400&nbsp;m²),
+    congés en cours, et présentation libre rédigée par l'association.</p>
   <div class="callout cas-limite">
     <span class="label">À venir</span>
     Une vue détaillée complète du dossier association (habilitation, chaîne du froid,
@@ -492,8 +494,8 @@
 
   <h3>Archives</h3>
   <p>Historique complet en 3 onglets : bons d'enlèvement confirmés, attestations fiscales,
-    attestations d'intérêt général — chacun avec accès direct au PDF. Les puces « 2026 » et « Tous
-    partenaires » affichées en haut sont décoratives : elles ne filtrent rien.</p>
+    attestations d'intérêt général — chacun avec accès direct au PDF. Deux listes déroulantes en haut
+    filtrent par année (à l'heure de Paris) et par partenaire ; un lien « Effacer » les remet à zéro.</p>
 
   <h3>Profil</h3>
   <ul>
@@ -562,9 +564,9 @@
   </ul>
   <div class="callout legal">
     <span class="label">Règle sanitaire non négociable</span>
-    Si « Dépassée » est cochée sur un article encore en attente, il ne peut plus être validé — le
-    refus devient obligatoire. Attention : un article déjà validé puis marqué « Dépassée » reste
-    validé, et modifier la date limite peut décocher la case en base (voir partie 9).
+    Cocher « Dépassée » refuse automatiquement l'article (motif « DLC dépassée »), même s'il était
+    déjà validé : il ne peut plus être validé tant que la case reste cochée. Modifier la date limite
+    ne décoche jamais la case.
   </div>
   <p>Si l'association a des bénévoles <strong>mandatés</strong>, elle peut désigner lequel
     effectue cet enlèvement : son nom est inscrit sur le bon, mais c'est le compte de l'association
@@ -631,9 +633,10 @@
       n'ont aucune association habilitée parmi leurs partenaires conventionnés — donc « à risque »
       vis-à-vis de la loi.</li>
     <li><strong>« Dons à traiter »</strong>, mis en avant en priorité : chaque don publié que
-      personne n'a réclamé, avec un menu pour l'assigner manuellement à une association. L'assignation
-      n'exige pas de convention signée, ne prévient ni l'association ni l'entreprise, et pour un don
-      divisible elle se passe de la validation de l'entreprise.</li>
+      personne n'a réclamé, avec un menu pour l'assigner manuellement à une association. L'association
+      et l'entreprise sont prévenues ; s'il n'existe pas encore de convention signée entre elles, elle
+      est créée et les deux sont invitées à la signer. Pour un don divisible, l'assignation (réservée aux
+      dons encore publiés) se passe de la validation de l'entreprise : c'est un choix du coordinateur.</li>
     <li><strong>Associations à vérifier</strong> : nom, RNA, statut du rescrit fiscal, niveau
       d'habilitation, accès aux documents, et un bouton pour basculer le badge de confiance
       « Vérifiée ». Ce badge est purement informatif : une association non vérifiée peut se
@@ -744,7 +747,9 @@
     automatiquement dès leur premier lien. Le montant d'une attestation fiscale est calculé à
     <strong>60&nbsp;% de la valeur de revient</strong> des dons remis sur la période (poids × coût de
     revient au kilo, voir l'encadré « Montant à 0 € » en partie 3), avec un numéro d'ordre unique
-    au format <code>2026-ATT-0001</code>. Le compteur est global et ne repart pas à zéro chaque année.
+    au format <code>2026-ATT-0001</code>. Le compteur repart à zéro chaque année (heure de Paris) et
+    ne peut pas produire de doublon ; les bons d'enlèvement suivent la même règle
+    (<code>2026-0001</code>).
     La convention n'a pas de date d'expiration contrôlée.</p>
 
   <h3>Notifications (email et push)</h3>
@@ -754,16 +759,22 @@
     <li>demande de positionnement partiel sur un don matériel divisible → l'entreprise ;</li>
     <li>acceptation de cette demande → l'association ;</li>
     <li>refus de cette demande → l'association refusée ;</li>
-    <li>signature du donateur sur un bon d'enlèvement → l'association, à qui c'est le tour ;</li>
-    <li>signature de l'association → l'entreprise, qui peut alors confirmer l'enlèvement ;</li>
+    <li>première signature d'un bon d'enlèvement (par l'une ou l'autre partie) → l'autre partie, invitée
+      à signer ; seconde signature → l'autre partie, prévenue que le bon est signé par les deux ;</li>
+    <li>signature d'un bon annulée par une modification → la partie dont la signature tombe ;</li>
+    <li>attribution d'un don par le planning → l'association ;</li>
+    <li>attribution d'un don par le coordinateur → l'association et l'entreprise ;</li>
+    <li>convention à signer (créée lors d'un positionnement, d'un planning ou d'une attribution) →
+      l'autre partie, ou les deux si c'est le coordinateur ;</li>
+    <li>convention signée par l'une des parties → l'autre, invitée à signer ; signée par les deux →
+      l'autre partie, prévenue ;</li>
     <li>nouveau message dans la messagerie → le ou les destinataires.</li>
   </ul>
   <p>Un envoi raté n'interrompt jamais l'action métier qui vient de réussir — la personne peut
     simplement ne pas recevoir la notification.</p>
-  <p>Ces six cas sont les seuls. Ne sont <strong>pas</strong> notifiés : la publication d'un don,
-    le positionnement sur un don entier, l'attribution par le planning ou par le coordinateur, la
-    convention à signer ou signée, les attestations, l'annulation pour congés, la confirmation d'un
-    bon, la vérification d'une association.</p>
+  <p>Ne sont <strong>pas</strong> notifiés : la publication d'un don, le positionnement sur un don
+    entier, les attestations, l'annulation pour congés, la confirmation d'un bon, la vérification d'une
+    association.</p>
 
   <h3>Messagerie interne</h3>
   <p>Une conversation existe soit entre une entreprise et une association partenaires, soit entre
@@ -780,10 +791,10 @@
   <p>Trois catégories de documents signables, directement dans l'application (pas de redirection vers
     un site externe) :</p>
   <ul>
-    <li><strong>Bons d'enlèvement</strong> — deux signataires, ordre imposé : le donateur d'abord,
-      l'association ensuite.</li>
-    <li><strong>Conventions de don</strong> — deux signataires, ordre imposé : l'entreprise d'abord
-      (l'écran ne l'indique pas).</li>
+    <li><strong>Bons d'enlèvement</strong> — deux signataires, dans l'ordre de leur choix. Une
+      modification après une première signature annule la séance de signature en cours chez DocuSign
+      (le document signé reflète donc toujours la liste finale).</li>
+    <li><strong>Conventions de don</strong> — deux signataires, dans l'ordre de leur choix.</li>
     <li><strong>Attestations</strong> (fiscale ou intérêt général) — un seul signataire : l'association.</li>
   </ul>
   <div class="callout regle">
@@ -924,28 +935,24 @@
   <h2 id="limites">9 · Limites connues de la version actuelle</h2>
   <p>Défauts relevés en lisant le code le 9 octobre 2026. Ils ne doivent pas être reproduits dans la
     reconstruction (détail en annexe A du cahier des charges).</p>
+  <div class="callout regle">
+    <span class="label">Corrigé le 10 octobre 2026</span>
+    Bon d'enlèvement (signatures dans n'importe quel ordre, liste modifiable jusqu'à la seconde
+    signature avec nouvelle signature, confirmation seulement quand tout est contrôlé, bon d'un don
+    annulé bloqué), date limite dépassée (refus automatique), republication d'un don déjà pris en
+    charge, attribution par le planning (convention et congés revérifiés), contournement de la
+    validation d'un don divisible par appel direct, numéros de bon et d'attestation (annuels, sans
+    doublon), notifications d'attribution et de convention, dates à l'heure de Paris, filtres des
+    archives.
+  </div>
   <ul>
-    <li><strong>Bon d'enlèvement</strong> : le document signé est figé avant le contrôle de
-      l'association ; l'entreprise peut encore modifier les articles après les signatures ; la
-      confirmation est possible avec des articles non contrôlés ; un bon d'un don annulé reste
-      signable et confirmable.</li>
-    <li><strong>Date limite dépassée</strong> : un article déjà validé reste validé, et modifier la
-      date peut décocher « Dépassée » en base.</li>
-    <li><strong>Attestations fiscales</strong> : montant à 0&nbsp;€ hors démonstration ; numérotation
-      globale non annuelle ; pas de notification ni de bouton de renvoi.</li>
-    <li><strong>Publication</strong> : un don déjà pris en charge peut être republié (deux onglets ou
-      appel direct) ; l'attribution par le planning ne revérifie ni la convention ni les congés.</li>
-    <li><strong>Don divisible</strong> : la validation de l'entreprise peut être contournée par un
-      appel direct au serveur, et par le coordinateur.</li>
-    <li><strong>Numéros de bon et d'attestation</strong> : calculés par « nombre + 1 », doublons
-      possibles (notamment après le refus d'une demande partielle, dont le bon est supprimé).</li>
-    <li><strong>Notifications</strong> : aucune alerte de nouveau don ; la plupart des événements ne
-      préviennent personne (voir partie 6).</li>
+    <li><strong>Attestations fiscales</strong> : montant à 0&nbsp;€ hors démonstration (le coût de
+      revient au kilo n'est saisi nulle part) ; pas de notification ni de bouton de renvoi.</li>
+    <li><strong>Notifications</strong> : aucune alerte de nouveau don aux associations ; la préférence
+      d'alerte du profil n'a pas d'effet.</li>
     <li><strong>Suivi</strong> : pas de liste des dons en cours pour l'entreprise ; pas d'annulation
       volontaire d'un don ; pas de mot de passe oublié ; un seul utilisateur par organisation ;
       informations d'inscription non modifiables.</li>
-    <li><strong>Dates</strong> : jours du planning et périodes calculés à l'heure du serveur (UTC), pas
-      à l'heure de Paris.</li>
     <li><strong>Données</strong> : fichiers stockés dans la base de données ; base locale partagée
       avec la production ; le script de données de démonstration viderait la production s'il y était
       lancé.</li>
@@ -999,7 +1006,7 @@
   </dl>
 
   <footer>
-    Document mis à jour à partir de l'état du code au 9 octobre 2026 (version actuelle, V1). Pour la
+    Document mis à jour à partir de l'état du code au 10 octobre 2026 (version actuelle, V1). Pour la
     reconstruction, le cahier des charges <code>docs/cahier-des-charges-parcours.md</code> fait
     référence.
   </footer>

@@ -8,12 +8,6 @@ export function calculerMontantAttestation(poidsTotalKg: number, coutRevientKg: 
   return Math.round(poidsTotalKg * coutRevientKg * TAUX_REDUCTION_DON * 100) / 100;
 }
 
-export async function genererNumeroOrdreAttestation(): Promise<string> {
-  const total = await prisma.attestationFiscale.count();
-  const annee = new Date().getFullYear();
-  return `${annee}-ATT-${String(total + 1).padStart(4, "0")}`;
-}
-
 export type GroupeBeneficiaire = {
   associationId: string;
   associationNom: string;

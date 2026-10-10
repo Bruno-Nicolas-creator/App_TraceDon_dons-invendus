@@ -1,6 +1,6 @@
 "use server";
 
-import { getSession } from "@/lib/auth";
+import { getSessionLimitee as getSession } from "@/lib/sessionLimitee";
 import { prisma } from "@/lib/prisma";
 import { obtenirUrlSignatureEmbarquee, type RoleSignataire } from "@/lib/docusign";
 import { origineRequete } from "@/lib/requestOrigin";
@@ -21,7 +21,7 @@ export async function demarrerSignatureDocuSign(
     return { ok: false, error: "Trop de tentatives, merci de patienter quelques minutes." };
   }
 
-  const bon = await prisma.bonEnlevement.findUnique({ where: { id: bonId } });
+  const bon = await prisma.bonEnlevement.findUnique({ where: { id: bonId }, include: { don: { select: { statut: true } } } });
   if (!bon) return { ok: false, error: "Bon introuvable." };
   const autorise =
     (role === "DONATEUR" && session.role === "ENTREPRISE" && bon.entrepriseId === session.entrepriseId) ||
@@ -31,12 +31,12 @@ export async function demarrerSignatureDocuSign(
     return { ok: false, error: "Le donateur doit d'abord valider cette demande de positionnement." };
   }
 
-  // L'enveloppe DocuSign est envoyée en séquence (donateur d'abord, association ensuite) :
-  // demander un lien de signature association avant que le donateur ait signé est refusé par
-  // DocuSign (RECIPIENT_NOT_IN_SEQUENCE). On l'anticipe ici avec un message clair.
-  if (role === "ASSOCIATION" && !bon.signatureDonateurLe) {
-    return { ok: false, error: "Le donateur doit signer en premier avant que vous puissiez signer." };
-  }
+  // Ordre de signature libre (décision de Bruno du 2026-10-10) : seules comptent une signature
+  // déjà posée par ce rôle et un bon déjà confirmé.
+  if (bon.confirme) return { ok: false, error: "Ce bon est déjà confirmé." };
+  if (bon.don.statut === "ANNULE") return { ok: false, error: "Ce don a été annulé : le bon ne peut plus être signé." };
+  const dejaSigne = role === "DONATEUR" ? bon.signatureDonateurLe : bon.signatureAssociationLe;
+  if (dejaSigne) return { ok: false, error: "Vous avez déjà signé ce bon." };
 
   try {
     const origin = await origineRequete();

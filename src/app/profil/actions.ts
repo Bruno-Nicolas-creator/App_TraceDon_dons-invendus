@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { debutJourParis, finJourParis } from "@/lib/dateParis";
 import { revalidatePath } from "next/cache";
 import { clearSessionCookie } from "@/lib/auth";
 import { getSessionLimitee as getSession } from "@/lib/sessionLimitee";
@@ -226,9 +227,9 @@ export async function ajouterPeriodeCongesAction(formData: FormData) {
   if (!debutBrut || !finBrut) throw new Error("Les dates de début et de fin sont requises.");
   if (champTropLong(motif, LONGUEUR_MAX_CHAMP_COURT)) throw new Error("Motif trop long.");
 
-  const debut = new Date(debutBrut);
-  const fin = new Date(`${finBrut}T23:59:59`);
-  if (Number.isNaN(debut.getTime()) || Number.isNaN(fin.getTime()) || fin < debut) {
+  const debut = debutJourParis(debutBrut);
+  const fin = finJourParis(finBrut);
+  if (!debut || !fin || fin < debut) {
     throw new Error("Période de congés invalide.");
   }
 

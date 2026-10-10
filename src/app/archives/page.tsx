@@ -11,7 +11,11 @@ import ArchivesClient, {
 export const dynamic = "force-dynamic";
 
 const formatDate = (date: Date) =>
-  date.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+  date.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Paris" });
+
+// Année d'un document à l'heure de Paris (sert au filtre par année des archives).
+const anneeDe = (date: Date | null) =>
+  date ? Number(date.toLocaleDateString("fr-FR", { year: "numeric", timeZone: "Europe/Paris" })) : null;
 
 export default async function ArchivesPage() {
   const session = await getSession();
@@ -54,6 +58,8 @@ export default async function ArchivesPage() {
   const bonsAffiches: BonArchive[] = bons.map((bon) => ({
     id: bon.id,
     titre: `Bon n°${bon.numero} — ${nomPartenaire(bon)}`,
+    partenaire: nomPartenaire(bon),
+    annee: anneeDe(bon.dateHeureEnlevement),
     date: bon.dateHeureEnlevement ? formatDate(bon.dateHeureEnlevement) : "—",
     poids: `${(bon.poidsTotalRetenu ?? 0).toLocaleString("fr-FR")} kg`,
   }));
@@ -61,6 +67,8 @@ export default async function ArchivesPage() {
   const attestationsAffichees: AttestationArchive[] = attestations.map((att) => ({
     id: att.id,
     titre: `Attestation ${att.numeroOrdre} — ${nomPartenaire(att)}`,
+    partenaire: nomPartenaire(att),
+    annee: anneeDe(att.periodeDebut),
     periode: `${formatDate(att.periodeDebut)} – ${formatDate(att.periodeFin)}`,
     montant: `${att.montantCalcule.toLocaleString("fr-FR")} €`,
     statut: att.statut,
@@ -70,6 +78,8 @@ export default async function ArchivesPage() {
     (att) => ({
       id: att.id,
       titre: nomPartenaire(att),
+      partenaire: nomPartenaire(att),
+      annee: anneeDe(att.createdAt),
       statut: att.statut,
     })
   );

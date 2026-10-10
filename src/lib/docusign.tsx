@@ -164,7 +164,11 @@ export async function genererPdfBon(bonId: string, origin: string): Promise<Buff
   );
 }
 
-/** Crée l'enveloppe DocuSign (deux signataires, envoi séquentiel) si elle n'existe pas déjà. */
+/**
+ * Crée l'enveloppe DocuSign du bon (deux signataires au même rang : ordre de signature libre) si
+ * elle n'existe pas déjà. Le PDF est figé à la création : toute modification ultérieure du bon
+ * annule l'enveloppe (cf. invaliderSignaturesBon), et la suivante reprend l'état à jour.
+ */
 async function assurerEnveloppe(bonId: string, origin: string): Promise<string> {
   const bon = await prisma.bonEnlevement.findUniqueOrThrow({
     where: { id: bonId },
@@ -214,7 +218,8 @@ async function assurerEnveloppe(bonId: string, origin: string): Promise<string> 
           email: emailAssociation,
           name: bon.association.denomination,
           recipientId: "2",
-          routingOrder: "2",
+          // Même rang que le donateur : les deux parties signent dans l'ordre de leur choix.
+          routingOrder: "1",
           clientUserId: clientUserId(bon.id, "ASSOCIATION"),
           tabs: {
             signHereTabs: [
@@ -245,6 +250,23 @@ async function assurerEnveloppe(bonId: string, origin: string): Promise<string> 
 
   await prisma.bonEnlevement.update({ where: { id: bonId }, data: { docusignEnvelopeId: data.envelopeId } });
   return data.envelopeId;
+}
+
+/**
+ * Annule (« void ») une enveloppe DocuSign encore ouverte : ses signatures déjà faites ne valent
+ * plus, et elle ne peut plus être signée. Utilisé quand le bon est modifié après une signature.
+ * Renvoie false si DocuSign refuse (enveloppe déjà terminée ou introuvable) : l'appelant
+ * détache de toute façon l'enveloppe du bon.
+ */
+export async function annulerEnveloppe(envelopeId: string, raison: string): Promise<boolean> {
+  const accessToken = await obtenirAccessToken();
+  const accountId = requireEnv("DOCUSIGN_ACCOUNT_ID");
+  const res = await fetch(`${BASE_PATH}/v2.1/accounts/${accountId}/envelopes/${envelopeId}`, {
+    method: "PUT",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ status: "voided", voidedReason: raison.slice(0, 200) }),
+  });
+  return res.ok;
 }
 
 /** Ouvre une session de signature intégrée (dans l'appli) pour le rôle demandé. */
@@ -325,18 +347,23 @@ export async function verifierEtEnregistrerSignature(bonId: string, role: RoleSi
     }),
   ]);
 
-  if (role === "DONATEUR") {
+  // Ordre de signature libre : on prévient l'autre partie, soit que c'est à elle de signer, soit
+  // que le bon est signé par les deux et peut être confirmé.
+  const autreDejaSigne = role === "DONATEUR" ? !!bon.signatureAssociationLe : !!bon.signatureDonateurLe;
+  const nomSignataire = role === "DONATEUR" ? bon.entreprise.raisonSociale : bon.association.denomination;
+  const destinataire = role === "DONATEUR" ? { associationId: bon.associationId } : { entrepriseId: bon.entrepriseId };
+  if (autreDejaSigne) {
     await notifier(
-      { associationId: bon.associationId },
-      "Le donateur a signé, à vous de signer",
-      `${bon.entreprise.raisonSociale} a signé le bon d'enlèvement n°${bon.numero}. Vous pouvez maintenant le signer à votre tour.`,
+      destinataire,
+      "Bon signé par les deux parties",
+      `${nomSignataire} a signé à son tour le bon d'enlèvement n°${bon.numero}. Il est signé par les deux parties : la liste est verrouillée et l'enlèvement peut être confirmé.`,
       `/bon-enlevement/${bon.id}`
     );
   } else {
     await notifier(
-      { entrepriseId: bon.entrepriseId },
-      "L'association a signé, vous pouvez confirmer l'enlèvement",
-      `${bon.association.denomination} a signé le bon d'enlèvement n°${bon.numero}. Vous pouvez maintenant confirmer l'enlèvement.`,
+      destinataire,
+      `${nomSignataire} a signé, à vous de signer`,
+      `${nomSignataire} a signé le bon d'enlèvement n°${bon.numero}. Vous pouvez le signer à votre tour. Attention : toute modification de la liste avant votre signature annulera la sienne.`,
       `/bon-enlevement/${bon.id}`
     );
   }
@@ -421,7 +448,8 @@ async function assurerEnveloppeConvention(conventionId: string): Promise<string>
           email: emailAssociation,
           name: convention.association.denomination,
           recipientId: "2",
-          routingOrder: "2",
+          // Ordre de signature libre pour la convention (décision de Bruno du 2026-10-10).
+          routingOrder: "1",
           clientUserId: clientUserId(convention.id, "ASSOCIATION"),
           tabs: {
             signHereTabs: [
@@ -522,9 +550,28 @@ export async function verifierEtEnregistrerSignatureConvention(
   const champ = role === "DONATEUR" ? "signatureEntrepriseLe" : "signatureAssociationLe";
   const horodatage = signataire.signedDateTime ? new Date(signataire.signedDateTime) : new Date();
 
-  const conventionMaj = await prisma.convention.update({ where: { id: conventionId }, data: { [champ]: horodatage } });
+  const conventionMaj = await prisma.convention.update({
+    where: { id: conventionId },
+    data: { [champ]: horodatage },
+    include: { entreprise: { select: { raisonSociale: true } }, association: { select: { denomination: true } } },
+  });
+  const lien = `/convention/${conventionId}`;
+  const nomSignataire = role === "DONATEUR" ? conventionMaj.entreprise.raisonSociale : conventionMaj.association.denomination;
   if (conventionMaj.signatureEntrepriseLe && conventionMaj.signatureAssociationLe) {
     await prisma.convention.update({ where: { id: conventionId }, data: { statut: "SIGNEE" } });
+    const message = `La convention de don entre ${conventionMaj.entreprise.raisonSociale} et ${conventionMaj.association.denomination} est signée par les deux parties. Les dons entre vous sont désormais possibles.`;
+    await notifier({ entrepriseId: conventionMaj.entrepriseId }, "Convention de don signée", message, lien);
+    await notifier({ associationId: conventionMaj.associationId }, "Convention de don signée", message, lien);
+  } else {
+    // Ordre libre : on prévient l'autre partie que c'est à elle de signer.
+    const destinataire =
+      role === "DONATEUR" ? { associationId: conventionMaj.associationId } : { entrepriseId: conventionMaj.entrepriseId };
+    await notifier(
+      destinataire,
+      `${nomSignataire} a signé la convention, à vous de signer`,
+      `${nomSignataire} a signé la convention de don. Signez-la à votre tour pour permettre les dons entre vous.`,
+      lien
+    );
   }
 
   return true;

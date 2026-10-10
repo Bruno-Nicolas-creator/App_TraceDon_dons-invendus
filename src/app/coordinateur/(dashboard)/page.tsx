@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { debutMoisParis, partiesParis } from "@/lib/dateParis";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { associationHabilitee, libelleHabilitation, SEUIL_GRANDE_SURFACE_M2 } from "@/lib/conformite";
@@ -35,16 +36,21 @@ function ligneRescrit(assoc: { rescritStatut: string; rescritDateDepot: Date | n
   }
 }
 
+// Mois (à Paris) d'un instant, pour regrouper les enlèvements.
+function cleMois(date: Date): string {
+  const p = partiesParis(date);
+  return `${p.annee}-${p.mois}`;
+}
+
 // 6 derniers mois glissants, du plus ancien au plus récent (inclus le mois en cours).
 function moisGlissants(nombre: number): { debut: Date; libelle: string; cle: string }[] {
-  const maintenant = new Date();
   const mois: { debut: Date; libelle: string; cle: string }[] = [];
   for (let i = nombre - 1; i >= 0; i--) {
-    const debut = new Date(maintenant.getFullYear(), maintenant.getMonth() - i, 1);
+    const debut = debutMoisParis(-i);
     mois.push({
       debut,
-      cle: `${debut.getFullYear()}-${debut.getMonth()}`,
-      libelle: debut.toLocaleDateString("fr-FR", { month: "short" }).replace(".", ""),
+      cle: cleMois(debut),
+      libelle: debut.toLocaleDateString("fr-FR", { month: "short", timeZone: "Europe/Paris" }).replace(".", ""),
     });
   }
   return mois;
@@ -54,8 +60,8 @@ export default async function CoordinateurDashboardPage() {
   const session = await getSession();
   if (!session || session.role !== "COORDINATEUR") redirect("/connexion");
 
-  const debutMoisCourant = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  const debutHistorique = new Date(new Date().getFullYear(), new Date().getMonth() - 5, 1);
+  const debutMoisCourant = debutMoisParis(0);
+  const debutHistorique = debutMoisParis(-5);
 
   const [associations, donsNonAssignes, bonsConfirmes, bonsHistorique, articles, entreprisesGrandeSurface, articlesAlimentairesConfirmes] =
     await Promise.all([
@@ -121,14 +127,14 @@ export default async function CoordinateurDashboardPage() {
   const poidsMoisCourant = bonsConfirmes
     .filter((b) => b.dateHeureEnlevement && b.dateHeureEnlevement >= debutMoisCourant)
     .reduce((t, b) => t + (b.poidsTotalRetenu ?? 0), 0);
-  const libelleMoisCourant = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const libelleMoisCourant = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric", timeZone: "Europe/Paris" });
 
   const moisRecents = moisGlissants(6);
   const tendance: MoisTendance[] = moisRecents.map((m) => ({ mois: m.libelle, poidsKg: 0 }));
   const indexParCle = new Map(moisRecents.map((m, i) => [m.cle, i]));
   for (const bon of bonsHistorique) {
     if (!bon.dateHeureEnlevement) continue;
-    const cle = `${bon.dateHeureEnlevement.getFullYear()}-${bon.dateHeureEnlevement.getMonth()}`;
+    const cle = cleMois(bon.dateHeureEnlevement);
     const index = indexParCle.get(cle);
     if (index != null) tendance[index].poidsKg += bon.poidsTotalRetenu ?? 0;
   }

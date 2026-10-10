@@ -18,6 +18,8 @@ import { articlesDuBon, articlesEntierementReclames, poidsTotalArticles } from "
 import { notifier } from "@/lib/notifications";
 import { allergenesValides } from "@/lib/allergenes";
 import { tropDeTentatives, tropDEnvoisFichiers, tropDePublications } from "@/lib/rateLimiter";
+import { creerBonEnlevement } from "@/lib/numerotation";
+import { assurerBonModifiable, bonVerrouille, invaliderSignaturesBon, invaliderSignaturesDuDon } from "@/lib/bonSignature";
 
 const MESSAGE_TROP_D_ENVOIS = "Trop de fichiers envoyés en peu de temps, merci de réessayer dans une heure.";
 const MAX_EXTRACTIONS = 10;
@@ -27,12 +29,6 @@ async function requireSession() {
   const session = await getSession();
   if (!session) throw new Error("Non authentifié.");
   return session;
-}
-
-async function genererNumeroBon(): Promise<string> {
-  const total = await prisma.bonEnlevement.count();
-  const annee = new Date().getFullYear();
-  return `${annee}-${String(total + 1).padStart(4, "0")}`;
 }
 
 /**
@@ -47,10 +43,18 @@ function assurerBonNonConfirme(bon: { confirme: boolean } | null | undefined) {
 }
 
 async function assurerDonModifiable(donId: string) {
+  const don = await prisma.don.findUniqueOrThrow({ where: { id: donId }, select: { statut: true } });
+  if (don.statut === "ANNULE") throw new Error("Ce don a été annulé : il ne peut plus être modifié.");
   // Un don peut désormais avoir plusieurs bons (un par association, pour un don matériel
   // divisible) : on bloque la modification dès que l'un d'eux est confirmé.
   const bonConfirme = await prisma.bonEnlevement.findFirst({ where: { donId, confirme: true }, select: { confirme: true } });
   assurerBonNonConfirme(bonConfirme);
+  // Liste modifiable tant que les deux parties n'ont pas signé (cf. src/lib/bonSignature.ts).
+  const bons = await prisma.bonEnlevement.findMany({
+    where: { donId },
+    select: { confirme: true, signatureDonateurLe: true, signatureAssociationLe: true },
+  });
+  for (const bon of bons) assurerBonModifiable(bon);
 }
 
 export async function ajouterArticleManuel(
@@ -96,6 +100,7 @@ export async function ajouterArticleManuel(
       allergenes: allergenesValides(allergenes),
     },
   });
+  await invaliderSignaturesDuDon(donId, "ENTREPRISE");
   revalidatePath("/");
   return { ok: true, id: article.id, quantiteDeclaree };
 }
@@ -149,6 +154,7 @@ export async function ajouterArticleMateriel(formData: FormData) {
       photoContenu: photo?.photoContenu as unknown as never,
     },
   });
+  await invaliderSignaturesDuDon(donId, "ENTREPRISE");
   revalidatePath("/");
   return { ok: true, id: article.id, quantiteDeclaree };
 }
@@ -164,6 +170,7 @@ export async function definirDetailsDonMaterielAction(donId: string, divisible: 
     where: { id: donId },
     data: { divisible, instructionsAcces: instructionsNettoyees || null },
   });
+  await invaliderSignaturesDuDon(donId, "ENTREPRISE");
   revalidatePath("/nouveau-don-materiel");
 }
 
@@ -196,6 +203,7 @@ export async function definirDetailsLotAction(
       instructionsAcces: instructionsAcces.trim() || null,
     },
   });
+  await invaliderSignaturesDuDon(donId, "ENTREPRISE");
   revalidatePath("/");
 }
 
@@ -222,6 +230,7 @@ export async function televerserPieceJointeDonAction(formData: FormData) {
       pieceJointeContenu: Buffer.from(new Uint8Array(await fichier.arrayBuffer())) as unknown as never,
     },
   });
+  await invaliderSignaturesDuDon(donId, "ENTREPRISE");
   revalidatePath("/");
   return { ok: true };
 }
@@ -236,6 +245,7 @@ export async function retirerPieceJointeDonAction(donId: string) {
     where: { id: donId },
     data: { pieceJointeNomFichier: null, pieceJointeContentType: null, pieceJointeContenu: null },
   });
+  await invaliderSignaturesDuDon(donId, "ENTREPRISE");
   revalidatePath("/");
 }
 
@@ -284,6 +294,7 @@ export async function ajouterArticleScanne(
       allergenes: allergenesValides(allergenes),
     },
   });
+  await invaliderSignaturesDuDon(donId, "ENTREPRISE");
   revalidatePath("/");
   return { ok: true, id: article.id, poidsKg };
 }
@@ -292,7 +303,9 @@ export async function retirerArticle(articleId: string) {
   const session = await requireSession();
   const article = await prisma.article.findUniqueOrThrow({
     where: { id: articleId },
-    include: { don: { include: { bonsEnlevement: { select: { confirme: true } } } } },
+    include: {
+      don: { include: { bonsEnlevement: { select: { confirme: true, signatureDonateurLe: true, signatureAssociationLe: true } } } },
+    },
   });
   if (article.don.entrepriseId !== session.entrepriseId) throw new Error("Article non autorisé.");
   if (article.statut !== "EN_ATTENTE") {
@@ -304,7 +317,9 @@ export async function retirerArticle(articleId: string) {
   if (article.don.bonsEnlevement.some((b) => b.confirme)) {
     throw new Error("Le bon d'enlèvement est déjà confirmé : les articles ne peuvent plus être modifiés.");
   }
+  for (const bon of article.don.bonsEnlevement) assurerBonModifiable(bon);
   await prisma.article.delete({ where: { id: articleId } });
+  await invaliderSignaturesDuDon(article.donId, "ENTREPRISE");
   revalidatePath("/");
 }
 
@@ -345,6 +360,7 @@ export async function extraireArticlesAction(
   const articles = await prisma.article.createManyAndReturn({
     data: extraits.map((a) => ({ donId, designation: a.designation, quantiteDeclaree: a.quantiteDeclaree, poidsKg: a.poidsKg })),
   });
+  await invaliderSignaturesDuDon(donId, "ENTREPRISE");
   revalidatePath("/");
   return {
     ok: true,
@@ -357,6 +373,11 @@ export async function publierDon(donId: string) {
   if (session.role !== "ENTREPRISE" || !session.entrepriseId) throw new Error("Action réservée aux entreprises.");
   const don = await prisma.don.findUniqueOrThrow({ where: { id: donId }, include: { articles: true } });
   if (don.entrepriseId !== session.entrepriseId) throw new Error("Don non autorisé.");
+  // Seul un brouillon se publie : empêche de republier un don déjà pris en charge (deux onglets,
+  // double clic, appel direct).
+  if (don.statut !== "BROUILLON") {
+    return { ok: false as const, error: "Ce don a déjà été publié." };
+  }
   if (await tropDePublications(session.userId, "publication")) {
     return { ok: false as const, error: "Trop de publications en peu de temps, merci de réessayer dans une heure." };
   }
@@ -398,24 +419,40 @@ export async function publierDon(donId: string) {
   let assigneA: string | null = null;
   let bonIdAutoAssigne: string | null = null;
 
-  if (assignationsAujourdhui.length === 1) {
-    const association = assignationsAujourdhui[0].association;
-    await prisma.don.update({
-      where: { id: donId },
+  // L'attribution automatique revérifie que l'association planifiée est toujours éligible
+  // (convention signée, pas en congés) ; sinon le don part sur la place de marché.
+  let associationPlanifiee = assignationsAujourdhui.length === 1 ? assignationsAujourdhui[0].association : null;
+  if (associationPlanifiee) {
+    const [conventionOk, congesAssociation] = await Promise.all([
+      conventionEstSignee(session.entrepriseId, associationPlanifiee.id),
+      prisma.periodeConges.findMany({ where: { associationId: associationPlanifiee.id } }),
+    ]);
+    if (!conventionOk || periodeCongesActive(congesAssociation)) associationPlanifiee = null;
+  }
+
+  if (associationPlanifiee) {
+    const association = associationPlanifiee;
+    const { count } = await prisma.don.updateMany({
+      where: { id: donId, statut: "BROUILLON" },
       data: { statut: "PRIS_EN_CHARGE", associationAssigneeId: association.id, publieLe: new Date() },
     });
-    const bon = await prisma.bonEnlevement.create({
-      data: {
-        numero: await genererNumeroBon(),
-        donId,
-        entrepriseId: session.entrepriseId,
-        associationId: association.id,
-      },
-    });
+    if (count === 0) return { ok: false as const, error: "Ce don a déjà été publié." };
+    const bon = await creerBonEnlevement({ donId, entrepriseId: session.entrepriseId, associationId: association.id });
     assigneA = association.denomination;
     bonIdAutoAssigne = bon.id;
+    const entreprise = await prisma.entreprise.findUniqueOrThrow({ where: { id: session.entrepriseId }, select: { raisonSociale: true } });
+    await notifier(
+      { associationId: association.id },
+      "Un don vous est attribué (planning)",
+      `${entreprise.raisonSociale} vous a attribué son don du jour, selon votre planning récurrent. Le bon d'enlèvement n°${bon.numero} est prêt.`,
+      `/bon-enlevement/${bon.id}`
+    );
   } else {
-    await prisma.don.update({ where: { id: donId }, data: { statut: "PUBLIE", publieLe: new Date() } });
+    const { count } = await prisma.don.updateMany({
+      where: { id: donId, statut: "BROUILLON" },
+      data: { statut: "PUBLIE", publieLe: new Date() },
+    });
+    if (count === 0) return { ok: false as const, error: "Ce don a déjà été publié." };
   }
 
   revalidatePath("/");
@@ -448,6 +485,14 @@ export async function sePositionner(
   articleIds = articleIds ? Array.from(new Set(articleIds)) : null;
 
   const donCible = await prisma.don.findUniqueOrThrow({ where: { id: donId }, include: { articles: true } });
+  if (donCible.statut !== "PUBLIE") {
+    return { ok: false, error: "Ce don n'est plus disponible, merci de rafraîchir la page." };
+  }
+  // Un don divisible se réclame toujours article par article (avec validation du donateur) :
+  // la voie « don entier » lui est fermée, même par un appel direct au serveur.
+  if (donCible.type === "MATERIEL" && donCible.divisible && !(articleIds && articleIds.length > 0)) {
+    return { ok: false, error: "Ce don est divisible : choisissez les articles qui vous intéressent." };
+  }
 
   // Don matériel divisible : on réclame seulement les articles choisis, pas le don entier.
   if (articleIds && articleIds.length > 0) {
@@ -472,7 +517,7 @@ export async function sePositionner(
   }
 
   if (!(await conventionEstSignee(donCible.entrepriseId, session.associationId))) {
-    const convention = await obtenirOuCreerConvention(donCible.entrepriseId, session.associationId);
+    const convention = await obtenirOuCreerConvention(donCible.entrepriseId, session.associationId, "ASSOCIATION");
     return {
       ok: false,
       error: "Une convention de don doit être signée avec cette entreprise avant de vous positionner.",
@@ -528,17 +573,19 @@ export async function sePositionner(
     // Réclamation partielle (don matériel divisible) : seuls les articles choisis changent de
     // main, le don reste ouvert aux autres associations tant qu'il reste des articles libres.
     // La demande attend l'accord du donateur avant de pouvoir être signée (cf. refuserPositionnement).
-    const { count } = await prisma.article.updateMany({
-      where: { id: { in: articleIds! }, donId, associationAssigneeId: null },
-      data: { associationAssigneeId: associationId },
-    });
-    if (count !== articleIds!.length) {
-      // Réservation partielle (un autre article a été pris entre-temps) : on libère ceux qu'on
-      // vient de réserver, sinon ils resteraient bloqués sans aucun bon d'enlèvement associé.
-      await prisma.article.updateMany({
-        where: { id: { in: articleIds! }, donId, associationAssigneeId: associationId },
-        data: { associationAssigneeId: null },
-      });
+    // Réservation tout ou rien dans une transaction : si un seul article a été pris entre-temps,
+    // l'ensemble est annulé par la base, sans toucher aux articles réservés par d'autres demandes.
+    const reserve = await prisma
+      .$transaction(async (tx) => {
+        const { count } = await tx.article.updateMany({
+          where: { id: { in: articleIds! }, donId, associationAssigneeId: null },
+          data: { associationAssigneeId: associationId },
+        });
+        if (count !== articleIds!.length) throw new Error("reservation-incomplete");
+        return true;
+      })
+      .catch(() => false);
+    if (!reserve) {
       return { ok: false, error: "Certains articles viennent d'être réclamés par une autre association, merci de rafraîchir la page." };
     }
     const donMisAJour = await prisma.don.findUniqueOrThrow({ where: { id: donId }, include: { articles: true } });
@@ -546,14 +593,11 @@ export async function sePositionner(
       await prisma.don.update({ where: { id: donId }, data: { statut: "PRIS_EN_CHARGE" } });
     }
 
-    const bon = await prisma.bonEnlevement.create({
-      data: {
-        numero: await genererNumeroBon(),
-        donId,
-        entrepriseId: donCible.entrepriseId,
-        associationId,
-        enAttenteValidationDonateur: true,
-      },
+    const bon = await creerBonEnlevement({
+      donId,
+      entrepriseId: donCible.entrepriseId,
+      associationId,
+      enAttenteValidationDonateur: true,
     });
     revalidatePath("/dons");
     revalidatePath("/nouveau-don-materiel");
@@ -584,14 +628,7 @@ export async function sePositionner(
     where: { donId_associationId: { donId, associationId } },
   });
   if (!bon) {
-    bon = await prisma.bonEnlevement.create({
-      data: {
-        numero: await genererNumeroBon(),
-        donId,
-        entrepriseId: donCible.entrepriseId,
-        associationId,
-      },
-    });
+    bon = await creerBonEnlevement({ donId, entrepriseId: donCible.entrepriseId, associationId });
   }
   revalidatePath("/dons");
   return { ok: true, bonId: bon.id };
@@ -604,12 +641,15 @@ async function requireControleAssociation(articleId: string) {
     include: {
       don: {
         include: {
-          bonsEnlevement: { select: { associationId: true, confirme: true, enAttenteValidationDonateur: true, signatureAssociationLe: true } },
+          bonsEnlevement: {
+            select: { id: true, associationId: true, confirme: true, enAttenteValidationDonateur: true, signatureDonateurLe: true, signatureAssociationLe: true },
+          },
         },
       },
     },
   });
   // Don divisible : l'attributaire est porté par l'article. Don non divisible : par le don entier.
+  if (article.don.statut === "ANNULE") throw new Error("Ce don a été annulé : le bon ne peut plus être modifié.");
   const proprietaireId = article.associationAssigneeId ?? article.don.associationAssigneeId;
   if (session.role !== "ASSOCIATION" || proprietaireId !== session.associationId) {
     throw new Error("Action réservée à l'association destinataire de ce don.");
@@ -619,17 +659,14 @@ async function requireControleAssociation(articleId: string) {
     throw new Error("Le donateur doit d'abord valider votre demande de positionnement.");
   }
   assurerBonNonConfirme(bonAssocie);
-  // L'association signe en dernier, après avoir contrôlé les articles : une fois sa signature
-  // posée, modifier quantités, températures ou statuts ferait diverger le registre du document
-  // réellement signé sur DocuSign.
-  if (bonAssocie?.signatureAssociationLe) {
-    throw new Error("Vous avez déjà signé le bon d'enlèvement : le contrôle des articles ne peut plus être modifié.");
-  }
-  return { article, associationId: proprietaireId };
+  // Contrôle modifiable tant que les deux parties n'ont pas signé ; toute modification annule
+  // ensuite la signature déjà posée (cf. invaliderSignaturesBon, appelé par chaque action).
+  assurerBonModifiable(bonAssocie);
+  return { article, associationId: proprietaireId, bonId: bonAssocie?.id ?? null };
 }
 
 export async function validerArticle(articleId: string) {
-  const { article, associationId } = await requireControleAssociation(articleId);
+  const { article, associationId, bonId } = await requireControleAssociation(articleId);
 
   const periodesCongesAssociation = await prisma.periodeConges.findMany({
     where: { associationId },
@@ -643,21 +680,23 @@ export async function validerArticle(articleId: string) {
 
   if (article.dlcDepassee) return; // le refus est obligatoire, cf. cahier des charges
   await prisma.article.update({ where: { id: articleId }, data: { statut: "VALIDE", motifRefus: null } });
+  if (bonId) await invaliderSignaturesBon(bonId, "ASSOCIATION");
   revalidatePath("/bon-enlevement");
 }
 
 export async function refuserArticle(articleId: string, motif: string) {
-  await requireControleAssociation(articleId);
+  const { bonId } = await requireControleAssociation(articleId);
   await prisma.article.update({
     where: { id: articleId },
     data: { statut: "REFUSE", motifRefus: motif || null },
   });
+  if (bonId) await invaliderSignaturesBon(bonId, "ASSOCIATION");
   revalidatePath("/bon-enlevement");
 }
 
 /** Quantité et température réellement constatées par l'association au moment de l'enlèvement. */
 export async function constaterArticleAction(articleId: string, quantiteConstatee: string, temperature: string) {
-  await requireControleAssociation(articleId);
+  const { bonId } = await requireControleAssociation(articleId);
   if (champTropLong(quantiteConstatee, 100) || champTropLong(temperature, 50)) {
     throw new Error("Valeur trop longue.");
   }
@@ -665,6 +704,7 @@ export async function constaterArticleAction(articleId: string, quantiteConstate
     where: { id: articleId },
     data: { quantiteConstatee: quantiteConstatee.trim() || null, temperature: temperature.trim() || null },
   });
+  if (bonId) await invaliderSignaturesBon(bonId, "ASSOCIATION");
   revalidatePath("/bon-enlevement");
 }
 
@@ -674,14 +714,20 @@ export async function constaterArticleAction(articleId: string, quantiteConstate
  * bloque la validation de l'article (cf. validerArticle) : le refus devient obligatoire.
  */
 export async function constaterDlcAction(articleId: string, dlcOuEtat: string, dlcDepassee: boolean) {
-  await requireControleAssociation(articleId);
+  const { article, bonId } = await requireControleAssociation(articleId);
   if (champTropLong(dlcOuEtat, 100)) {
     throw new Error("Valeur trop longue.");
   }
+  // DLC dépassée = refus obligatoire : l'article passe en refusé, même s'il avait été validé.
   await prisma.article.update({
     where: { id: articleId },
-    data: { dlcOuEtat: dlcOuEtat.trim() || null, dlcDepassee },
+    data: {
+      dlcOuEtat: dlcOuEtat.trim() || null,
+      dlcDepassee,
+      ...(dlcDepassee ? { statut: "REFUSE" as const, motifRefus: article.motifRefus || "DLC dépassée" } : {}),
+    },
   });
+  if (bonId) await invaliderSignaturesBon(bonId, "ASSOCIATION");
   revalidatePath("/bon-enlevement");
 }
 
@@ -699,8 +745,8 @@ export async function definirBenevoleCollecteurAction(bonId: string, benevoleId:
   if (bon.enAttenteValidationDonateur) {
     throw new Error("Le donateur doit d'abord valider votre demande de positionnement.");
   }
-  if (bon.confirme || bon.signatureAssociationLe) {
-    throw new Error("Le bon est déjà signé par l'association : le bénévole collecteur ne peut plus être modifié.");
+  if (bonVerrouille(bon)) {
+    throw new Error("Le bon est signé par les deux parties : le bénévole collecteur ne peut plus être modifié.");
   }
 
   if (benevoleId) {
@@ -711,6 +757,7 @@ export async function definirBenevoleCollecteurAction(bonId: string, benevoleId:
   }
 
   await prisma.bonEnlevement.update({ where: { id: bonId }, data: { benevoleCollecteurId: benevoleId } });
+  await invaliderSignaturesBon(bonId, "ASSOCIATION");
   revalidatePath("/bon-enlevement");
 }
 
@@ -734,12 +781,22 @@ export async function confirmerBon(bonId: string) {
   if (bon.enAttenteValidationDonateur) {
     return { ok: false, error: "Le donateur doit d'abord valider cette demande de positionnement." };
   }
+  if (bon.confirme) return { ok: false, error: "Ce bon est déjà confirmé." };
+  if (bon.don.statut === "ANNULE") {
+    return { ok: false, error: "Ce don a été annulé : l'enlèvement ne peut pas être confirmé." };
+  }
   if (!bon.signatureDonateurLe || !bon.signatureAssociationLe) {
     return { ok: false, error: "Les deux signatures sont requises avant de confirmer l'enlèvement." };
   }
-  const poidsTotalRetenu = poidsTotalArticles(
-    articlesDuBon(bon.don, bon.don.articles, bon.associationId).filter((a) => a.statut === "VALIDE")
-  );
+  const articlesBon = articlesDuBon(bon.don, bon.don.articles, bon.associationId);
+  const nonControles = articlesBon.filter((a) => a.statut === "EN_ATTENTE").length;
+  if (nonControles > 0) {
+    return {
+      ok: false,
+      error: `${nonControles} article(s) n'ont pas été contrôlés : chaque article doit être validé ou refusé avant de confirmer.`,
+    };
+  }
+  const poidsTotalRetenu = poidsTotalArticles(articlesBon.filter((a) => a.statut === "VALIDE"));
 
   // Un don matériel divisible n'est clôturé que lorsque tous ses articles ont trouvé preneur
   // et que tous les bons associés (le sien y compris) sont confirmés — les autres associations
@@ -831,9 +888,11 @@ export async function assignerDon(donId: string, associationId: string) {
   let don = donCible;
   if (donCible.type === "MATERIEL" && donCible.divisible) {
     // Don divisible : le coordinateur attribue à cette association tout ce qui reste encore
-    // libre, sans toucher aux articles déjà réclamés par d'autres.
+    // libre, sans toucher aux articles déjà réclamés par d'autres — seulement s'il est publié
+    // (ni brouillon, ni annulé, ni déjà entièrement réclamé).
+    if (donCible.statut !== "PUBLIE") throw new Error("Ce don n'est plus disponible à l'attribution.");
     await prisma.article.updateMany({
-      where: { donId, associationAssigneeId: null },
+      where: { donId, associationAssigneeId: null, don: { statut: "PUBLIE" } },
       data: { associationAssigneeId: associationId },
     });
     don = await prisma.don.findUniqueOrThrow({ where: { id: donId }, include: { articles: true } });
@@ -856,11 +915,31 @@ export async function assignerDon(donId: string, associationId: string) {
   const bonExistant = await prisma.bonEnlevement.findUnique({
     where: { donId_associationId: { donId, associationId } },
   });
-  if (!bonExistant) {
-    await prisma.bonEnlevement.create({
-      data: { numero: await genererNumeroBon(), donId, entrepriseId: don.entrepriseId, associationId },
-    });
+  const bon =
+    bonExistant ??
+    (await creerBonEnlevement({ donId, entrepriseId: don.entrepriseId, associationId }));
+
+  // Notifications des deux parties ; sans convention signée entre elles, la convention est créée et
+  // envoyée automatiquement aux deux pour signature (décision de Bruno du 2026-10-09).
+  const [entreprise, association] = await Promise.all([
+    prisma.entreprise.findUniqueOrThrow({ where: { id: don.entrepriseId }, select: { raisonSociale: true } }),
+    prisma.association.findUniqueOrThrow({ where: { id: associationId }, select: { denomination: true } }),
+  ]);
+  if (!(await conventionEstSignee(don.entrepriseId, associationId))) {
+    await obtenirOuCreerConvention(don.entrepriseId, associationId, "COORDINATEUR");
   }
+  await notifier(
+    { associationId },
+    "Un don vous est attribué par le coordinateur",
+    `Le coordinateur vous a attribué un don de ${entreprise.raisonSociale}. Le bon d'enlèvement n°${bon.numero} est prêt.`,
+    `/bon-enlevement/${bon.id}`
+  );
+  await notifier(
+    { entrepriseId: don.entrepriseId },
+    "Votre don est attribué par le coordinateur",
+    `Le coordinateur a attribué votre don à ${association.denomination}. Le bon d'enlèvement n°${bon.numero} est prêt.`,
+    `/bon-enlevement/${bon.id}`
+  );
 
   revalidatePath("/coordinateur");
 }

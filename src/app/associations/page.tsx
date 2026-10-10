@@ -20,7 +20,7 @@ export default async function AssociationsProchesPage() {
   }
   const associations = await prisma.association.findMany({
     orderBy: { denomination: "asc" },
-    include: { periodesConges: true, documents: { where: { type: "ATTESTATION_CHAINE_FROID" } } },
+    include: { periodesConges: true },
   });
 
   let centreCarte: { lat: number; lng: number } | null =
@@ -84,9 +84,6 @@ export default async function AssociationsProchesPage() {
       congesJusquau: congesEnCours ? formaterDateConges(congesEnCours.fin) : null,
       typesActivite: association.typesActivite,
       notreAction: association.notreAction,
-      chaineFroidAttestee: association.documents.length > 0,
-      capaciteAccueilKg: association.capaciteAccueilKg,
-      nombreBeneficiaires: association.nombreBeneficiaires,
     };
   });
 

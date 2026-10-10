@@ -23,7 +23,7 @@ export async function definirAssignation(
   if (jourSemaine < 0 || jourSemaine > 6) throw new Error("Jour invalide.");
 
   if (!(await conventionEstSignee(session.entrepriseId!, associationId))) {
-    const convention = await obtenirOuCreerConvention(session.entrepriseId!, associationId);
+    const convention = await obtenirOuCreerConvention(session.entrepriseId!, associationId, "ENTREPRISE");
     return {
       ok: false,
       error: "Une convention de don doit être signée avec cette association avant de l'ajouter au planning.",

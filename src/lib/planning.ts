@@ -1,6 +1,9 @@
+import { partiesParis } from "@/lib/dateParis";
+
 export const LIBELLES_JOURS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"] as const;
 
-// Convertit le getDay() natif de JS (0 = dimanche) vers notre index (0 = lundi ... 6 = dimanche).
+// Jour de la semaine à Paris (0 = lundi ... 6 = dimanche) : le serveur tourne en UTC, un lundi
+// à 0 h 30 à Paris y est encore dimanche.
 export function jourSemaineDuJour(date: Date): number {
-  return (date.getDay() + 6) % 7;
+  return partiesParis(date).jourSemaine;
 }

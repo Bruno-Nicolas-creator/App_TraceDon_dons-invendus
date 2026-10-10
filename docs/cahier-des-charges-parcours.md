@@ -1,6 +1,6 @@
 # TraceDon · Cahier des charges des parcours utilisateurs
 
-> **Version 1.2 · 9 octobre 2026** (intègre toutes les décisions de Bruno, voir annexe C) · rédigé pour l'équipe qui reconstruit l'application TraceDon (nom technique actuel : « Dons Invendus »).
+> **Version 1.3 · 10 octobre 2026** (intègre toutes les décisions de Bruno, voir annexe C) · rédigé pour l'équipe qui reconstruit l'application TraceDon (nom technique actuel : « Dons Invendus »).
 > Ce document décrit le **comportement attendu** de l'application, rôle par rôle. Il est indépendant de la technologie : il ne présuppose ni le framework, ni la base de données, ni l'hébergeur. L'application actuelle (V1) ne sert que de référence ; ses écarts et ses pièges sont listés en annexe pour ne pas les reproduire.
 
 ---
@@ -225,7 +225,7 @@ Navigation principale de l'entreprise : **Nouveau don · Mes dons 🆕 · Planni
 ### E5 · Consulter l'annuaire et le dossier d'une association
 
 - **Objectif** : choisir des partenaires de confiance.
-- **Écran** : carte ou liste des associations, triées par distance réelle, avec badges : catégorie, « Habilitée » (affiché si l'entreprise dépasse 400 m²), « Chaîne du froid », « Vérifiée » par TraceDon, « Reconnue d'utilité publique » 🆕, capacité d'accueil (kg par collecte), nombre de bénéficiaires, congés en cours, présentation.
+- **Écran** : carte ou liste des associations, triées par distance réelle, avec badges : catégorie, « Habilitée » (affiché si l'entreprise dépasse 400 m²), « Vérifiée » par TraceDon, « Reconnue d'utilité publique » 🆕, congés en cours, présentation. Décision de Bruno (2026-10-10) : pas de badge « Chaîne du froid », capacité d'accueil ni nombre de bénéficiaires dans la liste ; ces informations restent dans le dossier détaillé.
 - 🆕 **Dossier détaillé** (en ouvrant une association) : habilitation (niveau, date de fin), déclaration DDPP, attestation chaîne du froid, assurances, statut fiscal (intérêt général, rescrit, RUP), disponibilités de retrait (jours × matin/après-midi), bénévoles (nom et rôle, sans téléphone), et **les documents du coffre-fort de l'association, consultables** (décision de Bruno).
 - 🆕 Actions depuis la fiche : « Proposer une convention », « Écrire » (si convention signée), « Ajouter au planning ».
 - **Règles** : les documents sont consultables en lecture seule par les entreprises connectées ; chaque consultation est comptée dans la limite de téléchargements (7.2). L'association est informée, sur son coffre-fort, que ses documents sont visibles des entreprises.
@@ -322,16 +322,16 @@ Navigation principale de l'entreprise : **Nouveau don · Mes dons 🆕 · Planni
 - **Ce qui se passe** :
   1. Avant la remise, l'entreprise peut ajouter ou retirer des articles (alimentaire), avec les mêmes contrôles qu'en E7.
   2. L'association contrôle chaque article (A8).
-  3. 🔧 **Signatures après le contrôle** : le document signé est généré **au moment de la signature** et reflète l'état final du contrôle. L'entreprise signe en premier, puis l'association.
-  4. 🔧 Dès que l'entreprise a signé, la liste d'articles est **gelée** : plus d'ajout ni de retrait.
+  3. 🔧 **Signatures dans l'ordre de son choix** : l'entreprise ou l'association signe en premier. Le document signé est généré **au moment de la signature** et reflète l'état du contrôle à cet instant.
+  4. 🔧 **Liste modifiable jusqu'à la seconde signature** (décision de Bruno, 2026-10-10) : tant que les deux parties n'ont pas signé, articles et contrôle restent modifiables ; toute modification après une première signature **annule** cette signature (et la séance de signature en cours), prévient la partie concernée, et les deux re-signent la version à jour. Dès que les deux ont signé, la liste est **gelée**.
   5. Une fois les deux signatures obtenues, l'enlèvement est **confirmé** (par l'une ou l'autre partie) : date et heure, poids retenu (somme des articles validés) et CO₂ évité sont **enregistrés** 🔧 ; le bon est verrouillé définitivement.
   6. 🆕 Le PDF signé par les deux parties est récupéré et archivé tel quel ; c'est lui qui fait foi.
 - **Règles** :
-  - Ordre des signatures **imposé** pour le bon : entreprise puis association.
+  - Ordre des signatures **libre** pour le bon (R10).
   - 🔧 Confirmation **bloquée** tant qu'un article est encore « en attente » (ni validé ni refusé).
   - 🔧 Un bon d'un don annulé ne peut être ni signé ni confirmé.
   - 🆕 Notification de la confirmation aux deux parties.
-- **Recette** : le PDF signé montre les quantités constatées et les refus ; après la signature de l'entreprise, le bouton « Ajouter un article » disparaît ; impossible de confirmer avec un article non contrôlé.
+- **Recette** : l'association peut signer en premier ; une modification après une signature l'annule et prévient l'autre partie ; après les deux signatures, le bouton « Ajouter un article » disparaît ; le PDF signé montre les quantités constatées et les refus ; impossible de confirmer avec un article non contrôlé.
 
 ### E13 · Annuler un don 🆕
 
@@ -489,7 +489,7 @@ Voir E6 : ordre de signature **libre**, notification à l'autre partie.
   - Ce que l'entreprise a déclaré est indicatif : les valeurs constatées par l'association font foi.
   - 🔧 **DLC dépassée = refus obligatoire** : cocher « Dépassée » fait passer l'article en « Refusé » (même s'il était validé) et empêche de le valider. Modifier la date ne décoche jamais la case par erreur.
   - Contrôle impossible tant que la demande partielle n'est pas acceptée, ou pendant les congés de l'association (validation comme refus 🔧).
-  - **Signature** : seulement après celle de l'entreprise. Le compte de l'association signe ; si un bénévole est choisi, **son nom figure sur le bon** comme personne ayant collecté pour l'association (décision : le bénévole ne signe pas lui-même).
+  - **Signature** : avant ou après celle de l'entreprise (R10). Le compte de l'association signe ; si un bénévole est choisi, **son nom figure sur le bon** comme personne ayant collecté pour l'association (décision : le bénévole ne signe pas lui-même).
   - Confirmation : voir E12 (poids retenu, date, CO₂ enregistrés ; bon verrouillé ; notification).
 - **Recette** : cocher « Dépassée » sur un article validé le fait passer en refusé ; le PDF signé indique le nom du bénévole collecteur.
 
@@ -670,18 +670,18 @@ Chaque notification part par **e-mail** et par **notification sur l'appareil** (
 |---|---|---|
 | Nouveau don publié correspondant à ses réglages (rayon, catégories) | Associations concernées | 🆕 |
 | Articles d'un don divisible de nouveau libres | Associations concernées | 🆕 |
-| Don attribué par le planning | Association | 🆕 |
-| Don attribué par le coordinateur | Association et entreprise | 🆕 |
+| Don attribué par le planning | Association | Existe depuis le 2026-10-10 |
+| Don attribué par le coordinateur | Association et entreprise | Existe depuis le 2026-10-10 |
 | Positionnement sur un don entier | Entreprise | 🆕 |
 | Demande partielle sur un don divisible | Entreprise | Existe |
 | Demande partielle acceptée / refusée | Association | Existe |
-| Convention à signer / signée | L'autre partie | 🆕 |
-| L'entreprise a signé le bon | Association | Existe |
-| L'association a signé le bon | Entreprise | Existe |
+| Convention à signer / signée | L'autre partie | Existe depuis le 2026-10-10 |
+| Une partie a signé le bon (ordre libre) | L'autre partie | Existe |
+| Signature du bon annulée par une modification | La partie dont la signature tombe | Existe depuis le 2026-10-10 |
 | Enlèvement confirmé | Les deux parties | 🆕 |
 | Don annulé par l'entreprise | Association attributaire | 🆕 |
 | Planning suspendu par des congés, ou réactivé | Associations planifiées | 🆕 |
-| Convention envoyée par le coordinateur | Les deux parties | 🆕 |
+| Convention envoyée par le coordinateur | Les deux parties | Existe depuis le 2026-10-10 |
 | Demande partielle validée par le coordinateur | Entreprise | 🆕 |
 | Invitation à rejoindre une organisation, e-mail à vérifier | Utilisateur invité ou inscrit | 🆕 |
 | Demande de reçu fiscal reçue | Association | 🆕 |
@@ -743,8 +743,9 @@ stateDiagram-v2
   [*] --> AControler: attribution d'un don entier
   AttenteValidation --> AControler: l'entreprise accepte
   AttenteValidation --> Refuse: l'entreprise refuse
-  AControler --> SigneEntreprise: l'entreprise signe (liste gelée)
-  SigneEntreprise --> SigneDeuxParties: l'association signe
+  AControler --> UneSignature: une partie signe (ordre libre)
+  UneSignature --> AControler: modification (signature annulée)
+  UneSignature --> SigneDeuxParties: l'autre partie signe (liste gelée)
   SigneDeuxParties --> Confirme: confirmation (poids, date, CO₂ enregistrés)
   AControler --> Annule: don annulé
   Confirme --> [*]
@@ -792,8 +793,8 @@ stateDiagram-v2
 | R7 | DLC/DDM dépassée : refus obligatoire de l'article | Bloquant |
 | R8 | Un don non divisible a une seule association attributaire, même en cas de clics simultanés | Bloquant |
 | R9 | Don divisible : toute réclamation partielle doit être acceptée par l'entreprise avant contrôle et signature | Bloquant |
-| R10 | Bon : l'entreprise signe d'abord, l'association ensuite ; le document signé reflète le contrôle final | Bloquant |
-| R11 | Après la signature de l'entreprise, la liste d'articles du bon est gelée | Bloquant |
+| R10 | Bon : ordre de signature libre ; le document signé reflète le contrôle final | — |
+| R11 | Liste du bon modifiable tant que les deux n'ont pas signé ; une modification après une première signature l'annule (re-signature des deux) ; gelée après la seconde signature | Bloquant |
 | R12 | Confirmation : deux signatures et aucun article en attente | Bloquant |
 | R13 | Bon confirmé : définitivement non modifiable (registre légal) | Bloquant |
 | R14 | Convention : ordre de signature libre, reconduction tacite sans date de fin, résiliation avec préavis d'un mois | — |
@@ -894,23 +895,23 @@ Consentement préalable à toute mesure d'audience, modifiable à tout moment ; 
 | Alerte nouveau don | Aucune, malgré une préférence e-mail/SMS dans le profil | E-mail, SMS, notification (A3) |
 | Suivi entreprise | Aucune liste des dons en cours | « Mes dons » (E10) |
 | Annulation | Seulement via les congés, sans prévenir personne | Annulation avec motif et notification (E13) |
-| PDF signé du bon | Figé au premier clic de signature, avant le contrôle de l'association | Généré au moment de la signature, archivé (E12) |
-| Liste d'articles après signature | Modifiable jusqu'à la confirmation | Gelée dès la signature de l'entreprise (R11) |
-| Confirmation | Possible avec des articles non contrôlés | Bloquée (R12) |
-| DLC dépassée | Contournable (article déjà validé, champ date qui décochait la case) | Refus automatique (R7) |
-| Convention | Ordre imposé techniquement, présenté comme libre à l'écran | Ordre libre (R14) |
-| Bon d'un don annulé | Restait signable et confirmable | Bloqué |
-| Republication | Un don déjà pris en charge pouvait être republié | Seul un brouillon se publie |
-| Don divisible | Contournement possible de la validation du donateur par appel direct | Refusé côté serveur |
-| Numérotation | « nombre + 1 » : doublons possibles, compteur non annuel | Séquence annuelle sans doublon (R16) |
+| PDF signé du bon | Figé au premier clic de signature, avant le contrôle de l'association (corrigé dans la V1 le 2026-10-10) : une modification annule la séance de signature | Généré au moment de la signature, archivé (E12) |
+| Liste d'articles après signature | Modifiable jusqu'à la confirmation (corrigé dans la V1 le 2026-10-10) | Modifiable jusqu'à la seconde signature, avec re-signature (R11) |
+| Confirmation | Possible avec des articles non contrôlés (corrigé dans la V1 le 2026-10-10) | Bloquée (R12) |
+| DLC dépassée | Contournable (article déjà validé, champ date qui décochait la case) (corrigé dans la V1 le 2026-10-10) | Refus automatique (R7) |
+| Convention | Ordre imposé techniquement, présenté comme libre à l'écran (corrigé dans la V1 le 2026-10-10) | Ordre libre (R14) |
+| Bon d'un don annulé | Restait signable et confirmable (corrigé dans la V1 le 2026-10-10) | Bloqué |
+| Republication | Un don déjà pris en charge pouvait être republié (corrigé dans la V1 le 2026-10-10) | Seul un brouillon se publie |
+| Don divisible | Contournement possible de la validation du donateur par appel direct (corrigé dans la V1 le 2026-10-10) | Refusé côté serveur |
+| Numérotation | « nombre + 1 » : doublons possibles, compteur non annuel (corrigé dans la V1 le 2026-10-10) | Séquence annuelle sans doublon (R16) |
 | Création de compte | Organisation et utilisateur créés séparément | Tout ou rien |
 | Habilitation | Date de fin ignorée | Prise en compte (R4) |
 | CO₂ | Recalculé à chaque affichage, jamais enregistré | Enregistré à la confirmation |
 | Don matériel | Ni titre, ni description, ni adresse de récupération, ni pièce jointe (corrigé dans la V1 le 2026-10-10 sur l'écran et le PDF du bon) | Mêmes informations de lot que l'alimentaire, visibles partout (E8) |
-| Fuseau horaire | Heure du serveur (jour du planning faux en soirée) | Europe/Paris (R17) |
+| Fuseau horaire | Heure du serveur (jour du planning faux en soirée) (corrigé dans la V1 le 2026-10-10) | Europe/Paris (R17) |
 | Distances | Depuis l'adresse de l'entreprise, sans cache | Depuis l'adresse de récupération, avec cache |
 | Coordinateur | Pas de page de détail des bons, recherche factice, pas de lien Messages | Détail en lecture, recherche, messagerie |
-| Filtres | Boutons « Filtrer » et puces d'archives décoratifs | Filtres fonctionnels |
+| Filtres | Boutons « Filtrer » et puces d'archives décoratifs (filtres des archives corrigés dans la V1 le 2026-10-10) | Filtres fonctionnels |
 | Fichiers | Stockés dans la base de données | Service de fichiers dédié |
 | Base de test | Partagée avec la production | Séparée (7.1, point 8) |
 | Données de démo | Le script de démo vidait presque toutes les tables | Jamais exécutable en production |
@@ -944,6 +945,13 @@ Consentement préalable à toute mesure d'audience, modifiable à tout moment ; 
 ### Décisions complémentaires du 9 octobre 2026
 
 Toutes les propositions de la rédaction ont été acceptées par Bruno, avec deux précisions : un don alimentaire est signalé « sans preneur » au coordinateur au bout de **2 heures** (48 heures pour un don matériel), et la résiliation d'une convention se fait avec un **préavis d'un mois** et une notification à l'autre partie. Elles sont intégrées dans le texte : vérification du SIRET, trois niveaux d'accès, notifications choisies par chaque utilisateur, invitation des coordinateurs, publication possible pendant les congés avec avertissement, poids estimé facultatif pour le matériel, alerte des autres associations après un refus, alertes reçues avant réglage du rayon, regroupement des alertes sur 15 minutes, prévenance 30 jours avant la fin d'une habilitation, liens entre documents déposés et profil, bénévoles affichés sans téléphone, retrait du badge « Vérifiée » au remplacement d'un document obligatoire, enseignes et réseaux hors périmètre, durées de conservation proposées.
+
+### Décisions du 10 octobre 2026
+
+- **Bon d'enlèvement** : ordre de signature libre ; liste modifiable tant que les deux parties n'ont pas signé ; une modification après une première signature l'annule et les deux re-signent ; plus aucune modification après les deux signatures (E12, A8, R10, R11).
+- **Annuaire** : retrait des badges « Chaîne du froid », capacité d'accueil et nombre de bénéficiaires de la liste (E5).
+- **Notifications** : l'attribution par le planning ou par le coordinateur, la convention à signer et la convention signée sont notifiées.
+- Ces décisions, et la correction des limites connues simples, ont été **appliquées aussi dans la V1** (exception au gel décidée par Bruno).
 
 ### Points restant à faire valider par des tiers
 

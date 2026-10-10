@@ -1,20 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import BottomTabBar from "@/components/BottomTabBar";
 
 type Onglet = "bons" | "attestations" | "interetGeneral";
 
-export type BonArchive = { id: string; titre: string; date: string; poids: string };
-export type AttestationArchive = {
+// partenaire et annee servent aux filtres en haut de la liste.
+type Filtrable = { partenaire: string; annee: number | null };
+
+export type BonArchive = Filtrable & { id: string; titre: string; date: string; poids: string };
+export type AttestationArchive = Filtrable & {
   id: string;
   titre: string;
   periode: string;
   montant: string;
   statut: "BROUILLON" | "ENVOYEE" | "SIGNEE";
 };
-export type AttestationInteretGeneralArchive = {
+export type AttestationInteretGeneralArchive = Filtrable & {
   id: string;
   titre: string;
   statut: "BROUILLON" | "ENVOYEE" | "SIGNEE";
@@ -47,6 +50,30 @@ export default function ArchivesClient({
   nonLusMessages?: number;
 }) {
   const [onglet, setOnglet] = useState<Onglet>("bons");
+  const [annee, setAnnee] = useState<string>("toutes");
+  const [partenaire, setPartenaire] = useState<string>("tous");
+
+  // Années et partenaires proposés : ceux réellement présents dans les archives.
+  const tous: Filtrable[] = useMemo(
+    () => [...bons, ...attestations, ...attestationsInteretGeneral],
+    [bons, attestations, attestationsInteretGeneral]
+  );
+  const annees = useMemo(
+    () => [...new Set(tous.map((d) => d.annee).filter((a): a is number => a !== null))].sort((a, b) => b - a),
+    [tous]
+  );
+  const partenaires = useMemo(
+    () => [...new Set(tous.map((d) => d.partenaire))].sort((a, b) => a.localeCompare(b, "fr")),
+    [tous]
+  );
+  const garder = (d: Filtrable) =>
+    (annee === "toutes" || d.annee === Number(annee)) && (partenaire === "tous" || d.partenaire === partenaire);
+  const bonsFiltres = bons.filter(garder);
+  const attestationsFiltrees = attestations.filter(garder);
+  const interetGeneralFiltrees = attestationsInteretGeneral.filter(garder);
+  const filtreActif = annee !== "toutes" || partenaire !== "tous";
+  const classeFiltre = (actif: boolean) =>
+    `rounded-full px-3 py-1.5 text-xs font-semibold ${actif ? "bg-ink text-white" : "border border-border bg-surface text-ink-muted"}`;
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg">
@@ -77,9 +104,42 @@ export default function ArchivesClient({
         </div>
       </header>
 
-      <div className="flex gap-2 px-5 py-3">
-        <span className="rounded-full bg-ink px-3 py-1.5 text-xs font-semibold text-white">2026</span>
-        <span className="rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-ink-muted">Tous partenaires</span>
+      <div className="flex flex-wrap gap-2 px-5 py-3">
+        <label className="sr-only" htmlFor="filtreAnnee">Année</label>
+        <select id="filtreAnnee" value={annee} onChange={(e) => setAnnee(e.target.value)} className={classeFiltre(annee !== "toutes")}>
+          <option value="toutes">Toutes les années</option>
+          {annees.map((a) => (
+            <option key={a} value={String(a)}>
+              {a}
+            </option>
+          ))}
+        </select>
+        <label className="sr-only" htmlFor="filtrePartenaire">Partenaire</label>
+        <select
+          id="filtrePartenaire"
+          value={partenaire}
+          onChange={(e) => setPartenaire(e.target.value)}
+          className={`max-w-[60%] truncate ${classeFiltre(partenaire !== "tous")}`}
+        >
+          <option value="tous">Tous partenaires</option>
+          {partenaires.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+        {filtreActif && (
+          <button
+            type="button"
+            onClick={() => {
+              setAnnee("toutes");
+              setPartenaire("tous");
+            }}
+            className="px-1 text-xs font-semibold text-ink-muted underline"
+          >
+            Effacer
+          </button>
+        )}
       </div>
 
       <main className="flex-1 space-y-2.5 px-5 pb-4">
@@ -100,7 +160,7 @@ export default function ArchivesClient({
           </Link>
         )}
         {onglet === "bons" &&
-          bons.map((bon) => (
+          bonsFiltres.map((bon) => (
             <a
               key={bon.id}
               href={`/api/bon-enlevement/${bon.id}/pdf`}
@@ -119,7 +179,7 @@ export default function ArchivesClient({
             </a>
           ))}
         {onglet === "attestations" &&
-          attestations.map((att) => {
+          attestationsFiltrees.map((att) => {
             const aSigner = role === "ASSOCIATION" && att.statut !== "SIGNEE";
             return (
               <a
@@ -147,7 +207,7 @@ export default function ArchivesClient({
             );
           })}
         {onglet === "interetGeneral" &&
-          attestationsInteretGeneral.map((att) => {
+          interetGeneralFiltrees.map((att) => {
             const aSigner = role === "ASSOCIATION" && att.statut !== "SIGNEE";
             return (
               <a
@@ -178,13 +238,17 @@ export default function ArchivesClient({
               </a>
             );
           })}
-        {onglet === "bons" && bons.length === 0 && (
-          <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-ink-muted">Aucun bon archivé.</div>
+        {onglet === "bons" && bonsFiltres.length === 0 && (
+          <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-ink-muted">
+            {filtreActif ? "Aucun bon pour ces filtres." : "Aucun bon archivé."}
+          </div>
         )}
-        {onglet === "attestations" && attestations.length === 0 && (
-          <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-ink-muted">Aucune attestation générée.</div>
+        {onglet === "attestations" && attestationsFiltrees.length === 0 && (
+          <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-ink-muted">
+            {filtreActif ? "Aucune attestation pour ces filtres." : "Aucune attestation générée."}
+          </div>
         )}
-        {onglet === "interetGeneral" && attestationsInteretGeneral.length === 0 && (
+        {onglet === "interetGeneral" && interetGeneralFiltrees.length === 0 && (
           <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-ink-muted">
             Aucune attestation intérêt général générée.
           </div>

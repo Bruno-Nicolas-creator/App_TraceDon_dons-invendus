@@ -9,5 +9,5 @@ export function periodeCongesActive<T extends PeriodeCongesMinimale>(
 }
 
 export function formaterDateConges(date: Date): string {
-  return date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  return date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Paris" });
 }

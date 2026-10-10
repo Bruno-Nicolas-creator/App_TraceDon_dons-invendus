@@ -23,9 +23,6 @@ export type AssociationAffichee = {
   congesJusquau: string | null;
   typesActivite: string[];
   notreAction: string | null;
-  chaineFroidAttestee: boolean;
-  capaciteAccueilKg: number | null;
-  nombreBeneficiaires: number | null;
 };
 
 const LONGUEUR_MAX_EXTRAIT = 140;
@@ -151,21 +148,6 @@ export default function AssociationsProchesClient({
                     }`}
                   >
                     {association.habilitee ? "Habilitée" : "Non habilitée"}
-                  </span>
-                )}
-                {association.chaineFroidAttestee && (
-                  <span className="rounded-full bg-brand-tint px-2.5 py-1 text-xs font-semibold text-brand-dark">
-                    ✓ Chaîne du froid
-                  </span>
-                )}
-                {association.capaciteAccueilKg != null && (
-                  <span className="rounded-full bg-surface-alt px-2.5 py-1 text-xs text-ink-muted">
-                    Jusqu&apos;à {association.capaciteAccueilKg.toLocaleString("fr-FR")} kg/collecte
-                  </span>
-                )}
-                {association.nombreBeneficiaires != null && (
-                  <span className="rounded-full bg-surface-alt px-2.5 py-1 text-xs text-ink-muted">
-                    {association.nombreBeneficiaires.toLocaleString("fr-FR")} bénéficiaires
                   </span>
                 )}
                 {association.congesJusquau && (
