@@ -1,39 +1,30 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { bonsEligiblesParBeneficiaire } from "@/lib/attestationFiscale";
+import { anneesAvecBonsEligibles, bonsEligiblesParBeneficiaire, libelleNatures } from "@/lib/attestationFiscale";
 import NouvelleAttestationClient from "./NouvelleAttestationClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function NouvelleAttestationPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ debut?: string; fin?: string }>;
-}) {
+export default async function NouvelleAttestationPage({ searchParams }: { searchParams: Promise<{ annee?: string }> }) {
   const session = await getSession();
   if (!session || session.role !== "ENTREPRISE" || !session.entrepriseId) redirect("/connexion");
 
-  const { debut, fin } = await searchParams;
-  let groupes: Awaited<ReturnType<typeof bonsEligiblesParBeneficiaire>> = [];
-
-  if (debut && fin) {
-    const periodeDebut = new Date(debut);
-    const periodeFin = new Date(`${fin}T23:59:59`);
-    if (!Number.isNaN(periodeDebut.getTime()) && !Number.isNaN(periodeFin.getTime()) && periodeFin >= periodeDebut) {
-      groupes = await bonsEligiblesParBeneficiaire(session.entrepriseId, periodeDebut, periodeFin);
-    }
-  }
+  const annees = await anneesAvecBonsEligibles(session.entrepriseId);
+  const demandee = Number((await searchParams).annee);
+  const annee = annees.includes(demandee) ? demandee : (annees[0] ?? null);
+  const groupes = annee ? await bonsEligiblesParBeneficiaire(session.entrepriseId, annee) : [];
 
   return (
     <NouvelleAttestationClient
-      debut={debut ?? ""}
-      fin={fin ?? ""}
+      annees={annees}
+      annee={annee}
       groupes={groupes.map((g) => ({
         associationId: g.associationId,
         associationNom: g.associationNom,
+        interetGeneralDeclare: g.interetGeneralDeclare,
         nombreBons: g.bonIds.length,
         poidsTotalKg: g.poidsTotalKg,
-        montantEstime: g.montantEstime,
+        nature: libelleNatures(g.natures),
       }))}
     />
   );

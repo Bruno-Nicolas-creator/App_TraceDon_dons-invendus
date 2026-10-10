@@ -26,6 +26,12 @@ const styles = StyleSheet.create({
 
 export type AttestationPdfData = {
   numeroOrdre: string;
+  /** Année civile des dons (reçus valorisés) ; null pour les anciennes attestations par période. */
+  annee: number | null;
+  emisLe: Date;
+  /** true : valeur déclarée par l'entreprise ; false : ancien calcul de l'application. */
+  valeurSaisieParEntreprise: boolean;
+  nature: string;
   entreprise: { raisonSociale: string; formeJuridique: string | null; adresse: string; siret: string };
   association: {
     denomination: string;
@@ -38,11 +44,12 @@ export type AttestationPdfData = {
   };
   periodeDebut: Date;
   periodeFin: Date;
-  montantCalcule: number;
+  montant: number;
   bons: { numero: string; date: Date | null; poids: number }[];
 };
 
-const formatDate = (date: Date) => date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+const formatDate = (date: Date) =>
+  date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Paris" });
 
 function mentionInteretGeneral(a: AttestationPdfData["association"]): string {
   if (!a.declarationInteretGeneral) return "Organisme non déclaré d'intérêt général.";
@@ -60,23 +67,25 @@ function mentionInteretGeneral(a: AttestationPdfData["association"]): string {
   }
 }
 
+/**
+ * Reçu des dons effectués par les entreprises (article 238 bis du CGI), reprenant les rubriques du
+ * formulaire officiel (Cerfa n° 16216) : numéro d'ordre, bénéficiaire et sa qualité, donateur,
+ * montant en chiffres et en lettres, date, forme et nature du don. Mentions et numérotation restent
+ * à faire valider par un juriste (cahier des charges, annexe C).
+ */
 export default function AttestationFiscaleDocument({ data, montantEnLettres }: { data: AttestationPdfData; montantEnLettres: string }) {
+  const periode = data.annee
+    ? `Dons remis au cours de l'année ${data.annee} (du 1er janvier au 31 décembre ${data.annee})`
+    : `Du ${formatDate(data.periodeDebut)} au ${formatDate(data.periodeFin)}`;
   return (
-    <Document title={`Attestation de don ${data.numeroOrdre}`}>
+    <Document title={`Reçu fiscal ${data.numeroOrdre}`}>
       <Page size="A4" style={styles.page}>
-        <Text style={styles.title}>Attestation de don en nature</Text>
+        <Text style={styles.title}>Reçu des dons effectués par les entreprises</Text>
         <Text style={styles.subtitle}>
-          N° d&apos;ordre {data.numeroOrdre} — Article 238 bis du code général des impôts
+          Article 238 bis du code général des impôts · Reçu n° {data.numeroOrdre}
         </Text>
 
         <View style={styles.row}>
-          <View style={styles.col}>
-            <Text style={styles.colTitle}>Entreprise donatrice</Text>
-            <Text style={styles.line}>{data.entreprise.raisonSociale}</Text>
-            {data.entreprise.formeJuridique && <Text style={styles.line}>{data.entreprise.formeJuridique}</Text>}
-            <Text style={styles.line}>{data.entreprise.adresse}</Text>
-            <Text style={styles.line}>SIRET : {data.entreprise.siret}</Text>
-          </View>
           <View style={styles.col}>
             <Text style={styles.colTitle}>Organisme bénéficiaire</Text>
             <Text style={styles.line}>{data.association.denomination}</Text>
@@ -86,26 +95,40 @@ export default function AttestationFiscaleDocument({ data, montantEnLettres }: {
               <Text style={styles.line}>Objet : {data.association.categorieEligibilite}</Text>
             )}
           </View>
+          <View style={styles.col}>
+            <Text style={styles.colTitle}>Entreprise donatrice</Text>
+            <Text style={styles.line}>{data.entreprise.raisonSociale}</Text>
+            {data.entreprise.formeJuridique && <Text style={styles.line}>{data.entreprise.formeJuridique}</Text>}
+            <Text style={styles.line}>{data.entreprise.adresse}</Text>
+            <Text style={styles.line}>SIRET : {data.entreprise.siret}</Text>
+          </View>
         </View>
 
+        <Text style={styles.sectionTitle}>Qualité de l&apos;organisme</Text>
         <Text style={styles.legal}>{mentionInteretGeneral(data.association)}</Text>
 
-        <Text style={styles.sectionTitle}>Période couverte</Text>
-        <Text style={{ marginBottom: 16 }}>
-          Du {formatDate(data.periodeDebut)} au {formatDate(data.periodeFin)}
-        </Text>
-
-        <Text style={styles.sectionTitle}>Nature et valeur du don</Text>
+        <Text style={styles.sectionTitle}>Don reçu</Text>
         <View style={styles.card}>
           <Text style={{ marginBottom: 8 }}>
-            Don en nature de denrées alimentaires, dont la description physique détaillée figure en annexe
-            (bons d&apos;enlèvement listés ci-dessous), sans mention de valeur sur ces bons.
+            Le bénéficiaire reconnaît avoir reçu, au titre des dons ouvrant droit à réduction d&apos;impôt, des biens
+            d&apos;une valeur de :
           </Text>
-          <Text style={styles.amountLine}>{data.montantCalcule.toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}</Text>
+          {/* « euros » en toutes lettres : la police standard du PDF n'affiche pas le symbole € */}
+          <Text style={styles.amountLine}>
+            {data.montant.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).replace(/\s/g, " ")} euros
+          </Text>
           <Text style={styles.amountWords}>({montantEnLettres})</Text>
         </View>
+        <Text style={styles.line}>Date des dons : {periode}.</Text>
+        <Text style={styles.line}>Forme du don : autre (remises successives constatées par les bons d&apos;enlèvement ci-dessous).</Text>
+        <Text style={styles.line}>Nature du don : don en nature ({data.nature}).</Text>
+        <Text style={[styles.line, { marginBottom: 16 }]}>
+          {data.valeurSaisieParEntreprise
+            ? "Valorisation : établie par l'entreprise donatrice, sous sa responsabilité, à partir de sa comptabilité (coût de revient des biens donnés)."
+            : "Valorisation : estimation calculée par l'application (attestation établie avant le 10 octobre 2026)."}
+        </Text>
 
-        <Text style={styles.sectionTitle}>Annexe — bons d&apos;enlèvement inclus</Text>
+        <Text style={styles.sectionTitle}>Annexe : bons d&apos;enlèvement inclus</Text>
         <View style={styles.table}>
           <View style={styles.tr}>
             <Text style={[styles.th, styles.cNumero]}>N° de bon</Text>
@@ -116,20 +139,18 @@ export default function AttestationFiscaleDocument({ data, montantEnLettres }: {
             <View key={b.numero} style={i === data.bons.length - 1 ? styles.trLast : styles.tr}>
               <Text style={[styles.td, styles.cNumero]}>{b.numero}</Text>
               <Text style={[styles.td, styles.cDate]}>{b.date ? formatDate(b.date) : "—"}</Text>
-              <Text style={[styles.td, styles.cPoids]}>{b.poids.toLocaleString("fr-FR")}</Text>
+              <Text style={[styles.td, styles.cPoids]}>{b.poids ? b.poids.toLocaleString("fr-FR") : "—"}</Text>
             </View>
           ))}
         </View>
 
         <Text style={styles.legal}>
-          Cette attestation est établie conformément aux dispositions de l&apos;article 238 bis du code général des
-          impôts. L&apos;association bénéficiaire est seule responsable de l&apos;exactitude des informations qui y
-          figurent. L&apos;entreprise donatrice ne peut prétendre à la réduction d&apos;impôt à raison des denrées
-          qui auraient été refusées et non prises en charge par l&apos;association.
+          Reçu établi conformément aux dispositions de l&apos;article 238 bis du code général des impôts. Les biens
+          refusés lors de l&apos;enlèvement et non pris en charge par l&apos;organisme ne sont pas couverts par ce reçu.
         </Text>
 
         <Text style={styles.signature}>
-          Fait le {formatDate(new Date())}.{"\n"}Pour l&apos;association bénéficiaire,{"\n\n"}
+          Fait le {formatDate(data.emisLe)}.{"\n"}Pour l&apos;association bénéficiaire,{"\n\n"}
           {data.association.denomination}
         </Text>
       </Page>

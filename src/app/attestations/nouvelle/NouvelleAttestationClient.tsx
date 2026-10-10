@@ -1,42 +1,91 @@
 "use client";
 
-import { useActionState, useState, type FormEvent } from "react";
+import { useActionState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { genererEtEnvoyerAttestationsAction } from "../actions";
+import { demanderRecuFiscalAction } from "../actions";
 
 type Groupe = {
   associationId: string;
   associationNom: string;
+  interetGeneralDeclare: boolean;
   nombreBons: number;
   poidsTotalKg: number;
-  montantEstime: number;
+  nature: string;
 };
 
-type Etat = { ok: true; nombreCreees: number } | { ok: false; error: string } | null;
+type Etat = { ok: false; error: string } | null;
 
-async function actionAvecEtat(_etat: Etat, formData: FormData): Promise<Etat> {
-  return genererEtEnvoyerAttestationsAction(formData);
+/** Une demande par association : la valeur se saisit séparément pour chacune. */
+function DemandeAssociation({ annee, groupe }: { annee: number; groupe: Groupe }) {
+  const router = useRouter();
+  // Une fois envoyée, on ouvre la page de la demande (qui confirme l'envoi et permet de la suivre).
+  const [etat, formAction, isPending] = useActionState(async (_etat: Etat, formData: FormData): Promise<Etat> => {
+    const resultat = await demanderRecuFiscalAction(formData);
+    if (!resultat.ok) return resultat;
+    router.push(`/attestations/${resultat.id}?envoyee=1`);
+    return null;
+  }, null);
+
+  return (
+    <form action={formAction} className="space-y-3 rounded-2xl border border-border bg-surface p-4">
+      <input type="hidden" name="annee" value={annee} />
+      <input type="hidden" name="associationId" value={groupe.associationId} />
+      <div>
+        <div className="text-sm font-semibold">{groupe.associationNom}</div>
+        <div className="text-xs text-ink-muted">
+          {groupe.nombreBons} bon{groupe.nombreBons > 1 ? "s" : ""} confirmé{groupe.nombreBons > 1 ? "s" : ""} · {groupe.nature}
+          {groupe.poidsTotalKg > 0 && ` · ${groupe.poidsTotalKg.toLocaleString("fr-FR")} kg`}
+        </div>
+      </div>
+      {!groupe.interetGeneralDeclare && (
+        <div className="rounded-lg bg-surface-alt px-3 py-2 text-xs text-ink-muted">
+          Cette association n&apos;a pas encore déclaré être d&apos;intérêt général : elle devra le faire avant d&apos;émettre le
+          reçu.
+        </div>
+      )}
+      <label className="block space-y-1">
+        <span className="text-xs font-semibold">Valeur totale des dons {annee} (en euros)</span>
+        <input
+          name="montant"
+          inputMode="decimal"
+          required
+          placeholder="Ex. 1 250,50"
+          className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+        />
+      </label>
+      <label className="block space-y-1">
+        <span className="text-xs font-semibold">Justificatif (facultatif)</span>
+        <input
+          type="file"
+          name="justificatif"
+          accept="application/pdf,image/jpeg,image/png,image/webp"
+          className="block w-full text-xs text-ink-muted"
+        />
+        <span className="block text-[11px] text-ink-muted">PDF ou image, 5 Mo maximum — par exemple l&apos;export de votre logiciel.</span>
+      </label>
+      {etat && <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{etat.error}</div>}
+      <button
+        type="submit"
+        disabled={isPending}
+        className="w-full rounded-full bg-brand py-3 text-sm font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
+      >
+        {isPending ? "Envoi en cours…" : "Envoyer la demande de reçu"}
+      </button>
+    </form>
+  );
 }
 
 export default function NouvelleAttestationClient({
-  debut,
-  fin,
+  annees,
+  annee,
   groupes,
 }: {
-  debut: string;
-  fin: string;
+  annees: number[];
+  annee: number | null;
   groupes: Groupe[];
 }) {
   const router = useRouter();
-  const [debutForm, setDebutForm] = useState(debut);
-  const [finForm, setFinForm] = useState(fin);
-  const [etat, formAction, isPending] = useActionState(actionAvecEtat, null);
-
-  const rechercher = (e: FormEvent) => {
-    e.preventDefault();
-    router.push(`/attestations/nouvelle?debut=${debutForm}&fin=${finForm}`);
-  };
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg">
@@ -50,94 +99,40 @@ export default function NouvelleAttestationClient({
             <path d="M15 18L9 12L15 6" stroke="#201F1B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </Link>
-        <h1 className="font-display text-xl font-semibold">Récapitulatif fiscal</h1>
+        <h1 className="font-display text-xl font-semibold">Demander un reçu fiscal</h1>
       </header>
 
       <main className="flex-1 space-y-4 px-5 pb-4">
-        <form onSubmit={rechercher} className="space-y-2.5 rounded-2xl border border-border bg-surface p-4">
-          <h2 className="text-sm font-semibold">Période</h2>
+        <div className="space-y-2.5 rounded-2xl border border-border bg-surface p-4">
           <p className="text-xs text-ink-muted">
-            Un récapitulatif fiscal distinct sera généré par association bénéficiaire ayant reçu au moins un don
-            confirmé sur cette période, puis envoyé pour signature.
+            Une fois par an, valorisez avec votre propre logiciel les dons remis à chaque association (en général à leur coût
+            de revient), puis indiquez ici la valeur totale. L&apos;association vérifie votre demande, puis émet et signe le
+            reçu fiscal — ou la conteste en vous expliquant pourquoi.
           </p>
-          <div className="flex gap-2.5">
-            <input
-              type="date"
-              value={debutForm}
-              onChange={(e) => setDebutForm(e.target.value)}
-              required
-              aria-label="Date de début"
-              className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-            />
-            <input
-              type="date"
-              value={finForm}
-              onChange={(e) => setFinForm(e.target.value)}
-              required
-              aria-label="Date de fin"
-              className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full rounded-full border border-border py-2.5 text-sm font-semibold transition-transform active:scale-[0.98]"
-          >
-            Rechercher les dons éligibles
-          </button>
-        </form>
-
-        {debut && fin && (
-          <form action={formAction} className="space-y-3 rounded-2xl border border-border bg-surface p-4">
-            <input type="hidden" name="periodeDebut" value={debut} />
-            <input type="hidden" name="periodeFin" value={fin} />
-            <div>
-              <h2 className="text-sm font-semibold">Bénéficiaires sur cette période</h2>
-            </div>
-
-            {groupes.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-ink-muted">
-                Aucun don confirmé, pas encore rattaché à une attestation, sur cette période.
-              </div>
-            ) : (
-              <ul className="space-y-1.5">
-                {groupes.map((g) => (
-                  <li key={g.associationId} className="flex items-center gap-3 rounded-xl bg-surface-alt px-3.5 py-2.5">
-                    <input
-                      type="checkbox"
-                      name="associationId"
-                      value={g.associationId}
-                      defaultChecked
-                      className="h-4 w-4 shrink-0"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-semibold">{g.associationNom}</div>
-                      <div className="text-xs text-ink-muted">
-                        {g.nombreBons} bon{g.nombreBons > 1 ? "s" : ""} · {g.poidsTotalKg.toLocaleString("fr-FR")} kg ·
-                        {" ≈ "}
-                        {g.montantEstime.toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}
-                      </div>
-                    </div>
-                  </li>
+          {annees.length > 0 && annee && (
+            <label className="flex items-center justify-between gap-3">
+              <span className="text-sm font-semibold">Année des dons</span>
+              <select
+                value={annee}
+                onChange={(e) => router.push(`/attestations/nouvelle?annee=${e.target.value}`)}
+                className="rounded-xl border border-border bg-surface-alt px-3 py-2 text-sm"
+              >
+                {annees.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
                 ))}
-              </ul>
-            )}
+              </select>
+            </label>
+          )}
+        </div>
 
-            {etat && !etat.ok && <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{etat.error}</div>}
-            {etat && etat.ok && (
-              <div className="rounded-lg bg-brand-tint px-3 py-2 text-xs text-brand-dark">
-                {etat.nombreCreees} récapitulatif{etat.nombreCreees > 1 ? "s" : ""} généré
-                {etat.nombreCreees > 1 ? "s" : ""} et envoyé{etat.nombreCreees > 1 ? "s" : ""} pour signature.
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={groupes.length === 0 || isPending}
-              className="w-full rounded-full bg-brand py-3 text-sm font-bold text-white transition-transform active:scale-[0.98] disabled:opacity-50"
-            >
-              {isPending ? "Envoi en cours…" : "Générer et envoyer pour signature"}
-            </button>
-          </form>
+        {!annee || groupes.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border p-4 text-center text-xs text-ink-muted">
+            Aucun don confirmé qui ne soit pas déjà couvert par un reçu ou une demande en cours.
+          </div>
+        ) : (
+          groupes.map((g) => <DemandeAssociation key={`${annee}-${g.associationId}`} annee={annee} groupe={g} />)
         )}
       </main>
     </div>

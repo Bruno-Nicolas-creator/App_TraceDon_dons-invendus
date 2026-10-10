@@ -80,21 +80,23 @@ enum PreferenceAlerte {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  passwordHash  String
-  nom           String
-  role          Role
-  entrepriseId  String?
-  entreprise    Entreprise? @relation(fields: [entrepriseId], references: [id])
-  associationId String?
-  association   Association? @relation(fields: [associationId], references: [id])
-  messages      Message[]
+  id                String             @id @default(cuid())
+  email             String             @unique
+  passwordHash      String
+  nom               String
+  role              Role
+  entrepriseId      String?
+  entreprise        Entreprise?        @relation(fields: [entrepriseId], references: [id])
+  associationId     String?
+  association       Association?       @relation(fields: [associationId], references: [id])
+  messages          Message[]
   pushSubscriptions PushSubscription[]
-  createdAt     DateTime @default(now())
+  createdAt         DateTime           @default(now())
 }
 
-/** Un abonnement par navigateur/appareil sur lequel la personne a activé les notifications. */
+/**
+ * Un abonnement par navigateur/appareil sur lequel la personne a activé les notifications.
+ */
 model PushSubscription {
   id        String   @id @default(cuid())
   userId    String
@@ -106,130 +108,130 @@ model PushSubscription {
 }
 
 model Enseigne {
-  id             String       @id @default(cuid())
-  denomination   String
-  siretSiege     String
-  nombreSieges   Int          @default(1)
-  entreprises    Entreprise[]
-  abonnement     Abonnement?
-  createdAt      DateTime     @default(now())
+  id           String       @id @default(cuid())
+  denomination String
+  siretSiege   String
+  nombreSieges Int          @default(1)
+  entreprises  Entreprise[]
+  abonnement   Abonnement?
+  createdAt    DateTime     @default(now())
 }
 
 model Abonnement {
-  id           String   @id @default(cuid())
-  enseigneId   String   @unique
-  enseigne     Enseigne @relation(fields: [enseigneId], references: [id])
-  formule      String
-  montant      Float
-  periodicite  String
-  dateDebut    DateTime @default(now())
-  statut       String   @default("actif")
+  id          String   @id @default(cuid())
+  enseigneId  String   @unique
+  enseigne    Enseigne @relation(fields: [enseigneId], references: [id])
+  formule     String
+  montant     Float
+  periodicite String
+  dateDebut   DateTime @default(now())
+  statut      String   @default("actif")
 }
 
 model Entreprise {
-  id                    String   @id @default(cuid())
-  raisonSociale         String
-  formeJuridique        String?
-  siret                 String
-  adresse               String
-  secteurActivite       String?
-  coutRevientKg         Float    @default(0)
-  surfaceVenteM2        Float?
-  referentDonNom        String?
-  referentDonTelephone  String?
-  natureActivite        NatureActiviteEntreprise @default(ALIMENTAIRE)
-  latitude              Float?
-  longitude             Float?
-  enseigneId            String?
-  enseigne         Enseigne? @relation(fields: [enseigneId], references: [id])
-  users            User[]
-  dons             Don[]
-  bonsEnlevement   BonEnlevement[]
-  attestations     AttestationFiscale[]
+  id                         String                      @id @default(cuid())
+  raisonSociale              String
+  formeJuridique             String?
+  siret                      String
+  adresse                    String
+  secteurActivite            String?
+  coutRevientKg              Float                       @default(0)
+  surfaceVenteM2             Float?
+  referentDonNom             String?
+  referentDonTelephone       String?
+  natureActivite             NatureActiviteEntreprise    @default(ALIMENTAIRE)
+  latitude                   Float?
+  longitude                  Float?
+  enseigneId                 String?
+  enseigne                   Enseigne?                   @relation(fields: [enseigneId], references: [id])
+  users                      User[]
+  dons                       Don[]
+  bonsEnlevement             BonEnlevement[]
+  attestations               AttestationFiscale[]
   attestationsInteretGeneral AttestationInteretGeneral[]
-  conventions      Convention[]
-  assignationsRecurrentes AssignationRecurrente[]
-  documents        Document[]
-  periodesConges   PeriodeConges[]
-  conversations    Conversation[]
-  createdAt        DateTime @default(now())
+  conventions                Convention[]
+  assignationsRecurrentes    AssignationRecurrente[]
+  documents                  Document[]
+  periodesConges             PeriodeConges[]
+  conversations              Conversation[]
+  createdAt                  DateTime                    @default(now())
 }
 
 model Reseau {
-  id            String        @id @default(cuid())
-  denomination  String
-  perimetre     String?
-  associations  Association[]
+  id           String        @id @default(cuid())
+  denomination String
+  perimetre    String?
+  associations Association[]
 }
 
 model Association {
-  id                        String        @id @default(cuid())
-  denomination              String
-  rna                       String
-  adresse                   String
-  categorieEligibilite      String?
-  categoriesDon             String[]      @default([])
-  disponibilitesRetrait     String[]      @default([])
-  typesActivite             String[]      @default([])
-  notreAction               String?
+  id                         String                      @id @default(cuid())
+  denomination               String
+  rna                        String
+  adresse                    String
+  categorieEligibilite       String?
+  categoriesDon              String[]                    @default([])
+  disponibilitesRetrait      String[]                    @default([])
+  typesActivite              String[]                    @default([])
+  notreAction                String?
   // Déclaratif, en complément de l'attestation chaîne du froid (cf. Document type
   // ATTESTATION_CHAINE_FROID) : sert à avertir (pas bloquer) une association qui se positionnerait
   // sur un don dépassant la quantité qu'elle a indiqué pouvoir gérer.
-  capaciteAccueilKg         Float?
+  capaciteAccueilKg          Float?
   // Purement informatif, visible par les entreprises donatrices pour choisir leurs partenaires.
-  nombreBeneficiaires       Int?
-  preferenceAlerte          PreferenceAlerte @default(EMAIL)
-  telephoneAlerteSms        String?
-  declarationInteretGeneral Boolean       @default(false)
-  rescritStatut             StatutRescrit @default(NON_DEPOSE)
-  rescritDateDepot          DateTime?
-  verifiee                  Boolean       @default(false)
-  verifieeLe                DateTime?
-  verifieePar               String?
-  habilitationStatut        StatutHabilitation @default(NON_HABILITEE)
-  habilitationDateFin       DateTime?
-  declarationDdpp           Boolean       @default(false)
-  declarationDdppDate       DateTime?
-  referentDonNom            String?
-  referentDonTelephone      String?
+  nombreBeneficiaires        Int?
+  preferenceAlerte           PreferenceAlerte            @default(EMAIL)
+  telephoneAlerteSms         String?
+  declarationInteretGeneral  Boolean                     @default(false)
+  rescritStatut              StatutRescrit               @default(NON_DEPOSE)
+  rescritDateDepot           DateTime?
+  verifiee                   Boolean                     @default(false)
+  verifieeLe                 DateTime?
+  verifieePar                String?
+  habilitationStatut         StatutHabilitation          @default(NON_HABILITEE)
+  habilitationDateFin        DateTime?
+  declarationDdpp            Boolean                     @default(false)
+  declarationDdppDate        DateTime?
+  referentDonNom             String?
+  referentDonTelephone       String?
   // Personne à prévenir immédiatement en cas de rappel/retrait d'un produit déjà distribué —
   // distincte du référent don au quotidien.
-  contactRappelNom          String?
-  contactRappelTelephone    String?
-  contactRappelEmail        String?
-  latitude                  Float?
-  longitude                 Float?
-  reseauId                  String?
-  reseau                    Reseau?       @relation(fields: [reseauId], references: [id])
-  users                     User[]
-  donsAssignes              Don[]
-  articlesAssignes          Article[]
-  bonsEnlevement            BonEnlevement[]
-  attestations              AttestationFiscale[]
+  contactRappelNom           String?
+  contactRappelTelephone     String?
+  contactRappelEmail         String?
+  latitude                   Float?
+  longitude                  Float?
+  reseauId                   String?
+  reseau                     Reseau?                     @relation(fields: [reseauId], references: [id])
+  users                      User[]
+  donsAssignes               Don[]
+  articlesAssignes           Article[]
+  bonsEnlevement             BonEnlevement[]
+  attestations               AttestationFiscale[]
   attestationsInteretGeneral AttestationInteretGeneral[]
-  conventions               Convention[]
-  assignationsRecurrentes   AssignationRecurrente[]
-  benevoles                 Benevole[]
-  documents                 Document[]
-  periodesConges            PeriodeConges[]
-  conversations             Conversation[]
-  createdAt                 DateTime      @default(now())
+  conventions                Convention[]
+  assignationsRecurrentes    AssignationRecurrente[]
+  benevoles                  Benevole[]
+  documents                  Document[]
+  periodesConges             PeriodeConges[]
+  conversations              Conversation[]
+  createdAt                  DateTime                    @default(now())
 }
 
 model Benevole {
-  id                   String      @id @default(cuid())
-  associationId        String
-  association          Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
-  nom                  String
-  telephone            String?
-  role                 RoleBenevole @default(COLLECTEUR)
-  assuranceRcAttestee  Boolean     @default(false)
+  id                    String          @id @default(cuid())
+  associationId         String
+  association           Association     @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  nom                   String
+  telephone             String?
+  role                  RoleBenevole    @default(COLLECTEUR)
+  assuranceRcAttestee   Boolean         @default(false)
   assuranceRcAttesteeLe DateTime?
   // Mandat de signature donné par le président de l'association à ce bénévole pour signer les
   // bordereaux de remise en son nom (cf. Mandat_Signature_Association_Benevole).
-  mandatDonneLe        DateTime?
-  bonsCollectes        BonEnlevement[]
-  createdAt            DateTime    @default(now())
+  mandatDonneLe         DateTime?
+  bonsCollectes         BonEnlevement[]
+  createdAt             DateTime        @default(now())
 }
 
 // Congés / fermeture déclarés par un commerçant ou une association : visibles par l'autre
@@ -257,18 +259,18 @@ enum PrioriteMessage {
 // coordinateur de la plateforme (canal support). `avecCoordinateur` distingue les deux cas
 // puisque `entrepriseId`/`associationId` peuvent chacun être seuls renseignés dans les deux.
 model Conversation {
-  id                  String        @id @default(cuid())
+  id                  String       @id @default(cuid())
   entrepriseId        String?
-  entreprise          Entreprise?   @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  entreprise          Entreprise?  @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
   associationId       String?
-  association         Association?  @relation(fields: [associationId], references: [id], onDelete: Cascade)
-  avecCoordinateur    Boolean       @default(false)
+  association         Association? @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  avecCoordinateur    Boolean      @default(false)
   luParEntrepriseLe   DateTime?
   luParAssociationLe  DateTime?
   luParCoordinateurLe DateTime?
   messages            Message[]
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 }
 
 model Message {
@@ -301,17 +303,17 @@ enum TypeDocument {
 }
 
 model Document {
-  id            String        @id @default(cuid())
+  id            String       @id @default(cuid())
   type          TypeDocument
   nomFichier    String
   contentType   String
   contenu       Bytes
   tailleOctets  Int
   entrepriseId  String?
-  entreprise    Entreprise?   @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  entreprise    Entreprise?  @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
   associationId String?
-  association   Association?  @relation(fields: [associationId], references: [id], onDelete: Cascade)
-  createdAt     DateTime      @default(now())
+  association   Association? @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  createdAt     DateTime     @default(now())
 
   @@unique([entrepriseId, type])
   @@unique([associationId, type])
@@ -349,91 +351,91 @@ model Convention {
 }
 
 model Don {
-  id                  String       @id @default(cuid())
-  entrepriseId        String
-  entreprise          Entreprise   @relation(fields: [entrepriseId], references: [id])
-  statut              StatutDon    @default(BROUILLON)
-  type                TypeDon      @default(ALIMENTAIRE)
-  categorie           String       @default("Alimentaire")
-  divisible           Boolean      @default(false)
-  instructionsAcces   String?
-  titre               String?
-  description         String?
-  adresseRecuperation String?
-  pieceJointeNomFichier   String?
-  pieceJointeContentType  String?
-  pieceJointeContenu      Bytes?
-  distanceLabel       String?
-  associationAssigneeId String?
-  associationAssignee Association? @relation(fields: [associationAssigneeId], references: [id])
-  articles            Article[]
-  bonsEnlevement      BonEnlevement[]
-  createdAt           DateTime     @default(now())
-  publieLe            DateTime?
+  id                     String          @id @default(cuid())
+  entrepriseId           String
+  entreprise             Entreprise      @relation(fields: [entrepriseId], references: [id])
+  statut                 StatutDon       @default(BROUILLON)
+  type                   TypeDon         @default(ALIMENTAIRE)
+  categorie              String          @default("Alimentaire")
+  divisible              Boolean         @default(false)
+  instructionsAcces      String?
+  titre                  String?
+  description            String?
+  adresseRecuperation    String?
+  pieceJointeNomFichier  String?
+  pieceJointeContentType String?
+  pieceJointeContenu     Bytes?
+  distanceLabel          String?
+  associationAssigneeId  String?
+  associationAssignee    Association?    @relation(fields: [associationAssigneeId], references: [id])
+  articles               Article[]
+  bonsEnlevement         BonEnlevement[]
+  createdAt              DateTime        @default(now())
+  publieLe               DateTime?
 }
 
 model Article {
-  id                 String        @id @default(cuid())
-  donId              String
-  don                Don           @relation(fields: [donId], references: [id], onDelete: Cascade)
-  codeBarres         String?
-  designation        String
+  id                    String        @id @default(cuid())
+  donId                 String
+  don                   Don           @relation(fields: [donId], references: [id], onDelete: Cascade)
+  codeBarres            String?
+  designation           String
   // Catégorie choisie parmi src/lib/categoriesDon.ts, uniquement pour les articles ajoutés à la
   // main (cf. AjouterArticleForm) — pas pour ceux scannés ou extraits automatiquement.
-  categorie          String?
-  quantiteDeclaree   String
-  quantiteConstatee  String?
-  poidsKg            Float
-  dlcOuEtat          String?
-  temperature        String?
-  dlcDepassee        Boolean       @default(false)
+  categorie             String?
+  quantiteDeclaree      String
+  quantiteConstatee     String?
+  poidsKg               Float
+  dlcOuEtat             String?
+  temperature           String?
+  dlcDepassee           Boolean       @default(false)
   // Identifiants src/lib/allergenes.ts (les 14 allergènes à déclaration obligatoire, règlement UE
   // 1169/2011). Renseigné automatiquement depuis Open Food Facts pour un article scanné, ou coché
   // à la main sinon — vide si inconnu, jamais vérifié.
-  allergenes         String[]      @default([])
-  statut             StatutArticle @default(EN_ATTENTE)
-  motifRefus         String?
-  photoNomFichier    String?
-  photoContentType   String?
-  photoContenu       Bytes?
+  allergenes            String[]      @default([])
+  statut                StatutArticle @default(EN_ATTENTE)
+  motifRefus            String?
+  photoNomFichier       String?
+  photoContentType      String?
+  photoContenu          Bytes?
   // Association qui a réclamé cet article précis — uniquement pour un don matériel divisible
   // (cf. Don.divisible) : plusieurs associations peuvent alors se partager les articles d'un même
   // don. Reste `null` pour un don non divisible (l'attribution se fait alors au niveau du don via
   // Don.associationAssigneeId) et pour les articles pas encore réclamés.
   associationAssigneeId String?
-  associationAssignee    Association? @relation(fields: [associationAssigneeId], references: [id])
-  createdAt          DateTime      @default(now())
+  associationAssignee   Association?  @relation(fields: [associationAssigneeId], references: [id])
+  createdAt             DateTime      @default(now())
 }
 
 model BonEnlevement {
-  id                       String      @id @default(cuid())
-  numero                   String      @unique
-  donId                    String
-  don                      Don         @relation(fields: [donId], references: [id])
-  entrepriseId             String
-  entreprise               Entreprise  @relation(fields: [entrepriseId], references: [id])
-  associationId            String
-  association              Association @relation(fields: [associationId], references: [id])
-  dateHeureEnlevement      DateTime?
-  poidsTotalRetenu         Float?
-  signatureDonateurLe      DateTime?
-  signatureAssociationLe   DateTime?
+  id                          String              @id @default(cuid())
+  numero                      String              @unique
+  donId                       String
+  don                         Don                 @relation(fields: [donId], references: [id])
+  entrepriseId                String
+  entreprise                  Entreprise          @relation(fields: [entrepriseId], references: [id])
+  associationId               String
+  association                 Association         @relation(fields: [associationId], references: [id])
+  dateHeureEnlevement         DateTime?
+  poidsTotalRetenu            Float?
+  signatureDonateurLe         DateTime?
+  signatureAssociationLe      DateTime?
   // Bénévole mandaté qui signe effectivement ce bon au nom de l'association (cf. Mandat de
   // signature) : sert de nom de signataire pour DocuSign, à défaut la dénomination de
   // l'association est utilisée. SetNull si le bénévole est retiré : n'invalide pas le bon.
-  benevoleCollecteurId     String?
-  benevoleCollecteur       Benevole?   @relation(fields: [benevoleCollecteurId], references: [id], onDelete: SetNull)
-  confirme                 Boolean     @default(false)
+  benevoleCollecteurId        String?
+  benevoleCollecteur          Benevole?           @relation(fields: [benevoleCollecteurId], references: [id], onDelete: SetNull)
+  confirme                    Boolean             @default(false)
   // Don matériel divisible uniquement : le donateur doit valider la sélection d'articles choisie
   // par l'association avant que quoi que ce soit (signature, contrôle) ne soit possible, pour
   // éviter une répartition trop petite ou trop grande à son goût. Toujours à false pour un don
   // non divisible (aucune validation supplémentaire, comportement historique).
-  enAttenteValidationDonateur Boolean   @default(false)
-  docusignEnvelopeId       String?
-  signatures               Signature[]
-  attestationId            String?
-  attestation              AttestationFiscale? @relation(fields: [attestationId], references: [id])
-  createdAt                DateTime    @default(now())
+  enAttenteValidationDonateur Boolean             @default(false)
+  docusignEnvelopeId          String?
+  signatures                  Signature[]
+  attestationId               String?
+  attestation                 AttestationFiscale? @relation(fields: [attestationId], references: [id])
+  createdAt                   DateTime            @default(now())
 
   // Un don matériel divisible peut être réparti entre plusieurs associations : chacune reçoit
   // son propre bon (une seule fois chacune, d'où l'unicité sur la paire don+association) plutôt
@@ -442,36 +444,53 @@ model BonEnlevement {
 }
 
 model Signature {
-  id              String         @id @default(cuid())
-  bonEnlevementId String
-  bonEnlevement   BonEnlevement  @relation(fields: [bonEnlevementId], references: [id], onDelete: Cascade)
-  role            RoleSignataire
-  signataireNom   String?
-  horodatage      DateTime       @default(now())
+  id                String         @id @default(cuid())
+  bonEnlevementId   String
+  bonEnlevement     BonEnlevement  @relation(fields: [bonEnlevementId], references: [id], onDelete: Cascade)
+  role              RoleSignataire
+  signataireNom     String?
+  horodatage        DateTime       @default(now())
   referenceDocuSign String?
 }
 
+// Reçu fiscal (décision de Bruno du 2026-10-09) : l'entreprise valorise elle-même ses dons de
+// l'année et envoie une DEMANDE ; l'association l'émet (ENVOYEE pour signature, puis SIGNEE) ou la
+// CONTESTE avec un motif. BROUILLON : anciennes attestations calculées par l'application.
 enum StatutAttestation {
   BROUILLON
+  DEMANDEE
+  CONTESTEE
   ENVOYEE
   SIGNEE
 }
 
 model AttestationFiscale {
-  id                     String            @id @default(cuid())
-  numeroOrdre            String            @unique
-  entrepriseId           String
-  entreprise             Entreprise        @relation(fields: [entrepriseId], references: [id])
-  associationId          String
-  association            Association       @relation(fields: [associationId], references: [id])
-  periodeDebut           DateTime
-  periodeFin             DateTime
-  montantCalcule         Float
-  statut                 StatutAttestation @default(BROUILLON)
-  docusignEnvelopeId     String?
-  signatureAssociationLe DateTime?
-  bonsEnlevement         BonEnlevement[]
-  createdAt              DateTime          @default(now())
+  id                       String            @id @default(cuid())
+  // Attribué à l'émission par l'association (pas à la demande) : aucun trou dans la séquence.
+  numeroOrdre              String?           @unique
+  entrepriseId             String
+  entreprise               Entreprise        @relation(fields: [entrepriseId], references: [id])
+  associationId            String
+  association              Association       @relation(fields: [associationId], references: [id])
+  periodeDebut             DateTime
+  periodeFin               DateTime
+  // Ancien calcul de l'application (poids × coût au kilo × 60 %) ; 0 pour les reçus valorisés.
+  montantCalcule           Float             @default(0)
+  // Reçu valorisé : année civile concernée et valeur totale des dons saisie par l'entreprise.
+  annee                    Int?
+  montantValorise          Float?
+  demandeLe                DateTime?
+  motifContestation        String?
+  emisLe                   DateTime?
+  justificatifNomFichier   String?
+  justificatifContentType  String?
+  justificatifContenu      Bytes?
+  justificatifTailleOctets Int?
+  statut                   StatutAttestation @default(BROUILLON)
+  docusignEnvelopeId       String?
+  signatureAssociationLe   DateTime?
+  bonsEnlevement           BonEnlevement[]
+  createdAt                DateTime          @default(now())
 }
 
 enum StatutAttestationInteretGeneral {
@@ -484,15 +503,15 @@ enum StatutAttestationInteretGeneral {
 // l'association et adressée à une entreprise donatrice nommée (contrairement à AttestationFiscale,
 // non rattachée à une période ou des bons précis : une seule par couple entreprise/association).
 model AttestationInteretGeneral {
-  id                     String                           @id @default(cuid())
+  id                     String                          @id @default(cuid())
   entrepriseId           String
-  entreprise             Entreprise                       @relation(fields: [entrepriseId], references: [id])
+  entreprise             Entreprise                      @relation(fields: [entrepriseId], references: [id])
   associationId          String
-  association            Association                      @relation(fields: [associationId], references: [id])
+  association            Association                     @relation(fields: [associationId], references: [id])
   statut                 StatutAttestationInteretGeneral @default(BROUILLON)
   docusignEnvelopeId     String?
   signatureAssociationLe DateTime?
-  createdAt              DateTime                         @default(now())
+  createdAt              DateTime                        @default(now())
 
   @@unique([entrepriseId, associationId])
 }

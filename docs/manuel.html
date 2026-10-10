@@ -345,9 +345,9 @@
     </li>
     <li>
       <strong>Justificatifs a posteriori</strong>
-      Périodiquement, l'entreprise génère des attestations fiscales (regroupant les bons confirmés
-      par association) et des attestations d'intérêt général — signées, cette fois, par
-      l'association.
+      Une fois par an, l'entreprise valorise elle-même ses dons et demande un reçu fiscal à chaque
+      association, qui l'émet et le signe (ou conteste la demande). L'entreprise génère aussi des
+      attestations d'intérêt général, signées par l'association.
     </li>
   </ol>
 
@@ -468,23 +468,34 @@
     registre légal de ce qui a été remis.
   </div>
 
-  <h3>Attestations fiscales (art. 200/238 bis du CGI)</h3>
-  <p>Sur une période choisie, l'application regroupe automatiquement tous les bons confirmés
-    <strong>par association bénéficiaire</strong> (nombre de bons, poids total, montant fiscal
-    estimé). Une attestation distincte par association est générée et envoyée pour signature.
-    L'association n'est pas notifiée : elle la découvre dans ses archives, avec la mention « À
-    signer ».</p>
+  <h3>Reçus fiscaux (art. 238 bis du CGI)</h3>
+  <p>Depuis le 10 octobre 2026, l'application ne calcule plus aucun montant. Depuis Archives →
+    « Demander un reçu fiscal », l'entreprise choisit l'<strong>année</strong> : pour chaque
+    association, elle voit ses bons confirmés pas encore couverts par un reçu (nombre, nature, poids).
+    Elle saisit la <strong>valeur totale des dons</strong>, calculée avec son propre logiciel (en
+    général au coût de revient), et peut joindre un justificatif (PDF ou image, 5&nbsp;Mo). La demande
+    part à l'association, qui est notifiée.</p>
+  <ul>
+    <li>Tant que le reçu n'est pas émis, l'entreprise peut <strong>modifier</strong> la demande
+      (montant, justificatif) ou la <strong>retirer</strong> : ses bons redeviennent alors disponibles
+      pour une nouvelle demande.</li>
+    <li>Si l'association <strong>conteste</strong>, l'entreprise voit le motif et peut corriger puis
+      renvoyer.</li>
+    <li>Quand l'association <strong>émet</strong> le reçu, il reçoit son numéro d'ordre et elle le
+      signe électroniquement ; l'entreprise est notifiée et le retrouve dans ses archives.</li>
+  </ul>
   <div class="callout legal">
-    <span class="label">Montant à 0 €</span>
-    Le montant est calculé à partir d'un coût de revient au kilo que l'entreprise ne peut saisir
-    nulle part dans l'application : il vaut donc 0&nbsp;€ pour toute entreprise réelle (seules les
-    données de démonstration ont un coût renseigné). Pour un don matériel, sans poids, il vaut
-    aussi 0&nbsp;€.
+    <span class="label">Contenu du reçu</span>
+    Le PDF reprend les rubriques du formulaire officiel de reçu des dons des entreprises (Cerfa
+    n°&nbsp;16216) : numéro d'ordre, organisme et sa qualité, entreprise donatrice, valeur en chiffres
+    et en lettres, année, forme et nature du don (en nature : denrées alimentaires et/ou biens
+    matériels), et en annexe la liste des bons couverts. Mentions et numérotation restent à faire
+    valider par un juriste.
   </div>
   <div class="callout cas-limite">
     <span class="label">Qui signe</span>
-    C'est <strong>l'association</strong> qui signe cette attestation, pas l'entreprise —
-    l'entreprise se contente de la générer et de l'envoyer.
+    C'est <strong>l'association</strong> qui émet et signe le reçu, pas l'entreprise. Les attestations
+    établies avant le 10 octobre 2026 (montant calculé par l'application) restent consultables.
   </div>
 
   <h3>Attestation d'intérêt général (art. 238 bis du CGI)</h3>
@@ -493,8 +504,9 @@
     par couple entreprise/association.</p>
 
   <h3>Archives</h3>
-  <p>Historique complet en 3 onglets : bons d'enlèvement confirmés, attestations fiscales,
-    attestations d'intérêt général — chacun avec accès direct au PDF. Deux listes déroulantes en haut
+  <p>Historique complet en 3 onglets : bons d'enlèvement confirmés, reçus fiscaux (avec les demandes
+    en cours et leur étiquette : « Demandé », « Contesté », « En signature »), attestations d'intérêt
+    général. Deux listes déroulantes en haut
     filtrent par année (à l'heure de Paris) et par partenaire ; un lien « Effacer » les remet à zéro.</p>
 
   <h3>Profil</h3>
@@ -576,9 +588,18 @@
 
   <h3>Messagerie, convention, attestations</h3>
   <p>Mêmes règles que côté entreprise (conversation possible avec le coordinateur ou une entreprise
-    conventionnée, convention à signer en premier). Sur les attestations fiscales et d'intérêt
-    général, c'est <strong>l'association qui signe</strong> — l'entreprise ne fait que les générer et
-    les envoyer.</p>
+    conventionnée, convention à signer en premier). Sur les reçus fiscaux et les attestations d'intérêt
+    général, c'est <strong>l'association qui signe</strong>.</p>
+  <h3>Répondre à une demande de reçu fiscal</h3>
+  <p>L'association est notifiée et retrouve la demande dans Archives (étiquette « À traiter ») : valeur
+    déclarée, bons couverts, justificatif éventuel. Elle peut :</p>
+  <ul>
+    <li><strong>Émettre et signer le reçu</strong> : il reçoit son numéro d'ordre et s'ouvre à la
+      signature électronique. Il faut avoir au minimum <strong>déclaré être d'intérêt
+      général</strong> ; si ce n'est pas fait, une case permet de le déclarer à ce moment-là (la
+      déclaration est enregistrée dans le profil).</li>
+    <li><strong>Contester la demande</strong>, avec un motif obligatoire que l'entreprise verra.</li>
+  </ul>
 
   <h3>Profil association</h3>
   <ul>
@@ -742,14 +763,13 @@
     nationale déclarée, sans contrôle de sa date de fin. Le seuil s'applique au-delà de 400&nbsp;m²
     (strictement).</p>
 
-  <h3>Conventions et attestations fiscales</h3>
+  <h3>Conventions et reçus fiscaux</h3>
   <p>Une convention existe en un seul exemplaire par couple entreprise/association, créée
-    automatiquement dès leur premier lien. Le montant d'une attestation fiscale est calculé à
-    <strong>60&nbsp;% de la valeur de revient</strong> des dons remis sur la période (poids × coût de
-    revient au kilo, voir l'encadré « Montant à 0 € » en partie 3), avec un numéro d'ordre unique
-    au format <code>2026-ATT-0001</code>. Le compteur repart à zéro chaque année (heure de Paris) et
-    ne peut pas produire de doublon ; les bons d'enlèvement suivent la même règle
-    (<code>2026-0001</code>).
+    automatiquement dès leur premier lien. Le montant d'un reçu fiscal est la valeur déclarée par
+    l'entreprise (voir partie 3). Le numéro d'ordre, au format <code>2026-ATT-0001</code>, est
+    attribué au moment où l'association émet le reçu : une demande contestée ou retirée ne laisse
+    pas de trou. Le compteur repart à zéro chaque année (heure de Paris) et ne peut pas produire de
+    doublon ; les bons d'enlèvement suivent la même règle (<code>2026-0001</code>).
     La convention n'a pas de date d'expiration contrôlée.</p>
 
   <h3>Notifications (email et push)</h3>
@@ -768,12 +788,14 @@
       l'autre partie, ou les deux si c'est le coordinateur ;</li>
     <li>convention signée par l'une des parties → l'autre, invitée à signer ; signée par les deux →
       l'autre partie, prévenue ;</li>
+    <li>demande de reçu fiscal, modifiée ou retirée → l'association ; demande contestée ou reçu émis
+      et signé → l'entreprise ;</li>
     <li>nouveau message dans la messagerie → le ou les destinataires.</li>
   </ul>
   <p>Un envoi raté n'interrompt jamais l'action métier qui vient de réussir — la personne peut
     simplement ne pas recevoir la notification.</p>
   <p>Ne sont <strong>pas</strong> notifiés : la publication d'un don, le positionnement sur un don
-    entier, les attestations, l'annulation pour congés, la confirmation d'un bon, la vérification d'une
+    entier, les attestations d'intérêt général, l'annulation pour congés, la confirmation d'un bon, la vérification d'une
     association.</p>
 
   <h3>Messagerie interne</h3>
@@ -814,7 +836,7 @@
   <p>La saisie à la voix (en français) s'appuie sur une fonctionnalité native du navigateur : si le
     navigateur ne la propose pas, le bouton n'apparaît simplement pas. La conversion d'un montant en
     toutes lettres (ex. « huit cent quarante-deux euros et cinquante centimes ») n'est utilisée que
-    sur l'attestation fiscale.</p>
+    sur le reçu fiscal.</p>
 
   <hr class="sep" />
 
@@ -919,8 +941,9 @@
     <li><strong>Don</strong> regroupe des <strong>Articles</strong> ; chaque article peut être
       réclamé individuellement dans un don matériel divisible.</li>
     <li><strong>Bon d'enlèvement</strong> est généré par don (ou par part de don divisible) et porte
-      les signatures, le poids retenu, et le lien vers une éventuelle attestation fiscale.</li>
-    <li><strong>Convention</strong>, <strong>Attestation fiscale</strong> et <strong>Attestation
+      les signatures, le poids retenu, et le lien vers un éventuel reçu fiscal.</li>
+    <li><strong>Convention</strong>, <strong>Reçu fiscal</strong> (table <code>AttestationFiscale</code> : de la demande de
+      l'entreprise à la signature de l'association) et <strong>Attestation
       d'intérêt général</strong> sont les trois documents légaux échangés entre une entreprise et une
       association données.</li>
     <li><strong>Conversation</strong> et <strong>Message</strong> forment la messagerie interne.</li>
@@ -943,11 +966,9 @@
     charge, attribution par le planning (convention et congés revérifiés), contournement de la
     validation d'un don divisible par appel direct, numéros de bon et d'attestation (annuels, sans
     doublon), notifications d'attribution et de convention, dates à l'heure de Paris, filtres des
-    archives.
+    archives. Puis, le même jour, reçu fiscal valorisé par l'entreprise et émis par l'association.
   </div>
   <ul>
-    <li><strong>Attestations fiscales</strong> : montant à 0&nbsp;€ hors démonstration (le coût de
-      revient au kilo n'est saisi nulle part) ; pas de notification ni de bouton de renvoi.</li>
     <li><strong>Notifications</strong> : aucune alerte de nouveau don aux associations ; la préférence
       d'alerte du profil n'a pas d'effet.</li>
     <li><strong>Suivi</strong> : pas de liste des dons en cours pour l'entreprise ; pas d'annulation

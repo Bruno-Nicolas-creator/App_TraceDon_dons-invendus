@@ -15,7 +15,9 @@ export type AttestationArchive = Filtrable & {
   titre: string;
   periode: string;
   montant: string;
-  statut: "BROUILLON" | "ENVOYEE" | "SIGNEE";
+  /** Page du reçu, ou son PDF (coordinateur) ; null : rien à ouvrir (demande pas encore émise). */
+  lien: string | null;
+  etiquette: { texte: string; aTraiter: boolean } | null;
 };
 export type AttestationInteretGeneralArchive = Filtrable & {
   id: string;
@@ -92,7 +94,7 @@ export default function ArchivesClient({
             onClick={() => setOnglet("attestations")}
             className={`border-b-2 pb-2.5 text-[13px] font-semibold ${onglet === "attestations" ? "border-ink text-ink" : "border-transparent text-ink-muted"}`}
           >
-            Attestations fiscales
+            Reçus fiscaux
           </button>
           <button
             type="button"
@@ -148,7 +150,7 @@ export default function ArchivesClient({
             href="/attestations/nouvelle"
             className="block w-full rounded-full border border-dashed border-border bg-surface py-2.5 text-center text-sm font-semibold transition-transform active:scale-[0.98]"
           >
-            + Générer un récapitulatif fiscal
+            + Demander un reçu fiscal
           </Link>
         )}
         {onglet === "interetGeneral" && role === "ENTREPRISE" && (
@@ -180,29 +182,42 @@ export default function ArchivesClient({
           ))}
         {onglet === "attestations" &&
           attestationsFiltrees.map((att) => {
-            const aSigner = role === "ASSOCIATION" && att.statut !== "SIGNEE";
-            return (
-              <a
-                key={att.id}
-                href={aSigner ? `/attestations/${att.id}` : `/api/attestations/${att.id}/pdf`}
-                target={aSigner ? undefined : "_blank"}
-                rel={aSigner ? undefined : "noopener noreferrer"}
-                className="flex items-center gap-3 rounded-xl border border-border bg-surface p-3.5"
-              >
+            const contenu = (
+              <>
                 <DocIcon variant="attestation" />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[13.5px] font-semibold">{att.titre}</div>
                   <div className="mt-0.5 text-xs text-ink-muted">{att.periode} · {att.montant}</div>
                 </div>
-                {aSigner ? (
-                  <span className="shrink-0 rounded-full bg-accent-tint px-2.5 py-1 text-[11px] font-semibold text-accent">
-                    À signer
+                {att.etiquette ? (
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                      att.etiquette.aTraiter ? "bg-accent-tint text-accent" : "bg-surface-alt text-ink-muted"
+                    }`}
+                  >
+                    {att.etiquette.texte}
                   </span>
                 ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0" aria-hidden="true">
-                    <path d="M9 6L15 12L9 18" stroke="#6B6459" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
+                  att.lien && (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0" aria-hidden="true">
+                      <path d="M9 6L15 12L9 18" stroke="#6B6459" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )
                 )}
+              </>
+            );
+            const classes = "flex items-center gap-3 rounded-xl border border-border bg-surface p-3.5";
+            if (!att.lien) return <div key={att.id} className={classes}>{contenu}</div>;
+            const pdf = att.lien.startsWith("/api/");
+            return (
+              <a
+                key={att.id}
+                href={att.lien}
+                target={pdf ? "_blank" : undefined}
+                rel={pdf ? "noopener noreferrer" : undefined}
+                className={classes}
+              >
+                {contenu}
               </a>
             );
           })}
@@ -245,7 +260,7 @@ export default function ArchivesClient({
         )}
         {onglet === "attestations" && attestationsFiltrees.length === 0 && (
           <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-ink-muted">
-            {filtreActif ? "Aucune attestation pour ces filtres." : "Aucune attestation générée."}
+            {filtreActif ? "Aucun reçu pour ces filtres." : "Aucun reçu fiscal ni demande en cours."}
           </div>
         )}
         {onglet === "interetGeneral" && interetGeneralFiltrees.length === 0 && (

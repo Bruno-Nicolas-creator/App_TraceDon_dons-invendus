@@ -11,6 +11,7 @@ import AttestationInteretGeneralDocument, {
   type AttestationInteretGeneralPdfData,
 } from "@/lib/pdf/AttestationInteretGeneralDocument";
 import { montantEnLettres } from "@/lib/nombreEnLettres";
+import { libelleNatures, montantDuRecu } from "@/lib/attestationFiscale";
 import { articlesDuBon } from "@/lib/donDivisible";
 import { notifier } from "@/lib/notifications";
 
@@ -580,11 +581,21 @@ export async function verifierEtEnregistrerSignatureConvention(
 export async function genererPdfAttestation(attestationId: string): Promise<Buffer> {
   const attestation = await prisma.attestationFiscale.findUniqueOrThrow({
     where: { id: attestationId },
-    include: { entreprise: true, association: true, bonsEnlevement: { orderBy: { dateHeureEnlevement: "asc" } } },
+    include: {
+      entreprise: true,
+      association: true,
+      bonsEnlevement: { orderBy: { dateHeureEnlevement: "asc" }, include: { don: { select: { type: true } } } },
+    },
   });
+  if (!attestation.numeroOrdre) throw new Error("Ce reçu n'est pas encore émis par l'association.");
 
+  const montant = montantDuRecu(attestation);
   const data: AttestationPdfData = {
     numeroOrdre: attestation.numeroOrdre,
+    annee: attestation.annee,
+    emisLe: attestation.emisLe ?? attestation.createdAt,
+    valeurSaisieParEntreprise: attestation.montantValorise !== null,
+    nature: libelleNatures(attestation.bonsEnlevement.map((b) => b.don.type)),
     entreprise: {
       raisonSociale: attestation.entreprise.raisonSociale,
       formeJuridique: attestation.entreprise.formeJuridique,
@@ -602,7 +613,7 @@ export async function genererPdfAttestation(attestationId: string): Promise<Buff
     },
     periodeDebut: attestation.periodeDebut,
     periodeFin: attestation.periodeFin,
-    montantCalcule: attestation.montantCalcule,
+    montant,
     bons: attestation.bonsEnlevement.map((b) => ({
       numero: b.numero,
       date: b.dateHeureEnlevement,
@@ -611,7 +622,7 @@ export async function genererPdfAttestation(attestationId: string): Promise<Buff
   };
 
   return renderToBuffer(
-    <AttestationFiscaleDocument data={data} montantEnLettres={montantEnLettres(attestation.montantCalcule)} />
+    <AttestationFiscaleDocument data={data} montantEnLettres={montantEnLettres(montant)} />
   );
 }
 
@@ -622,6 +633,9 @@ export async function envoyerAttestationPourSignature(attestationId: string): Pr
     include: { association: true },
   });
   if (attestation.docusignEnvelopeId) return attestation.docusignEnvelopeId;
+  if (!attestation.numeroOrdre || attestation.statut === "DEMANDEE" || attestation.statut === "CONTESTEE") {
+    throw new Error("Ce reçu n'est pas encore émis par l'association.");
+  }
 
   const [accessToken, pdfBuffer, emailAssociation] = await Promise.all([
     obtenirAccessToken(),
@@ -631,11 +645,11 @@ export async function envoyerAttestationPourSignature(attestationId: string): Pr
   const accountId = requireEnv("DOCUSIGN_ACCOUNT_ID");
 
   const enveloppe = {
-    emailSubject: `Attestation fiscale ${attestation.numeroOrdre} — signature requise`,
+    emailSubject: `Reçu fiscal ${attestation.numeroOrdre} — signature requise`,
     documents: [
       {
         documentBase64: pdfBuffer.toString("base64"),
-        name: `Attestation ${attestation.numeroOrdre}`,
+        name: `Recu fiscal ${attestation.numeroOrdre}`,
         fileExtension: "pdf",
         documentId: "1",
       },
@@ -735,10 +749,19 @@ export async function verifierEtEnregistrerSignatureAttestation(attestationId: s
   if (signataire?.status !== "completed") return false;
 
   const horodatage = signataire.signedDateTime ? new Date(signataire.signedDateTime) : new Date();
-  await prisma.attestationFiscale.update({
+  const signee = await prisma.attestationFiscale.update({
     where: { id: attestationId },
     data: { signatureAssociationLe: horodatage, statut: "SIGNEE" },
+    include: { association: { select: { denomination: true } } },
   });
+  await notifier(
+    { entrepriseId: signee.entrepriseId },
+    "Reçu fiscal émis",
+    `${signee.association.denomination} a émis et signé votre reçu fiscal n°${signee.numeroOrdre}${
+      signee.annee ? ` pour vos dons de ${signee.annee}` : ""
+    }. Il est disponible dans vos archives.`,
+    "/archives"
+  );
 
   return true;
 }

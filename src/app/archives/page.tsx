@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { compterMessagesNonLus } from "@/lib/messagerie";
+import { montantDuRecu } from "@/lib/attestationFiscale";
 import ArchivesClient, {
   type AttestationArchive,
   type AttestationInteretGeneralArchive,
@@ -39,8 +40,10 @@ export default async function ArchivesPage() {
     }),
     prisma.attestationFiscale.findMany({
       where: attestationWhere,
+      // Sans le contenu du justificatif (jusqu'à 5 Mo par reçu), inutile pour la liste.
+      omit: { justificatifContenu: true },
       include: { association: true, entreprise: true },
-      orderBy: { periodeDebut: "desc" },
+      orderBy: { createdAt: "desc" },
     }),
     prisma.attestationInteretGeneral.findMany({
       where: attestationWhere,
@@ -64,14 +67,28 @@ export default async function ArchivesPage() {
     poids: `${(bon.poidsTotalRetenu ?? 0).toLocaleString("fr-FR")} kg`,
   }));
 
+  const etiquetteRecu = (statut: (typeof attestations)[number]["statut"]): AttestationArchive["etiquette"] => {
+    const association = session.role === "ASSOCIATION";
+    if (statut === "SIGNEE") return null;
+    if (statut === "DEMANDEE") return association ? { texte: "À traiter", aTraiter: true } : { texte: "Demandé", aTraiter: false };
+    if (statut === "CONTESTEE") return { texte: "Contesté", aTraiter: !association };
+    return association ? { texte: "À signer", aTraiter: true } : { texte: "En signature", aTraiter: false };
+  };
+
   const attestationsAffichees: AttestationArchive[] = attestations.map((att) => ({
     id: att.id,
-    titre: `Attestation ${att.numeroOrdre} — ${nomPartenaire(att)}`,
+    titre: `${att.numeroOrdre ? `Reçu ${att.numeroOrdre}` : "Demande de reçu"} — ${nomPartenaire(att)}`,
     partenaire: nomPartenaire(att),
-    annee: anneeDe(att.periodeDebut),
-    periode: `${formatDate(att.periodeDebut)} – ${formatDate(att.periodeFin)}`,
-    montant: `${att.montantCalcule.toLocaleString("fr-FR")} €`,
-    statut: att.statut,
+    annee: att.annee ?? anneeDe(att.periodeDebut),
+    periode: att.annee ? `Dons ${att.annee}` : `${formatDate(att.periodeDebut)} – ${formatDate(att.periodeFin)}`,
+    montant: montantDuRecu(att).toLocaleString("fr-FR", { style: "currency", currency: "EUR" }),
+    lien:
+      session.role === "COORDINATEUR"
+        ? att.numeroOrdre
+          ? `/api/attestations/${att.id}/pdf`
+          : null
+        : `/attestations/${att.id}`,
+    etiquette: etiquetteRecu(att.statut),
   }));
 
   const attestationsInteretGeneralAffichees: AttestationInteretGeneralArchive[] = attestationsInteretGeneral.map(

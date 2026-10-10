@@ -684,8 +684,8 @@ Chaque notification part par **e-mail** et par **notification sur l'appareil** (
 | Convention envoyée par le coordinateur | Les deux parties | Existe depuis le 2026-10-10 |
 | Demande partielle validée par le coordinateur | Entreprise | 🆕 |
 | Invitation à rejoindre une organisation, e-mail à vérifier | Utilisateur invité ou inscrit | 🆕 |
-| Demande de reçu fiscal reçue | Association | 🆕 |
-| Reçu émis / demande contestée | Entreprise | 🆕 |
+| Demande de reçu fiscal reçue | Association | Existe depuis le 2026-10-10 |
+| Reçu émis / demande contestée | Entreprise | Existe depuis le 2026-10-10 |
 | Attestation d'intérêt général à signer / signée | Association / entreprise | 🆕 |
 | Nouvelle association inscrite | Coordinateurs | 🆕 |
 | Association vérifiée | Association | 🆕 |
@@ -891,7 +891,7 @@ Consentement préalable à toute mesure d'audience, modifiable à tout moment ; 
 
 | Sujet | Ce que faisait la V1 | Attendu |
 |---|---|---|
-| Valeur des dons | Calculait un montant (poids × coût au kilo jamais saisissable → 0 €) | Valorisation par l'entreprise, reçu émis par l'association (E14, A9) |
+| Valeur des dons | Calculait un montant (poids × coût au kilo jamais saisissable → 0 €) ; remplacé dans la V1 le 2026-10-10 par une version simple de E14/A9 (valeur annuelle saisie, justificatif facultatif, contestation, émission par l'association, PDF sur le modèle du Cerfa n° 16216) | Valorisation par l'entreprise, reçu émis par l'association (E14, A9) |
 | Alerte nouveau don | Aucune, malgré une préférence e-mail/SMS dans le profil | E-mail, SMS, notification (A3) |
 | Suivi entreprise | Aucune liste des dons en cours | « Mes dons » (E10) |
 | Annulation | Seulement via les congés, sans prévenir personne | Annulation avec motif et notification (E13) |
@@ -952,6 +952,7 @@ Toutes les propositions de la rédaction ont été acceptées par Bruno, avec de
 - **Annuaire** : retrait des badges « Chaîne du froid », capacité d'accueil et nombre de bénéficiaires de la liste (E5).
 - **Notifications** : l'attribution par le planning ou par le coordinateur, la convention à signer et la convention signée sont notifiées.
 - Ces décisions, et la correction des limites connues simples, ont été **appliquées aussi dans la V1** (exception au gel décidée par Bruno).
+- **Reçu fiscal** (même jour) : une version simple de E14/A9 est livrée dans la V1. Le numéro d'ordre n'est attribué qu'à l'émission par l'association (pas de trou si la demande est contestée ou retirée) ; la séquence reste commune à la plateforme et annuelle, à faire valider par le juriste (une séquence propre à chaque association est possible).
 
 ### Points restant à faire valider par des tiers
 

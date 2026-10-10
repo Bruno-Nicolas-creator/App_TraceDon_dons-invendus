@@ -47,13 +47,27 @@ export function creerBonEnlevement(data: Omit<Prisma.BonEnlevementUncheckedCreat
   );
 }
 
-export function creerAttestationFiscale(data: Omit<Prisma.AttestationFiscaleUncheckedCreateInput, "numeroOrdre">) {
-  return creerAvecNumero(
+/**
+ * Attribue son numéro d'ordre à un reçu fiscal au moment où l'association l'émet (et pas à la
+ * demande de l'entreprise : une demande contestée ou abandonnée ne laisse pas de trou). La mise à
+ * jour ne passe que si le reçu est encore une demande sans numéro : deux clics simultanés ne
+ * peuvent pas lui attribuer deux numéros. Renvoie false si le reçu n'était plus une demande.
+ */
+export async function emettreRecuAvecNumero(attestationId: string): Promise<boolean> {
+  let emis = false;
+  await creerAvecNumero(
     async (prefixe) =>
       (
         await prisma.attestationFiscale.findMany({ where: { numeroOrdre: { startsWith: prefixe } }, select: { numeroOrdre: true } })
-      ).map((a) => a.numeroOrdre),
+      ).flatMap((a) => (a.numeroOrdre ? [a.numeroOrdre] : [])),
     `${anneeParis()}-ATT-`,
-    (numeroOrdre) => prisma.attestationFiscale.create({ data: { ...data, numeroOrdre } })
+    async (numeroOrdre) => {
+      const { count } = await prisma.attestationFiscale.updateMany({
+        where: { id: attestationId, statut: "DEMANDEE", numeroOrdre: null },
+        data: { numeroOrdre, statut: "ENVOYEE", emisLe: new Date(), motifContestation: null },
+      });
+      emis = count === 1;
+    }
   );
+  return emis;
 }
