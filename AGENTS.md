@@ -102,12 +102,13 @@ Règles de cette rubrique (décidées par Bruno le 2026-10-08) :
 - Mise à jour : à chaque commit (le rappel automatique le demande), Claude ajoute ce qu'il a repéré et retire ce que Bruno vient de demander ou de faire. Si Bruno dit « non », la ligne passe dans « Écartées par Bruno » avec la date, et Claude ne la repropose pas. La vérification mensuelle propose de nouvelles idées dans son rapport, sans modifier ce fichier.
 - Aucun secret : des noms, jamais des valeurs.
 
-### À proposer (7 sur 15)
+### À proposer (8 sur 15)
 - [avant ouverture] Trancher le sort des comptes de démo carrefour, coeur, resto et des 25 dons de test visibles des associations — ils sont utilisables par tous avec un mot de passe connu — 1 h — repéré le 2026-10-08
 - [avant ouverture] Tester une restauration de sauvegarde Neon sur une branche isolée, et régénérer le mot de passe de la base exposé par erreur le 2026-10-02 — gestes de Bruno sur Neon, Claude le guide — 30 min — repéré le 2026-10-02
 - [avant ouverture] Vérifier dans Vercel si DocuSign pointe vers la démo (signatures sans valeur légale) ou la production — 15 min — repéré le 2026-10-08
 - [avant ouverture] Faire marcher le verrou « mode caché » (SITE_PASSWORD) ou y renoncer : le site est public avec l'inscription ouverte — il faut une capture des variables Vercel — 1 h — repéré le 2026-10-01
 - [avant ouverture] Créer le projet PostHog (région Europe), mettre la clé phc_ dans Vercel, et citer PostHog dans la politique de confidentialité — 30 min — repéré le 2026-10-08
+- [utile] Donner au coordinateur un écran pour corriger le nom, le SIRET ou le RNA d'une organisation — sinon une correction demandée par un utilisateur passe par une modification directe en base — 1 h — repéré le 2026-10-11
 - [utile] Ajouter chez o2switch un enregistrement DMARC pour tracedon.fr (ligne TXT _dmarc) — aide les messageries à ne pas classer les e-mails de TraceDon en indésirables — geste de Bruno guidé par Claude — 10 min — repéré le 2026-10-10
 - [utile] Ajouter une alerte sur les erreurs des visiteurs une fois PostHog branché — pour réagir avant qu'un utilisateur ne se plaigne — 1 h — repéré le 2026-10-08
 
