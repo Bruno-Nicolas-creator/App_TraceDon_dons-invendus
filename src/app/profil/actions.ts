@@ -5,7 +5,8 @@ import { debutJourParis, finJourParis } from "@/lib/dateParis";
 import { annulerDonsPourConges } from "@/lib/annulationDon";
 import { formaterDateConges } from "@/lib/conges";
 import { revalidatePath } from "next/cache";
-import { clearSessionCookie } from "@/lib/auth";
+import { clearSessionCookie, createSessionCookie, hashPassword, verifyPassword } from "@/lib/auth";
+import { avertirChangementMotDePasse, erreurMotDePasse } from "@/lib/reinitialisation";
 import { getSessionLimitee as getSession } from "@/lib/sessionLimitee";
 import { prisma } from "@/lib/prisma";
 import { definitionDocumentPourRole, nomFichierSur, validerFichierDocument, type TypeDocument } from "@/lib/documents";
@@ -14,7 +15,7 @@ import { disponibilitesValides } from "@/lib/disponibilites";
 import { typesActiviteValides } from "@/lib/activiteAssociation";
 import { IDS_FAMILLES_ALERTE, RAYONS_ALERTE_KM } from "@/lib/famillesAlerte";
 import { roleBenevoleValide } from "@/lib/benevoles";
-import { tropDEnvoisFichiers } from "@/lib/rateLimiter";
+import { tropDEnvoisFichiers, tropDeTentatives } from "@/lib/rateLimiter";
 import { endpointPushValide } from "@/lib/webPush";
 
 const LONGUEUR_MAX_NOTRE_ACTION = 2000;
@@ -352,6 +353,42 @@ export async function definirCapaciteAction(formData: FormData) {
 }
 
 /** Réglages des alertes « nouveau don » de l'association (cf. src/lib/alertesDon.ts). */
+/**
+ * Changement de mot de passe depuis le profil : l'ancien est exigé ; les autres sessions du compte
+ * sont déconnectées (version de session incrémentée), la session courante est renouvelée.
+ */
+export async function changerMotDePasseAction(
+  _etat: { ok: true } | { ok: false; error: string } | null,
+  formData: FormData
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "Non authentifié." };
+  if (await tropDeTentatives(`changement-mdp:${session.userId}`, 5, 15 * 60 * 1000)) {
+    return { ok: false, error: "Trop de tentatives. Merci de réessayer dans quelques minutes." };
+  }
+
+  const ancien = String(formData.get("ancien") ?? "");
+  const nouveau = String(formData.get("motDePasse") ?? "");
+  const erreur = erreurMotDePasse(nouveau, String(formData.get("confirmation") ?? ""));
+  if (erreur) return { ok: false, error: erreur };
+
+  const utilisateur = await prisma.user.findUnique({ where: { id: session.userId } });
+  if (!utilisateur || !(await verifyPassword(ancien, utilisateur.passwordHash))) {
+    return { ok: false, error: "Le mot de passe actuel est incorrect." };
+  }
+  if (ancien === nouveau) return { ok: false, error: "Le nouveau mot de passe doit être différent de l'actuel." };
+
+  await prisma.user.update({
+    where: { id: utilisateur.id },
+    data: { passwordHash: await hashPassword(nouveau), sessionVersion: { increment: 1 } },
+  });
+  const { sv: _ancienneVersion, ...charge } = session;
+  void _ancienneVersion;
+  await createSessionCookie(charge);
+  await avertirChangementMotDePasse(utilisateur.email, utilisateur.nom);
+  return { ok: true };
+}
+
 export async function definirAlertesAction(formData: FormData) {
   const session = await getSession();
   if (!session || session.role !== "ASSOCIATION" || !session.associationId) {

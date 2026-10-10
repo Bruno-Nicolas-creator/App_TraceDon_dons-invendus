@@ -13,9 +13,9 @@ const MESSAGES_ERREUR: Record<string, string> = {
 export default async function ConnexionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ erreur?: string }>;
+  searchParams: Promise<{ erreur?: string; reinitialise?: string }>;
 }) {
-  const { erreur } = await searchParams;
+  const { erreur, reinitialise } = await searchParams;
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-10">
@@ -28,6 +28,11 @@ export default async function ConnexionPage({
       </div>
 
       <form action={connexionAction} className="space-y-4 rounded-2xl border border-border bg-surface p-6">
+        {reinitialise === "1" && !erreur && (
+          <div className="rounded-lg bg-brand-tint px-3 py-2 text-sm text-brand-dark">
+            Votre mot de passe a été modifié. Vous pouvez vous connecter avec le nouveau.
+          </div>
+        )}
         {erreur && (
           <div className="rounded-lg bg-accent-tint px-3 py-2 text-sm text-accent">
             {MESSAGES_ERREUR[erreur] ?? "Email ou mot de passe incorrect."}
@@ -60,6 +65,9 @@ export default async function ConnexionPage({
             defaultValue={AFFICHER_COMPTES_DEMO ? "demo1234" : undefined}
             className="w-full rounded-lg border border-border px-3 py-2.5 text-sm"
           />
+          <Link href="/mot-de-passe-oublie" className="mt-1.5 inline-block text-xs font-semibold text-ink-muted underline">
+            Mot de passe oublié ?
+          </Link>
         </div>
         <SubmitButton className="w-full rounded-full bg-brand py-3 text-sm font-bold text-white disabled:opacity-60">
           Se connecter

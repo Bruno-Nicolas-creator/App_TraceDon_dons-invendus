@@ -17,6 +17,7 @@ import { ChoixMesureAudience } from "@/components/BandeauMesureAudience";
 import { isPushConfigure } from "@/lib/webPush";
 import { FAMILLES_ALERTE, RAYONS_ALERTE_KM } from "@/lib/famillesAlerte";
 import CoffreFort, { type ConventionSignee, type DocumentExistant } from "./CoffreFort";
+import ChangerMotDePasse from "./ChangerMotDePasse";
 import {
   ajouterBenevoleAction,
   ajouterPeriodeCongesAction,
@@ -175,6 +176,7 @@ export default async function ProfilPage() {
           <div className="font-semibold">{organisation}</div>
         </div>
       )}
+      <ChangerMotDePasse />
       <form action={deconnexionAction}>
         <button
           type="submit"

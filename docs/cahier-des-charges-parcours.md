@@ -905,6 +905,7 @@ Consentement préalable à toute mesure d'audience, modifiable à tout moment ; 
 | Don divisible | Contournement possible de la validation du donateur par appel direct (corrigé dans la V1 le 2026-10-10) | Refusé côté serveur |
 | Numérotation | « nombre + 1 » : doublons possibles, compteur non annuel (corrigé dans la V1 le 2026-10-10) | Séquence annuelle sans doublon (R16) |
 | Création de compte | Organisation et utilisateur créés séparément | Tout ou rien |
+| Mot de passe oublié | Inexistant | Réinitialisation par e-mail (E2) — ajoutée dans la V1 le 2026-10-10, avec changement depuis le profil et déconnexion des autres sessions |
 | Habilitation | Date de fin ignorée | Prise en compte (R4) |
 | CO₂ | Recalculé à chaque affichage, jamais enregistré | Enregistré à la confirmation |
 | Don matériel | Ni titre, ni description, ni adresse de récupération, ni pièce jointe (corrigé dans la V1 le 2026-10-10 sur l'écran et le PDF du bon) | Mêmes informations de lot que l'alimentaire, visibles partout (E8) |
@@ -954,6 +955,7 @@ Toutes les propositions de la rédaction ont été acceptées par Bruno, avec de
 - Ces décisions, et la correction des limites connues simples, ont été **appliquées aussi dans la V1** (exception au gel décidée par Bruno).
 - **Alertes nouveau don** (même jour) : version simple de A3 livrée dans la V1 — réglages dans le profil (interrupteur, rayon, familles de dons : les quatre groupes de catégories alimentaires et le matériel), sans regroupement sur 15 minutes et avec un lien vers les réglages plutôt qu'une désinscription en un clic (décision de Bruno). Le regroupement et la désinscription en un clic restent attendus dans la reconstruction.
 - **Mes dons et annulation** (même jour) : version simple de E10 et E13 livrée dans la V1 (accès par un bouton sur l'écran de nouveau don, pastille du nombre de dons à traiter, filtres par état ; annulation avec motif tant qu'aucun bon n'est signé). Les congés annulent désormais avec un motif et préviennent les associations, sans toucher aux dons dont le bon est signé.
+- **Mot de passe oublié et changement de mot de passe** (même jour, chantier C4a) : livrés dans la V1 (lien par e-mail valable 1 heure et à usage unique, changement depuis le profil, déconnexion des autres sessions, e-mail d'avertissement). Les e-mails partent depuis notifications@tracedon.fr (domaine vérifié chez Resend).
 - **Reçu fiscal** (même jour) : une version simple de E14/A9 est livrée dans la V1. Le numéro d'ordre n'est attribué qu'à l'émission par l'association (pas de trou si la demande est contestée ou retirée) ; la séquence reste commune à la plateforme et annuelle, à faire valider par le juriste (une séquence propre à chaque association est possible).
 
 ### Points restant à faire valider par des tiers

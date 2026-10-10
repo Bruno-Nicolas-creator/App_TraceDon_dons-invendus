@@ -720,6 +720,14 @@
     sens unique avant d'être enregistrés — même en cas de fuite de la base, personne ne peut
     retrouver le mot de passe d'origine. Une session dure 7 jours, via un cookie sécurisé
     inaccessible en JavaScript et transmis uniquement en HTTPS en production.</p>
+  <p><strong>Mot de passe oublié</strong> (depuis le 10 octobre 2026) : lien sous le champ mot de passe
+    de la connexion. On saisit son e-mail ; la réponse est la même que le compte existe ou non. Si le
+    compte existe, un e-mail contient un lien valable 1 heure et utilisable une seule fois (une
+    nouvelle demande annule la précédente ; seule une empreinte du lien est conservée en base). Le
+    lien mène au choix d'un nouveau mot de passe (8 caractères minimum, 72 maximum), puis à la
+    connexion. <strong>Changer son mot de passe</strong> : bouton dans le profil, ancien mot de passe
+    exigé. Dans les deux cas, toutes les autres sessions ouvertes du compte sont déconnectées et le
+    titulaire reçoit un e-mail « Votre mot de passe a été modifié ».</p>
   <div class="callout regle">
     <span class="label">Cloisonnement des rôles</span>
     Chaque rôle ne peut naviguer que vers ses propres pages ; toute tentative d'accéder à une page
@@ -749,6 +757,9 @@
         <tr><td>Lancement d'une signature DocuSign (par document)</td><td>10 / 5 min</td></tr>
         <tr><td>Téléchargement de documents (PDF, photos, pièces jointes), tous confondus</td><td>60 / 5 min</td></tr>
         <tr><td>Saisie du mot de passe de l'écran de verrouillage</td><td>10 / 10 min</td></tr>
+        <tr><td>Demande de lien « mot de passe oublié »</td><td>5 / 15 min par connexion internet, 3 / heure par e-mail</td></tr>
+        <tr><td>Choix d'un nouveau mot de passe depuis un lien</td><td>10 / 15 min par connexion internet</td></tr>
+        <tr><td>Changement de mot de passe depuis le profil</td><td>5 / 15 min</td></tr>
       </tbody>
     </table>
   </div>
@@ -1003,7 +1014,7 @@
       l'adresse d'expédition (<code>RESEND_FROM_EMAIL</code>) l'utilise ; sinon Resend ne livre qu'au
       propriétaire du compte (constaté en local le 10 octobre 2026).</li>
     <li><strong>Suivi</strong> : « Mes dons » sans filtre par période ni compteur sur l'onglet du bas ;
-      pas de mot de passe oublié ; un seul utilisateur par organisation ;
+      un seul utilisateur par organisation ;
       informations d'inscription non modifiables.</li>
     <li><strong>Données</strong> : fichiers stockés dans la base de données ; base locale partagée
       avec la production ; le script de données de démonstration viderait la production s'il y était

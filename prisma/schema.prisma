@@ -80,18 +80,36 @@ enum PreferenceAlerte {
 }
 
 model User {
-  id                String             @id @default(cuid())
-  email             String             @unique
-  passwordHash      String
-  nom               String
-  role              Role
-  entrepriseId      String?
-  entreprise        Entreprise?        @relation(fields: [entrepriseId], references: [id])
-  associationId     String?
-  association       Association?       @relation(fields: [associationId], references: [id])
-  messages          Message[]
-  pushSubscriptions PushSubscription[]
-  createdAt         DateTime           @default(now())
+  id                     String                  @id @default(cuid())
+  email                  String                  @unique
+  passwordHash           String
+  nom                    String
+  role                   Role
+  entrepriseId           String?
+  entreprise             Entreprise?             @relation(fields: [entrepriseId], references: [id])
+  associationId          String?
+  association            Association?            @relation(fields: [associationId], references: [id])
+  messages               Message[]
+  pushSubscriptions      PushSubscription[]
+  // Incrémenté à chaque changement de mot de passe : les sessions ouvertes avec l'ancienne
+  // valeur deviennent invalides (cf. getSession dans src/lib/auth.ts).
+  sessionVersion         Int                     @default(0)
+  jetonsReinitialisation JetonReinitialisation[]
+  createdAt              DateTime                @default(now())
+}
+
+// Lien « mot de passe oublié » : seule l'empreinte (SHA-256) du jeton envoyé par e-mail est
+// stockée ; valable 1 heure, utilisable une seule fois (cf. src/lib/reinitialisation.ts).
+model JetonReinitialisation {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  empreinte String    @unique
+  expireLe  DateTime
+  utiliseLe DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 /**
