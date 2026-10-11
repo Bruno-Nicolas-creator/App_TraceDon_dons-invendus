@@ -104,7 +104,7 @@ Règles de cette rubrique (décidées par Bruno le 2026-10-08) :
 - Mise à jour : à chaque commit (le rappel automatique le demande), Claude ajoute ce qu'il a repéré et retire ce que Bruno vient de demander ou de faire. Si Bruno dit « non », la ligne passe dans « Écartées par Bruno » avec la date, et Claude ne la repropose pas. La vérification mensuelle propose de nouvelles idées dans son rapport, sans modifier ce fichier.
 - Aucun secret : des noms, jamais des valeurs.
 
-### À proposer (8 sur 15)
+### À proposer (9 sur 15)
 - [avant ouverture] Trancher le sort des comptes de démo carrefour, coeur, resto et des 25 dons de test visibles des associations — ils sont utilisables par tous avec un mot de passe connu — 1 h — repéré le 2026-10-08
 - [avant ouverture] Tester une restauration de sauvegarde Neon sur une branche isolée, et régénérer le mot de passe de la base exposé par erreur le 2026-10-02 — gestes de Bruno sur Neon, Claude le guide — 30 min — repéré le 2026-10-02
 - [avant ouverture] Vérifier dans Vercel si DocuSign pointe vers la démo (signatures sans valeur légale) ou la production — 15 min — repéré le 2026-10-08
@@ -113,6 +113,7 @@ Règles de cette rubrique (décidées par Bruno le 2026-10-08) :
 - [utile] Donner au coordinateur un écran pour corriger le nom, le SIRET ou le RNA d'une organisation — sinon une correction demandée par un utilisateur passe par une modification directe en base — 1 h — repéré le 2026-10-11
 - [utile] Ajouter chez o2switch un enregistrement DMARC pour tracedon.fr (ligne TXT _dmarc) — aide les messageries à ne pas classer les e-mails de TraceDon en indésirables — geste de Bruno guidé par Claude — 10 min — repéré le 2026-10-10
 - [utile] Ajouter une alerte sur les erreurs des visiteurs une fois PostHog branché — pour réagir avant qu'un utilisateur ne se plaigne — 1 h — repéré le 2026-10-08
+- [confort] Afficher le vrai motif quand le serveur refuse une action (beaucoup d'actions lèvent une erreur, que la version en ligne remplace par la page générique « Une erreur est survenue ») — pour que l'utilisateur comprenne quoi faire — 2 h — repéré le 2026-10-11
 
 ### Écartées par Bruno (ne pas reproposer)
 - Corriger dans la V1 ses défauts du flux de don pendant la reconstruction — écarté le 2026-10-09 (la V1 reste en l'état, tout est pour la reconstruction)
