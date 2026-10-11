@@ -95,7 +95,8 @@ Ce produit doit, en permanence, respecter ces règles. Si tu vois que l'une d'el
 - 2026-10-11 : chantier C4b (informations modifiables) livré, avec la migration 20261010050000_changement_email appliquée avec l'accord de Bruno.
 - 2026-10-11 : chantier C4c étape 1 (niveaux d'accès, contrôle serveur de toutes les actions, boutons masqués, gestion des membres) livré, avec la migration 20261011010000_niveaux_acces appliquée avec l'accord de Bruno ; testé avec deux comptes de test rattachés à Carrefour, supprimés ensuite avec son accord.
 - 2026-10-11 : chantier C4c étape 2 (invitations de collègues par e-mail) livré, avec la migration 20261011020000_invitations appliquée avec l'accord de Bruno ; testé avec un compte et des invitations de test, supprimés ensuite avec son accord. Le chantier C4 (comptes et accès) est terminé.
-- Prochaine étape : la suite du lot C, présentée chantier par chantier avant de commencer (fichiers hors base et base de test séparée) ; puis transmettre le cahier des charges au développeur.
+- Décision de Bruno (2026-10-11) : le chantier C5 (fichiers hors de la base, base de test séparée) est reporté. Mesure du jour : base de 16 Mo, dont environ 3,5 Mo de fichiers, pour 0,5 Go permis par l'offre gratuite de Neon.
+- Prochaine étape : transmettre le cahier des charges au développeur ; C5 à reprendre quand Bruno le décidera.
 
 ## Idées de Claude, pas encore demandées (toujours en dernière rubrique)
 Règles de cette rubrique (décidées par Bruno le 2026-10-08) :
@@ -105,8 +106,9 @@ Règles de cette rubrique (décidées par Bruno le 2026-10-08) :
 - Mise à jour : à chaque commit (le rappel automatique le demande), Claude ajoute ce qu'il a repéré et retire ce que Bruno vient de demander ou de faire. Si Bruno dit « non », la ligne passe dans « Écartées par Bruno » avec la date, et Claude ne la repropose pas. La vérification mensuelle propose de nouvelles idées dans son rapport, sans modifier ce fichier.
 - Aucun secret : des noms, jamais des valeurs.
 
-### À proposer (10 sur 15)
+### À proposer (11 sur 15)
 - [avant ouverture] Trancher le sort des comptes de démo carrefour, coeur, resto et des 25 dons de test visibles des associations — ils sont utilisables par tous avec un mot de passe connu — 1 h — repéré le 2026-10-08
+- [avant ouverture] Créer une base de test séparée (branche Neon) pour que les tests locaux n'écrivent plus dans la production — chantier C5a, reporté par Bruno le 2026-10-11 — 30 à 45 min guidées — repéré le 2026-10-11
 - [avant ouverture] Tester une restauration de sauvegarde Neon sur une branche isolée, et régénérer le mot de passe de la base exposé par erreur le 2026-10-02 — gestes de Bruno sur Neon, Claude le guide — 30 min — repéré le 2026-10-02
 - [avant ouverture] Vérifier dans Vercel si DocuSign pointe vers la démo (signatures sans valeur légale) ou la production — 15 min — repéré le 2026-10-08
 - [avant ouverture] Faire marcher le verrou « mode caché » (SITE_PASSWORD) ou y renoncer : le site est public avec l'inscription ouverte — il faut une capture des variables Vercel — 1 h — repéré le 2026-10-01
