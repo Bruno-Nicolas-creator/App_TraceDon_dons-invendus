@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getSessionAdministrateur } from "@/lib/sessionLimitee";
 import { niveauValide } from "@/lib/droits";
+import { tropDeTentatives } from "@/lib/rateLimiter";
+import { origineRequete } from "@/lib/requestOrigin";
+import { annulerInvitation, inviterCollegue, renvoyerInvitation } from "@/lib/invitations";
 
 type Resultat = { ok: true } | { ok: false; error: string };
 
@@ -67,4 +70,61 @@ export async function reactiverMembreAction(userId: string): Promise<Resultat> {
   if (r.membre.desactiveLe) await prisma.user.update({ where: { id: userId }, data: { desactiveLe: null } });
   revalidatePath("/profil");
   return { ok: true };
+}
+
+// Chaque invitation envoie un e-mail : limite dédiée, pour qu'on ne puisse pas se servir de
+// TraceDon pour écrire en masse à des inconnus.
+const MAX_INVITATIONS = 20;
+const FENETRE_INVITATIONS_MS = 60 * 60 * 1000;
+
+async function administrateurDeSonOrganisation() {
+  const session = await getSessionAdministrateur();
+  if (!session || (session.role !== "ENTREPRISE" && session.role !== "ASSOCIATION")) return null;
+  return session;
+}
+
+export async function inviterCollegueAction(
+  _etat: Resultat | null,
+  formData: FormData
+): Promise<Resultat> {
+  const session = await administrateurDeSonOrganisation();
+  if (!session) return { ok: false, error: "Action réservée aux administrateurs d'une organisation." };
+  const niveau = String(formData.get("niveau") ?? "");
+  if (!niveauValide(niveau)) return { ok: false, error: "Niveau invalide." };
+  if (await tropDeTentatives(`invitation:${session.userId}`, MAX_INVITATIONS, FENETRE_INVITATIONS_MS)) {
+    return { ok: false, error: "Trop d'invitations envoyées en peu de temps. Merci de réessayer dans une heure." };
+  }
+  const erreur = await inviterCollegue(
+    { entrepriseId: session.entrepriseId, associationId: session.associationId },
+    { id: session.userId, nom: session.nom },
+    String(formData.get("email") ?? ""),
+    niveau,
+    await origineRequete()
+  );
+  revalidatePath("/profil");
+  return erreur ? { ok: false, error: erreur } : { ok: true };
+}
+
+export async function renvoyerInvitationAction(invitationId: string): Promise<Resultat> {
+  const session = await administrateurDeSonOrganisation();
+  if (!session) return { ok: false, error: "Action réservée aux administrateurs d'une organisation." };
+  if (await tropDeTentatives(`invitation:${session.userId}`, MAX_INVITATIONS, FENETRE_INVITATIONS_MS)) {
+    return { ok: false, error: "Trop d'invitations envoyées en peu de temps. Merci de réessayer dans une heure." };
+  }
+  const erreur = await renvoyerInvitation(
+    { entrepriseId: session.entrepriseId, associationId: session.associationId },
+    invitationId,
+    { id: session.userId, nom: session.nom },
+    await origineRequete()
+  );
+  revalidatePath("/profil");
+  return erreur ? { ok: false, error: erreur } : { ok: true };
+}
+
+export async function annulerInvitationAction(invitationId: string): Promise<Resultat> {
+  const session = await administrateurDeSonOrganisation();
+  if (!session) return { ok: false, error: "Action réservée aux administrateurs d'une organisation." };
+  const erreur = await annulerInvitation({ entrepriseId: session.entrepriseId, associationId: session.associationId }, invitationId);
+  revalidatePath("/profil");
+  return erreur ? { ok: false, error: erreur } : { ok: true };
 }

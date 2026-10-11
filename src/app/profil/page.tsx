@@ -202,6 +202,21 @@ export default async function ProfilPage() {
           })
         ).map((m) => ({ id: m.id, nom: m.nom, email: m.email, niveau: m.niveauAcces, desactive: !!m.desactiveLe }))
       : [];
+  const invitationsEnAttente =
+    estAdministrateurProfil && (session.entrepriseId || session.associationId)
+      ? (
+          await prisma.invitation.findMany({
+            where: {
+              ...(session.entrepriseId ? { entrepriseId: session.entrepriseId } : { associationId: session.associationId }),
+              acceptee: null,
+              annulee: null,
+              expireLe: { gt: new Date() },
+            },
+            select: { id: true, email: true, niveau: true, expireLe: true },
+            orderBy: { createdAt: "desc" },
+          })
+        ).map((i) => ({ id: i.id, email: i.email, niveau: i.niveau, expireLe: i.expireLe.toISOString() }))
+      : [];
 
   const carte = (
     <div className="space-y-5 rounded-2xl border border-border bg-surface p-6">
@@ -286,7 +301,7 @@ export default async function ProfilPage() {
         {/* Réglages de l'organisation : administrateurs uniquement (chantier C4c, décision B2 de Bruno). */}
         {estAdministrateurProfil ? (
           <>
-            <MembresOrganisation membres={membres} moiId={session.userId} />
+            <MembresOrganisation membres={membres} invitations={invitationsEnAttente} moiId={session.userId} />
             {session.role === "ASSOCIATION" && (
               <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4">
                 <div>

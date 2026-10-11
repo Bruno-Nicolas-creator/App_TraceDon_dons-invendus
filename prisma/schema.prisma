@@ -163,6 +163,7 @@ model Abonnement {
 }
 
 model Entreprise {
+  invitations                Invitation[]
   id                         String                      @id @default(cuid())
   raisonSociale              String
   formeJuridique             String?
@@ -199,6 +200,7 @@ model Reseau {
 }
 
 model Association {
+  invitations                Invitation[]
   id                         String                      @id @default(cuid())
   denomination               String
   rna                        String
@@ -569,4 +571,28 @@ model LimiteFrequence {
   cle          String   @id
   compteur     Int
   fenetreDebut DateTime
+}
+
+// Invitation d'un collègue dans une organisation (chantier C4c, étape 2) : envoyée par un
+// administrateur, lien par e-mail valable 7 jours et utilisable une fois (seule l'empreinte SHA-256
+// est stockée). L'invité choisit son nom et son mot de passe ; son compte reçoit le niveau prévu.
+// Cf. src/lib/invitations.ts.
+model Invitation {
+  id            String       @id @default(cuid())
+  email         String
+  niveau        NiveauAcces
+  entrepriseId  String?
+  entreprise    Entreprise?  @relation(fields: [entrepriseId], references: [id], onDelete: Cascade)
+  associationId String?
+  association   Association? @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  empreinte     String       @unique
+  expireLe      DateTime
+  acceptee      DateTime?
+  annulee       DateTime?
+  inviteParId   String
+  inviteParNom  String
+  createdAt     DateTime     @default(now())
+
+  @@index([entrepriseId])
+  @@index([associationId])
 }

@@ -63,5 +63,5 @@ export const config = {
   // connecté) qui le récupère pour les notifications push, avant même de savoir qui est connecté.
   // Idem pour les icônes (onglet, écran d'accueil iPhone/Android) : ce sont des images publiques
   // demandées par le navigateur, y compris sur la page de connexion.
-  matcher: ["/((?!connexion|inscription|mot-de-passe-oublie|confirmer-email|_next/static|_next/image|favicon.ico|manifest.json|sw.js|apple-icon.png|icon-192.png|icon-512.png).*)"],
+  matcher: ["/((?!connexion|inscription|mot-de-passe-oublie|confirmer-email|invitation|_next/static|_next/image|favicon.ico|manifest.json|sw.js|apple-icon.png|icon-192.png|icon-512.png).*)"],
 };

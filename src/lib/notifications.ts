@@ -3,7 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { envoyerEmail } from "@/lib/email";
 import { envoyerPush } from "@/lib/webPush";
 
-type Cible = { entrepriseId: string } | { associationId: string } | { coordinateur: true };
+// niveauAcces (facultatif) restreint l'envoi aux membres de ce niveau (ex. prévenir les seuls administrateurs).
+type Cible =
+  | { entrepriseId: string; niveauAcces?: "ADMINISTRATEUR" }
+  | { associationId: string; niveauAcces?: "ADMINISTRATEUR" }
+  | { coordinateur: true };
 
 /**
  * Prévient par email et par notification push (si activés sur ce déploiement, et si la personne
