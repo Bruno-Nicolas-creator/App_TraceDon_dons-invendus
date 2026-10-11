@@ -729,11 +729,11 @@ stateDiagram-v2
   EnAttente --> Refuse: l'association refuse / DLC dépassée
   Valide --> Refuse: correction / DLC dépassée cochée
   Refuse --> Valide: correction (si DLC non dépassée)
-  Valide --> [*]: signature de l'association (gelé)
-  Refuse --> [*]: signature de l'association (gelé)
+  Valide --> [*]: signature des deux parties (gelé)
+  Refuse --> [*]: signature des deux parties (gelé)
 ```
 
-Un article en attente peut être retiré par l'entreprise tant qu'elle n'a pas signé et qu'il n'est pas réclamé.
+Un article en attente peut être retiré par l'entreprise tant que les deux parties n'ont pas signé (R11 : un retrait après une première signature l'annule) et qu'il n'est pas réclamé.
 
 ### 6.3 Bon d'enlèvement
 

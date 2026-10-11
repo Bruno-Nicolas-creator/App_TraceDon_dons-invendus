@@ -414,9 +414,9 @@ a:focus-visible { outline: 2px solid var(--sapin); outline-offset: 2px; }
   EnAttente --&gt; Refuse: l'association refuse / DLC dépassée
   Valide --&gt; Refuse: correction / DLC dépassée cochée
   Refuse --&gt; Valide: correction (si DLC non dépassée)
-  Valide --&gt; [*]: signature de l'association (gelé)
-  Refuse --&gt; [*]: signature de l'association (gelé)</pre></div></figure>
-<p>Un article en attente peut être retiré par l'entreprise tant qu'elle n'a pas signé et qu'il n'est pas réclamé.</p>
+  Valide --&gt; [*]: signature des deux parties (gelé)
+  Refuse --&gt; [*]: signature des deux parties (gelé)</pre></div></figure>
+<p>Un article en attente peut être retiré par l'entreprise tant que les deux parties n'ont pas signé (R11 : un retrait après une première signature l'annule) et qu'il n'est pas réclamé.</p>
 <h3 id="6-3-bon-d-enlevement">6.3 Bon d'enlèvement</h3>
 <figure class="schema"><div class="schema-defile"><pre class="mermaid">stateDiagram-v2
   [*] --&gt; AttenteValidation: demande partielle (divisible)
