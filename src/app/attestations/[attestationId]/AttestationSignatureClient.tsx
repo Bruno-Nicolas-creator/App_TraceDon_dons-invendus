@@ -26,6 +26,8 @@ export type AttestationSignatureAffichee = {
   interetGeneralDeclare: boolean;
   bons: { numero: string; date: string; poids: string | null; nature: string }[];
   role: "ENTREPRISE" | "ASSOCIATION";
+  /** Administrateur de l'organisation : seul niveau autorisé à demander, émettre ou signer un reçu. */
+  peutAgir: boolean;
   vientDEtreEnvoyee: boolean;
 };
 
@@ -303,7 +305,11 @@ export default function AttestationSignatureClient({
           </a>
         )}
 
-        {demandeOuverte ? (
+        {!attestation.peutAgir ? (
+          <div className="rounded-xl bg-surface-alt px-3.5 py-2.5 text-xs text-ink-muted">
+            Les reçus fiscaux sont gérés par les administrateurs de votre organisation.
+          </div>
+        ) : demandeOuverte ? (
           estAssociation ? (
             attestation.statut === "DEMANDEE" ? (
               <ReponseDemande attestation={attestation} docusignConfigure={docusignConfigure} />

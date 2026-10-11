@@ -1,5 +1,6 @@
 "use client";
 
+import { useDroits } from "@/components/DroitsProvider";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -25,6 +26,7 @@ export default function PlanningClient({
   associations: Association[];
   nonLusMessages?: number;
 }) {
+  const { estAdministrateur } = useDroits();
   const [liste, setListe] = useState(assignations);
   const [selection, setSelection] = useState<Record<number, string>>({});
   const [erreur, setErreur] = useState<string | null>(null);
@@ -138,6 +140,7 @@ export default function PlanningClient({
                     className="flex items-center gap-1.5 rounded-full bg-brand-tint px-3 py-1.5 text-xs font-semibold text-brand-dark"
                   >
                     {a.associationNom}
+                    {estAdministrateur && (
                     <button
                       type="button"
                       onClick={() => retirer(a.id)}
@@ -146,6 +149,7 @@ export default function PlanningClient({
                     >
                       &times;
                     </button>
+                    )}
                   </span>
                 ))}
                 {associationsDuJour.length === 0 && (
@@ -153,7 +157,7 @@ export default function PlanningClient({
                 )}
               </div>
 
-              {disponibles.length > 0 && (
+              {disponibles.length > 0 && estAdministrateur && (
                 <div className="mt-2.5 flex gap-1.5">
                   <select
                     value={selection[jour] ?? disponibles[0]?.id ?? ""}

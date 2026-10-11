@@ -25,6 +25,8 @@ async function getOrCreateBrouillonMateriel(entrepriseId: string) {
 export default async function NouveauDonMaterielPage() {
   const session = await getSession();
   if (!session || session.role !== "ENTREPRISE" || !session.entrepriseId) redirect("/connexion");
+  // Accès en lecture seule : pas de préparation de don, on consulte « Mes dons ».
+  if (session.niveau === "LECTURE") redirect("/mes-dons");
 
   const entreprise = await prisma.entreprise.findUniqueOrThrow({ where: { id: session.entrepriseId } });
   if (!peutDonnerMateriel(entreprise.natureActivite)) redirect("/");

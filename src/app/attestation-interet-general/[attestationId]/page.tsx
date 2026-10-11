@@ -42,7 +42,7 @@ export default async function AttestationInteretGeneralSignaturePage({
     entrepriseNom: attestation.entreprise.raisonSociale,
     associationNom: attestation.association.denomination,
     signee: attestation.statut === "SIGNEE",
-    peutSigner: session.role === "ASSOCIATION",
+    peutSigner: session.role === "ASSOCIATION" && session.niveau === "ADMINISTRATEUR",
   };
 
   return (

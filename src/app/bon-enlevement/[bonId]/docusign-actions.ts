@@ -1,6 +1,6 @@
 "use server";
 
-import { getSessionLimitee as getSession } from "@/lib/sessionLimitee";
+import { getSessionOperateur as getSession } from "@/lib/sessionLimitee";
 import { prisma } from "@/lib/prisma";
 import { obtenirUrlSignatureEmbarquee, type RoleSignataire } from "@/lib/docusign";
 import { origineRequete } from "@/lib/requestOrigin";

@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function NouvelleConversationPage() {
   const session = await getSession();
   if (!session) redirect("/connexion");
+  if (session.role !== "COORDINATEUR" && session.niveau === "LECTURE") redirect("/messages");
 
   let cibles: CibleAffichee[] = [];
 

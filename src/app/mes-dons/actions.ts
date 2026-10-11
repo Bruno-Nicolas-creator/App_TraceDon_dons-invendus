@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getSessionLimitee as getSession } from "@/lib/sessionLimitee";
+import { getSessionOperateur as getSession } from "@/lib/sessionLimitee";
 import { annulerDon } from "@/lib/annulationDon";
 
 export async function annulerDonAction(donId: string, motif: string): Promise<{ ok: true } | { ok: false; error: string }> {

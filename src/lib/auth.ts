@@ -4,6 +4,7 @@ import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
+import type { NiveauAcces } from "@/lib/droits";
 
 export const SESSION_COOKIE = "session";
 
@@ -17,6 +18,8 @@ export type SessionPayload = {
   associationId: string | null;
   /** Version de session du compte au moment de la connexion (absente des sessions plus anciennes = 0). */
   sv?: number;
+  /** Niveau d'accès dans l'organisation, toujours relu en base par getSession (jamais celui du cookie). */
+  niveau?: NiveauAcces;
 };
 
 function getSecretKey() {
@@ -78,9 +81,14 @@ export const getSession = cache(async (): Promise<SessionPayload | null> => {
   if (!token) return null;
   const session = await verifySessionToken(token);
   if (!session) return null;
-  const compte = await prisma.user.findUnique({ where: { id: session.userId }, select: { sessionVersion: true } });
-  if (!compte || compte.sessionVersion !== (session.sv ?? 0)) return null;
-  return session;
+  const compte = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { sessionVersion: true, niveauAcces: true, desactiveLe: true },
+  });
+  // Compte supprimé, désactivé par un administrateur, ou mot de passe changé depuis la connexion.
+  if (!compte || compte.desactiveLe || compte.sessionVersion !== (session.sv ?? 0)) return null;
+  // Le niveau est relu à chaque requête : un changement de niveau prend effet immédiatement.
+  return { ...session, niveau: compte.niveauAcces };
 });
 
 /**

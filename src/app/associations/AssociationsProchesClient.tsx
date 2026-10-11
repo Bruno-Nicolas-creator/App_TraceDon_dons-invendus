@@ -1,5 +1,6 @@
 "use client";
 
+import { useDroits } from "@/components/DroitsProvider";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import BottomTabBar from "@/components/BottomTabBar";
@@ -43,6 +44,7 @@ export default function AssociationsProchesClient({
   entrepriseGrandeSurface: boolean;
   nonLusMessages?: number;
 }) {
+  const { estAdministrateur } = useDroits();
   const [vue, setVue] = useState<Vue>("carte");
   const [associationActiveId, setAssociationActiveId] = useState<string | null>(null);
   const [associationActiveSeq, setAssociationActiveSeq] = useState(0);
@@ -175,12 +177,14 @@ export default function AssociationsProchesClient({
           )}
         </ul>
 
-        <Link
-          href="/planning"
-          className="block w-full rounded-full border border-border bg-surface py-2.5 text-center text-sm font-semibold transition-transform active:scale-[0.98]"
-        >
-          Gérer le planning des enlèvements
-        </Link>
+        {estAdministrateur && (
+          <Link
+            href="/planning"
+            className="block w-full rounded-full border border-border bg-surface py-2.5 text-center text-sm font-semibold transition-transform active:scale-[0.98]"
+          >
+            Gérer le planning des enlèvements
+          </Link>
+        )}
       </main>
 
       <BottomTabBar active="dons" role="ENTREPRISE" nonLusMessages={nonLusMessages} />

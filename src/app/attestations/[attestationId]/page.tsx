@@ -84,6 +84,7 @@ export default async function AttestationSignaturePage({
       nature: b.don.type === "MATERIEL" ? "Matériel" : "Alimentaire",
     })),
     role: session.role === "ASSOCIATION" ? "ASSOCIATION" : "ENTREPRISE",
+    peutAgir: session.niveau === "ADMINISTRATEUR",
     vientDEtreEnvoyee: envoyee === "1" && attestation.statut === "DEMANDEE",
   };
 

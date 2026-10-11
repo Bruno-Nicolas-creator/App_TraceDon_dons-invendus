@@ -19,6 +19,8 @@ import { FAMILLES_ALERTE, RAYONS_ALERTE_KM } from "@/lib/famillesAlerte";
 import CoffreFort, { type ConventionSignee, type DocumentExistant } from "./CoffreFort";
 import ChangerMotDePasse from "./ChangerMotDePasse";
 import InformationsCompte, { type OrganisationModifiable } from "./InformationsCompte";
+import MembresOrganisation from "./MembresOrganisation";
+import { libelleNiveau } from "@/lib/droits";
 import {
   ajouterBenevoleAction,
   ajouterPeriodeCongesAction,
@@ -185,7 +187,21 @@ export default async function ProfilPage() {
       categoriesDon: a.categoriesDon.join(", "),
     };
   }
-  const informationsCompte = <InformationsCompte nom={compte.nom} email={compte.email} organisation={organisationModifiable} />;
+  const estAdministrateurProfil = session.role === "COORDINATEUR" || session.niveau === "ADMINISTRATEUR";
+  const informationsCompte = (
+    <InformationsCompte nom={compte.nom} email={compte.email} organisation={organisationModifiable} peutModifierOrganisation={estAdministrateurProfil} />
+  );
+  // Membres de l'organisation (gestion des niveaux d'accès, administrateurs uniquement).
+  const membres =
+    estAdministrateurProfil && (session.entrepriseId || session.associationId)
+      ? (
+          await prisma.user.findMany({
+            where: session.entrepriseId ? { entrepriseId: session.entrepriseId } : { associationId: session.associationId },
+            select: { id: true, nom: true, email: true, niveauAcces: true, desactiveLe: true },
+            orderBy: { createdAt: "asc" },
+          })
+        ).map((m) => ({ id: m.id, nom: m.nom, email: m.email, niveau: m.niveauAcces, desactive: !!m.desactiveLe }))
+      : [];
 
   const carte = (
     <div className="space-y-5 rounded-2xl border border-border bg-surface p-6">
@@ -267,529 +283,540 @@ export default async function ProfilPage() {
           </div>
         )}
 
-        {session.role === "ASSOCIATION" && (
-          <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4">
-            <div>
-              <h2 className="text-sm font-semibold">Notre association</h2>
-              <p className="mt-0.5 text-xs text-ink-muted">
-                Ces informations sont visibles par les entreprises donatrices.
-              </p>
-            </div>
-            <form action={definirPresentationAction} className="space-y-3">
-              <div>
-                <span className="mb-1.5 block text-xs text-ink-muted">Type d&apos;activité</span>
-                <div className="flex flex-wrap gap-2">
-                  {TYPES_ACTIVITE.map((t) => (
-                    <label key={t.id} className="cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="typesActivite"
-                        value={t.id}
-                        defaultChecked={typesActivite.includes(t.id)}
-                        className="peer hidden"
-                      />
-                      <span className="block rounded-full border border-border bg-surface-alt px-3 py-2 text-xs font-semibold text-ink-muted transition-colors peer-checked:border-brand peer-checked:bg-brand-tint peer-checked:text-brand-dark">
-                        {t.label}
-                      </span>
-                    </label>
-                  ))}
+        {/* Réglages de l'organisation : administrateurs uniquement (chantier C4c, décision B2 de Bruno). */}
+        {estAdministrateurProfil ? (
+          <>
+            <MembresOrganisation membres={membres} moiId={session.userId} />
+            {session.role === "ASSOCIATION" && (
+              <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4">
+                <div>
+                  <h2 className="text-sm font-semibold">Notre association</h2>
+                  <p className="mt-0.5 text-xs text-ink-muted">
+                    Ces informations sont visibles par les entreprises donatrices.
+                  </p>
                 </div>
-              </div>
-              <div>
-                <label htmlFor="notreAction" className="mb-1.5 block text-xs text-ink-muted">
-                  Notre action
-                </label>
-                <textarea
-                  id="notreAction"
-                  name="notreAction"
-                  defaultValue={notreAction}
-                  rows={4}
-                  maxLength={2000}
-                  placeholder="Présentez votre association aux entreprises donatrices : votre activité, votre public, votre fonctionnement…"
-                  className="w-full resize-none rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
-              >
-                Enregistrer
-              </button>
-            </form>
-          </div>
-        )}
-
-        <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4">
-          <div>
-            <h2 className="text-sm font-semibold">Référent don</h2>
-            <p className="mt-0.5 text-xs text-ink-muted">
-              La personne à contacter pour organiser les enlèvements.
-            </p>
-          </div>
-          <form action={definirReferentDonAction} className="space-y-2.5">
-            <input
-              type="text"
-              name="referentDonNom"
-              defaultValue={referentDonNom}
-              placeholder="Nom du référent"
-              className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-            />
-            <input
-              type="tel"
-              name="referentDonTelephone"
-              defaultValue={referentDonTelephone}
-              placeholder="Téléphone"
-              className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-            />
-            <button
-              type="submit"
-              className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
-            >
-              Enregistrer
-            </button>
-          </form>
-        </div>
-
-        {session.role === "ASSOCIATION" && <SelecteurDisponibilites disponibilitesInitiales={disponibilitesRetrait} />}
-
-        {congesEnCours && (
-          <div className="animate-fade-slide-in flex gap-3 rounded-2xl bg-accent-tint p-4">
-            <span aria-hidden="true" className="text-lg leading-none">🌴</span>
-            <p className="text-xs leading-relaxed text-ink">
-              <span className="font-semibold text-accent">Vous êtes actuellement en congés</span> jusqu&apos;au{" "}
-              {formaterDateConges(congesEnCours.fin)}.{" "}
-              {session.role === "ENTREPRISE"
-                ? "Vos dons en cours ont été annulés et vous ne pouvez pas en publier de nouveaux pendant cette période."
-                : "Vous ne pouvez pas vous positionner sur des dons ni valider d'articles pendant cette période."}
-            </p>
-          </div>
-        )}
-
-        <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4">
-          <div>
-            <h2 className="text-sm font-semibold">Congés / Fermeture</h2>
-            <p className="mt-0.5 text-xs text-ink-muted">
-              Visible par vos partenaires. Pendant ces périodes,{" "}
-              {session.role === "ENTREPRISE"
-                ? "vos dons en cours sont annulés et vous ne pouvez pas en publier de nouveaux."
-                : "vous ne pouvez ni vous positionner sur un don ni valider d'articles."}
-            </p>
-          </div>
-
-          {periodesConges.length > 0 && (
-            <ul className="space-y-1.5">
-              {periodesConges.map((periode) => (
-                <li
-                  key={periode.id}
-                  className="flex items-center justify-between gap-2 rounded-xl bg-surface-alt px-3.5 py-2.5 text-sm"
-                >
+                <form action={definirPresentationAction} className="space-y-3">
                   <div>
-                    <div className="font-medium">
-                      Du {formaterDateConges(periode.debut)} au {formaterDateConges(periode.fin)}
-                    </div>
-                    {periode.motif && <div className="text-xs text-ink-muted">{periode.motif}</div>}
-                  </div>
-                  <form action={retirerPeriodeCongesAction.bind(null, periode.id)}>
-                    <button
-                      type="submit"
-                      aria-label="Retirer cette période"
-                      className="text-ink-muted/70 transition-transform active:scale-90"
-                    >
-                      &times;
-                    </button>
-                  </form>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <form action={ajouterPeriodeCongesAction} className="space-y-2.5">
-            <div className="flex gap-2.5">
-              <input
-                type="date"
-                name="congesDebut"
-                required
-                aria-label="Date de début"
-                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-              />
-              <input
-                type="date"
-                name="congesFin"
-                required
-                aria-label="Date de fin"
-                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-              />
-            </div>
-            <input
-              type="text"
-              name="congesMotif"
-              placeholder="Motif (optionnel)"
-              maxLength={200}
-              className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-            />
-            <button
-              type="submit"
-              className="w-full rounded-full border border-border py-2.5 text-sm font-semibold transition-transform active:scale-[0.98]"
-            >
-              + Déclarer une période de congés
-            </button>
-          </form>
-        </div>
-
-        {session.role === "ASSOCIATION" && (
-          <div id="alertes" className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4">
-            <div>
-              <h2 className="text-sm font-semibold">Alertes nouveaux dons</h2>
-              <p className="mt-0.5 text-xs text-ink-muted">
-                Recevez un e-mail (et une notification sur votre appareil, si vous les avez activées) dès qu&apos;un don
-                correspondant à vos réglages est publié. Sans réglage, vous recevez toutes les alertes.
-              </p>
-            </div>
-            <form action={definirAlertesAction} className="space-y-3">
-              <label className="flex items-center gap-2.5 text-sm font-semibold">
-                <input type="checkbox" name="alertesActives" defaultChecked={alertesActives} className="h-4 w-4" />
-                Recevoir les alertes
-              </label>
-              <label className="block space-y-1">
-                <span className="text-xs font-semibold">Rayon autour de votre adresse</span>
-                <select
-                  name="alerteRayonKm"
-                  defaultValue={alerteRayonKm ?? ""}
-                  className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-                >
-                  <option value="">Partout</option>
-                  {RAYONS_ALERTE_KM.map((km) => (
-                    <option key={km} value={km}>
-                      {km} km
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <fieldset className="space-y-1.5">
-                <legend className="text-xs font-semibold">Types de dons qui vous intéressent (aucun coché = tous)</legend>
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {FAMILLES_ALERTE.map((f) => (
-                    <label
-                      key={f.id}
-                      className="flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-surface-alt px-3 py-1.5 text-xs has-[:checked]:border-brand has-[:checked]:bg-brand-tint has-[:checked]:font-semibold"
-                    >
-                      <input type="checkbox" name="alerteFamilles" value={f.id} defaultChecked={alerteFamilles.includes(f.id)} className="h-3.5 w-3.5" />
-                      {f.label}
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-              <button
-                type="submit"
-                className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
-              >
-                Enregistrer
-              </button>
-            </form>
-          </div>
-        )}
-
-        {session.role === "ASSOCIATION" && (
-          <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4" style={{ animationDelay: "140ms" }}>
-            <div>
-              <h2 className="text-sm font-semibold">Capacité d&apos;accueil</h2>
-              <p className="mt-0.5 text-xs leading-relaxed text-ink-muted">
-                En complément de votre attestation chaîne du froid ci-dessous : indiquez la quantité maximale que
-                vous pouvez gérer par collecte. Ce n&apos;est jamais vérifié — juste un repère pour vous avertir
-                avant de vous positionner sur un don qui dépasserait cette quantité (vous pourrez toujours passer
-                outre). Le nombre de bénéficiaires est visible par les entreprises donatrices pour les aider à
-                choisir leurs partenaires.
-              </p>
-            </div>
-            <form action={definirCapaciteAction} className="space-y-2.5">
-              <label className="block text-xs text-ink-muted">
-                Quantité maximale par collecte (kg) — optionnel
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  name="capaciteAccueilKg"
-                  defaultValue={capaciteAccueilKg ?? ""}
-                  placeholder="Ex. 30"
-                  className="mt-1 w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-                />
-              </label>
-              <label className="block text-xs text-ink-muted">
-                Nombre de bénéficiaires servis — optionnel
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  name="nombreBeneficiaires"
-                  defaultValue={nombreBeneficiaires ?? ""}
-                  placeholder="Ex. 150"
-                  className="mt-1 w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-                />
-              </label>
-              <button
-                type="submit"
-                className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
-              >
-                Enregistrer
-              </button>
-            </form>
-          </div>
-        )}
-
-        <CoffreFort role={session.role === "ENTREPRISE" ? "ENTREPRISE" : "ASSOCIATION"} documents={documents} conventionsSignees={conventionsSignees} />
-
-        {session.role === "ENTREPRISE" && (
-          <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4" style={{ animationDelay: "50ms" }}>
-            <div>
-              <h2 className="text-sm font-semibold">Surface de vente</h2>
-              <p className="mt-0.5 text-xs text-ink-muted">
-                Détermine si vous êtes soumis à l&apos;obligation légale de don (loi Garot, au-delà de{" "}
-                {SEUIL_GRANDE_SURFACE_M2} m²).
-              </p>
-            </div>
-            <form action={definirSurfaceVenteAction} className="flex gap-2.5">
-              <input
-                type="number"
-                name="surfaceVenteM2"
-                min="0"
-                step="1"
-                defaultValue={surfaceVenteM2 ?? ""}
-                placeholder="Surface en m²"
-                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-              />
-              <button
-                type="submit"
-                className="shrink-0 rounded-full bg-ink px-4 py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
-              >
-                Enregistrer
-              </button>
-            </form>
-          </div>
-        )}
-
-        {session.role === "ENTREPRISE" && grandeSurface && (
-          <div className="animate-fade-slide-in flex gap-3 rounded-2xl bg-accent-tint p-4" style={{ animationDelay: "75ms" }}>
-            <span aria-hidden="true" className="text-lg leading-none">⚠️</span>
-            <p className="text-xs leading-relaxed text-ink">
-              <span className="font-semibold text-accent">Surface &gt; {SEUIL_GRANDE_SURFACE_M2} m² : obligation légale de don.</span>{" "}
-              La loi Garot (art. L. 541-15-5 du code de l&apos;environnement, décret n° 2016-1962) vous interdit de
-              détruire des denrées encore consommables et vous impose de proposer, dans l&apos;année suivant le
-              franchissement du seuil, une convention de don à <strong>au moins une</strong> association
-              d&apos;aide alimentaire habilitée. Cette obligation porte sur la proposition, pas sur l&apos;exclusivité
-              : vous pouvez tout à fait donner aussi à des associations non habilitées en parallèle. Vérifiez le
-              statut d&apos;habilitation de vos associations partenaires dans votre{" "}
-              <a href="/planning" className="font-semibold underline">
-                planning
-              </a>
-              .
-            </p>
-          </div>
-        )}
-
-        {session.role === "ASSOCIATION" && (
-          <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4" style={{ animationDelay: "50ms" }}>
-            <div>
-              <h2 className="text-sm font-semibold">Bénévoles qui se déplacent</h2>
-              <p className="mt-0.5 text-xs text-ink-muted">
-                Les personnes susceptibles d&apos;effectuer les enlèvements chez les donateurs.
-              </p>
-            </div>
-
-            {benevoles.length > 0 && (
-              <ul className="space-y-1.5">
-                {benevoles.map((benevole) => (
-                  <li key={benevole.id} className="rounded-xl bg-surface-alt px-3.5 py-2.5 text-sm">
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-medium">{benevole.nom}</span>
-                          <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-ink-muted">
-                            {LABEL_ROLE_BENEVOLE[benevole.role]}
+                    <span className="mb-1.5 block text-xs text-ink-muted">Type d&apos;activité</span>
+                    <div className="flex flex-wrap gap-2">
+                      {TYPES_ACTIVITE.map((t) => (
+                        <label key={t.id} className="cursor-pointer">
+                          <input
+                            type="checkbox"
+                            name="typesActivite"
+                            value={t.id}
+                            defaultChecked={typesActivite.includes(t.id)}
+                            className="peer hidden"
+                          />
+                          <span className="block rounded-full border border-border bg-surface-alt px-3 py-2 text-xs font-semibold text-ink-muted transition-colors peer-checked:border-brand peer-checked:bg-brand-tint peer-checked:text-brand-dark">
+                            {t.label}
                           </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor="notreAction" className="mb-1.5 block text-xs text-ink-muted">
+                      Notre action
+                    </label>
+                    <textarea
+                      id="notreAction"
+                      name="notreAction"
+                      defaultValue={notreAction}
+                      rows={4}
+                      maxLength={2000}
+                      placeholder="Présentez votre association aux entreprises donatrices : votre activité, votre public, votre fonctionnement…"
+                      className="w-full resize-none rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+                  >
+                    Enregistrer
+                  </button>
+                </form>
+              </div>
+            )}
+
+            <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4">
+              <div>
+                <h2 className="text-sm font-semibold">Référent don</h2>
+                <p className="mt-0.5 text-xs text-ink-muted">
+                  La personne à contacter pour organiser les enlèvements.
+                </p>
+              </div>
+              <form action={definirReferentDonAction} className="space-y-2.5">
+                <input
+                  type="text"
+                  name="referentDonNom"
+                  defaultValue={referentDonNom}
+                  placeholder="Nom du référent"
+                  className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                />
+                <input
+                  type="tel"
+                  name="referentDonTelephone"
+                  defaultValue={referentDonTelephone}
+                  placeholder="Téléphone"
+                  className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                />
+                <button
+                  type="submit"
+                  className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+                >
+                  Enregistrer
+                </button>
+              </form>
+            </div>
+
+            {session.role === "ASSOCIATION" && <SelecteurDisponibilites disponibilitesInitiales={disponibilitesRetrait} />}
+
+            {congesEnCours && (
+              <div className="animate-fade-slide-in flex gap-3 rounded-2xl bg-accent-tint p-4">
+                <span aria-hidden="true" className="text-lg leading-none">🌴</span>
+                <p className="text-xs leading-relaxed text-ink">
+                  <span className="font-semibold text-accent">Vous êtes actuellement en congés</span> jusqu&apos;au{" "}
+                  {formaterDateConges(congesEnCours.fin)}.{" "}
+                  {session.role === "ENTREPRISE"
+                    ? "Vos dons en cours ont été annulés et vous ne pouvez pas en publier de nouveaux pendant cette période."
+                    : "Vous ne pouvez pas vous positionner sur des dons ni valider d'articles pendant cette période."}
+                </p>
+              </div>
+            )}
+
+            <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4">
+              <div>
+                <h2 className="text-sm font-semibold">Congés / Fermeture</h2>
+                <p className="mt-0.5 text-xs text-ink-muted">
+                  Visible par vos partenaires. Pendant ces périodes,{" "}
+                  {session.role === "ENTREPRISE"
+                    ? "vos dons en cours sont annulés et vous ne pouvez pas en publier de nouveaux."
+                    : "vous ne pouvez ni vous positionner sur un don ni valider d'articles."}
+                </p>
+              </div>
+
+              {periodesConges.length > 0 && (
+                <ul className="space-y-1.5">
+                  {periodesConges.map((periode) => (
+                    <li
+                      key={periode.id}
+                      className="flex items-center justify-between gap-2 rounded-xl bg-surface-alt px-3.5 py-2.5 text-sm"
+                    >
+                      <div>
+                        <div className="font-medium">
+                          Du {formaterDateConges(periode.debut)} au {formaterDateConges(periode.fin)}
                         </div>
-                        {benevole.telephone && (
-                          <div className="text-xs text-ink-muted">
-                            <LienTelephone numero={benevole.telephone} />
-                          </div>
-                        )}
+                        {periode.motif && <div className="text-xs text-ink-muted">{periode.motif}</div>}
                       </div>
-                      <form action={retirerBenevoleAction.bind(null, benevole.id)}>
+                      <form action={retirerPeriodeCongesAction.bind(null, periode.id)}>
                         <button
                           type="submit"
-                          aria-label={`Retirer ${benevole.nom}`}
+                          aria-label="Retirer cette période"
                           className="text-ink-muted/70 transition-transform active:scale-90"
                         >
                           &times;
                         </button>
                       </form>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      <form action={basculerAssuranceRcBenevoleAction.bind(null, benevole.id)}>
-                        <button
-                          type="submit"
-                          className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-transform active:scale-95 ${
-                            benevole.assuranceRcAttestee
-                              ? "bg-brand/15 text-brand"
-                              : "bg-amber-500/15 text-amber-700"
-                          }`}
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <form action={ajouterPeriodeCongesAction} className="space-y-2.5">
+                <div className="flex gap-2.5">
+                  <input
+                    type="date"
+                    name="congesDebut"
+                    required
+                    aria-label="Date de début"
+                    className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                  />
+                  <input
+                    type="date"
+                    name="congesFin"
+                    required
+                    aria-label="Date de fin"
+                    className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                  />
+                </div>
+                <input
+                  type="text"
+                  name="congesMotif"
+                  placeholder="Motif (optionnel)"
+                  maxLength={200}
+                  className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                />
+                <button
+                  type="submit"
+                  className="w-full rounded-full border border-border py-2.5 text-sm font-semibold transition-transform active:scale-[0.98]"
+                >
+                  + Déclarer une période de congés
+                </button>
+              </form>
+            </div>
+
+            {session.role === "ASSOCIATION" && (
+              <div id="alertes" className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4">
+                <div>
+                  <h2 className="text-sm font-semibold">Alertes nouveaux dons</h2>
+                  <p className="mt-0.5 text-xs text-ink-muted">
+                    Recevez un e-mail (et une notification sur votre appareil, si vous les avez activées) dès qu&apos;un don
+                    correspondant à vos réglages est publié. Sans réglage, vous recevez toutes les alertes.
+                  </p>
+                </div>
+                <form action={definirAlertesAction} className="space-y-3">
+                  <label className="flex items-center gap-2.5 text-sm font-semibold">
+                    <input type="checkbox" name="alertesActives" defaultChecked={alertesActives} className="h-4 w-4" />
+                    Recevoir les alertes
+                  </label>
+                  <label className="block space-y-1">
+                    <span className="text-xs font-semibold">Rayon autour de votre adresse</span>
+                    <select
+                      name="alerteRayonKm"
+                      defaultValue={alerteRayonKm ?? ""}
+                      className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                    >
+                      <option value="">Partout</option>
+                      {RAYONS_ALERTE_KM.map((km) => (
+                        <option key={km} value={km}>
+                          {km} km
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <fieldset className="space-y-1.5">
+                    <legend className="text-xs font-semibold">Types de dons qui vous intéressent (aucun coché = tous)</legend>
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {FAMILLES_ALERTE.map((f) => (
+                        <label
+                          key={f.id}
+                          className="flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-surface-alt px-3 py-1.5 text-xs has-[:checked]:border-brand has-[:checked]:bg-brand-tint has-[:checked]:font-semibold"
                         >
-                          {benevole.assuranceRcAttestee
-                            ? "✓ Assurance RC attestée"
-                            : "⚠ Assurance RC non attestée"}
-                        </button>
-                      </form>
-                      <form action={basculerMandatBenevoleAction.bind(null, benevole.id)}>
-                        <button
-                          type="submit"
-                          className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-transform active:scale-95 ${
-                            benevole.mandatDonneLe ? "bg-brand/15 text-brand" : "bg-surface text-ink-muted"
-                          }`}
-                        >
-                          {benevole.mandatDonneLe ? "✓ Mandaté pour signer" : "Pas encore mandaté"}
-                        </button>
-                      </form>
+                          <input type="checkbox" name="alerteFamilles" value={f.id} defaultChecked={alerteFamilles.includes(f.id)} className="h-3.5 w-3.5" />
+                          {f.label}
+                        </label>
+                      ))}
                     </div>
-                  </li>
-                ))}
-              </ul>
+                  </fieldset>
+                  <button
+                    type="submit"
+                    className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+                  >
+                    Enregistrer
+                  </button>
+                </form>
+              </div>
             )}
 
-            <form action={ajouterBenevoleAction} className="space-y-2.5">
-              <input
-                type="text"
-                name="benevoleNom"
-                placeholder="Nom du bénévole"
-                required
-                maxLength={200}
-                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-              />
-              <input
-                type="tel"
-                name="benevoleTelephone"
-                placeholder="Téléphone (optionnel)"
-                maxLength={200}
-                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-              />
-              <select
-                name="benevoleRole"
-                defaultValue="COLLECTEUR"
-                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-              >
-                <option value="REFERENT">Référent don</option>
-                <option value="COLLECTEUR">Collecteur</option>
-              </select>
-              <label className="flex items-start gap-2 text-xs text-ink-muted">
-                <input type="checkbox" name="benevoleAssuranceRc" className="mt-0.5" />
-                <span>
-                  J&apos;atteste que ce bénévole dispose d&apos;une assurance responsabilité civile en cours de
-                  validité pour ses déplacements.
-                </span>
-              </label>
-              <label className="flex items-start gap-2 text-xs text-ink-muted">
-                <input type="checkbox" name="benevoleMandat" className="mt-0.5" />
-                <span>
-                  Le président lui donne mandat pour signer les bordereaux de remise au nom de l&apos;association.
-                </span>
-              </label>
-              <button
-                type="submit"
-                className="w-full rounded-full border border-border py-2.5 text-sm font-semibold transition-transform active:scale-[0.98]"
-              >
-                + Ajouter un bénévole
-              </button>
-            </form>
-          </div>
-        )}
+            {session.role === "ASSOCIATION" && (
+              <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4" style={{ animationDelay: "140ms" }}>
+                <div>
+                  <h2 className="text-sm font-semibold">Capacité d&apos;accueil</h2>
+                  <p className="mt-0.5 text-xs leading-relaxed text-ink-muted">
+                    En complément de votre attestation chaîne du froid ci-dessous : indiquez la quantité maximale que
+                    vous pouvez gérer par collecte. Ce n&apos;est jamais vérifié — juste un repère pour vous avertir
+                    avant de vous positionner sur un don qui dépasserait cette quantité (vous pourrez toujours passer
+                    outre). Le nombre de bénéficiaires est visible par les entreprises donatrices pour les aider à
+                    choisir leurs partenaires.
+                  </p>
+                </div>
+                <form action={definirCapaciteAction} className="space-y-2.5">
+                  <label className="block text-xs text-ink-muted">
+                    Quantité maximale par collecte (kg) — optionnel
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      name="capaciteAccueilKg"
+                      defaultValue={capaciteAccueilKg ?? ""}
+                      placeholder="Ex. 30"
+                      className="mt-1 w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                    />
+                  </label>
+                  <label className="block text-xs text-ink-muted">
+                    Nombre de bénéficiaires servis — optionnel
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      name="nombreBeneficiaires"
+                      defaultValue={nombreBeneficiaires ?? ""}
+                      placeholder="Ex. 150"
+                      className="mt-1 w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+                  >
+                    Enregistrer
+                  </button>
+                </form>
+              </div>
+            )}
 
-        {session.role === "ASSOCIATION" && (
-          <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4" style={{ animationDelay: "75ms" }}>
-            <div>
-              <h2 className="text-sm font-semibold">Habilitation &amp; conformité sanitaire</h2>
-              <p className="mt-0.5 text-xs text-ink-muted">
-                Habilitation aide alimentaire (art. L. 266-2 du code de l&apos;action sociale et des familles) et
-                déclaration d&apos;activité auprès de la DDPP.
-              </p>
-            </div>
-            <form action={definirConformiteAssociationAction} className="space-y-2.5">
-              <select
-                name="habilitationStatut"
-                defaultValue={habilitationStatut}
-                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-              >
-                <option value="NON_HABILITEE">Non habilitée</option>
-                <option value="REGIONALE">Habilitation régionale (DREETS)</option>
-                <option value="NATIONALE">Habilitation nationale</option>
-              </select>
-              <label className="block text-xs text-ink-muted">
-                Fin de validité de l&apos;habilitation
-                <input
-                  type="date"
-                  name="habilitationDateFin"
-                  defaultValue={dateInputValue(habilitationDateFin)}
-                  className="mt-1 w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm text-ink"
-                />
-              </label>
+            <CoffreFort role={session.role === "ENTREPRISE" ? "ENTREPRISE" : "ASSOCIATION"} documents={documents} conventionsSignees={conventionsSignees} />
 
-              <label className="flex items-center gap-2.5 text-xs text-ink-muted">
-                <input type="checkbox" name="declarationDdpp" defaultChecked={declarationDdpp} />
-                Déclaration d&apos;activité (denrées d&apos;origine animale ou végétale) déposée auprès de la DDPP
-              </label>
-              <label className="block text-xs text-ink-muted">
-                Date de déclaration
-                <input
-                  type="date"
-                  name="declarationDdppDate"
-                  defaultValue={dateInputValue(declarationDdppDate)}
-                  className="mt-1 w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm text-ink"
-                />
-              </label>
+            {session.role === "ENTREPRISE" && (
+              <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4" style={{ animationDelay: "50ms" }}>
+                <div>
+                  <h2 className="text-sm font-semibold">Surface de vente</h2>
+                  <p className="mt-0.5 text-xs text-ink-muted">
+                    Détermine si vous êtes soumis à l&apos;obligation légale de don (loi Garot, au-delà de{" "}
+                    {SEUIL_GRANDE_SURFACE_M2} m²).
+                  </p>
+                </div>
+                <form action={definirSurfaceVenteAction} className="flex gap-2.5">
+                  <input
+                    type="number"
+                    name="surfaceVenteM2"
+                    min="0"
+                    step="1"
+                    defaultValue={surfaceVenteM2 ?? ""}
+                    placeholder="Surface en m²"
+                    className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                  />
+                  <button
+                    type="submit"
+                    className="shrink-0 rounded-full bg-ink px-4 py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+                  >
+                    Enregistrer
+                  </button>
+                </form>
+              </div>
+            )}
 
-              <button
-                type="submit"
-                className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
-              >
-                Enregistrer
-              </button>
-            </form>
-          </div>
-        )}
+            {session.role === "ENTREPRISE" && grandeSurface && (
+              <div className="animate-fade-slide-in flex gap-3 rounded-2xl bg-accent-tint p-4" style={{ animationDelay: "75ms" }}>
+                <span aria-hidden="true" className="text-lg leading-none">⚠️</span>
+                <p className="text-xs leading-relaxed text-ink">
+                  <span className="font-semibold text-accent">Surface &gt; {SEUIL_GRANDE_SURFACE_M2} m² : obligation légale de don.</span>{" "}
+                  La loi Garot (art. L. 541-15-5 du code de l&apos;environnement, décret n° 2016-1962) vous interdit de
+                  détruire des denrées encore consommables et vous impose de proposer, dans l&apos;année suivant le
+                  franchissement du seuil, une convention de don à <strong>au moins une</strong> association
+                  d&apos;aide alimentaire habilitée. Cette obligation porte sur la proposition, pas sur l&apos;exclusivité
+                  : vous pouvez tout à fait donner aussi à des associations non habilitées en parallèle. Vérifiez le
+                  statut d&apos;habilitation de vos associations partenaires dans votre{" "}
+                  <a href="/planning" className="font-semibold underline">
+                    planning
+                  </a>
+                  .
+                </p>
+              </div>
+            )}
 
-        {session.role === "ASSOCIATION" && (
-          <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4" style={{ animationDelay: "90ms" }}>
-            <div>
-              <h2 className="text-sm font-semibold">Contact en cas de rappel produit</h2>
-              <p className="mt-0.5 text-xs text-ink-muted">
-                La personne à prévenir immédiatement (email et téléphone) en cas de retrait/rappel d&apos;un produit
-                déjà distribué.
-              </p>
-            </div>
-            <form action={definirContactRappelAction} className="space-y-2.5">
-              <input
-                type="text"
-                name="contactRappelNom"
-                defaultValue={contactRappelNom}
-                placeholder="Nom de la personne à prévenir"
-                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-              />
-              <input
-                type="tel"
-                name="contactRappelTelephone"
-                defaultValue={contactRappelTelephone}
-                placeholder="Téléphone"
-                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-              />
-              <input
-                type="email"
-                name="contactRappelEmail"
-                defaultValue={contactRappelEmail}
-                placeholder="Email"
-                className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
-              />
-              <button
-                type="submit"
-                className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
-              >
-                Enregistrer
-              </button>
-            </form>
+            {session.role === "ASSOCIATION" && (
+              <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4" style={{ animationDelay: "50ms" }}>
+                <div>
+                  <h2 className="text-sm font-semibold">Bénévoles qui se déplacent</h2>
+                  <p className="mt-0.5 text-xs text-ink-muted">
+                    Les personnes susceptibles d&apos;effectuer les enlèvements chez les donateurs.
+                  </p>
+                </div>
+
+                {benevoles.length > 0 && (
+                  <ul className="space-y-1.5">
+                    {benevoles.map((benevole) => (
+                      <li key={benevole.id} className="rounded-xl bg-surface-alt px-3.5 py-2.5 text-sm">
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium">{benevole.nom}</span>
+                              <span className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-ink-muted">
+                                {LABEL_ROLE_BENEVOLE[benevole.role]}
+                              </span>
+                            </div>
+                            {benevole.telephone && (
+                              <div className="text-xs text-ink-muted">
+                                <LienTelephone numero={benevole.telephone} />
+                              </div>
+                            )}
+                          </div>
+                          <form action={retirerBenevoleAction.bind(null, benevole.id)}>
+                            <button
+                              type="submit"
+                              aria-label={`Retirer ${benevole.nom}`}
+                              className="text-ink-muted/70 transition-transform active:scale-90"
+                            >
+                              &times;
+                            </button>
+                          </form>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          <form action={basculerAssuranceRcBenevoleAction.bind(null, benevole.id)}>
+                            <button
+                              type="submit"
+                              className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-transform active:scale-95 ${
+                                benevole.assuranceRcAttestee
+                                  ? "bg-brand/15 text-brand"
+                                  : "bg-amber-500/15 text-amber-700"
+                              }`}
+                            >
+                              {benevole.assuranceRcAttestee
+                                ? "✓ Assurance RC attestée"
+                                : "⚠ Assurance RC non attestée"}
+                            </button>
+                          </form>
+                          <form action={basculerMandatBenevoleAction.bind(null, benevole.id)}>
+                            <button
+                              type="submit"
+                              className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-transform active:scale-95 ${
+                                benevole.mandatDonneLe ? "bg-brand/15 text-brand" : "bg-surface text-ink-muted"
+                              }`}
+                            >
+                              {benevole.mandatDonneLe ? "✓ Mandaté pour signer" : "Pas encore mandaté"}
+                            </button>
+                          </form>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <form action={ajouterBenevoleAction} className="space-y-2.5">
+                  <input
+                    type="text"
+                    name="benevoleNom"
+                    placeholder="Nom du bénévole"
+                    required
+                    maxLength={200}
+                    className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                  />
+                  <input
+                    type="tel"
+                    name="benevoleTelephone"
+                    placeholder="Téléphone (optionnel)"
+                    maxLength={200}
+                    className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                  />
+                  <select
+                    name="benevoleRole"
+                    defaultValue="COLLECTEUR"
+                    className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                  >
+                    <option value="REFERENT">Référent don</option>
+                    <option value="COLLECTEUR">Collecteur</option>
+                  </select>
+                  <label className="flex items-start gap-2 text-xs text-ink-muted">
+                    <input type="checkbox" name="benevoleAssuranceRc" className="mt-0.5" />
+                    <span>
+                      J&apos;atteste que ce bénévole dispose d&apos;une assurance responsabilité civile en cours de
+                      validité pour ses déplacements.
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-2 text-xs text-ink-muted">
+                    <input type="checkbox" name="benevoleMandat" className="mt-0.5" />
+                    <span>
+                      Le président lui donne mandat pour signer les bordereaux de remise au nom de l&apos;association.
+                    </span>
+                  </label>
+                  <button
+                    type="submit"
+                    className="w-full rounded-full border border-border py-2.5 text-sm font-semibold transition-transform active:scale-[0.98]"
+                  >
+                    + Ajouter un bénévole
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {session.role === "ASSOCIATION" && (
+              <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4" style={{ animationDelay: "75ms" }}>
+                <div>
+                  <h2 className="text-sm font-semibold">Habilitation &amp; conformité sanitaire</h2>
+                  <p className="mt-0.5 text-xs text-ink-muted">
+                    Habilitation aide alimentaire (art. L. 266-2 du code de l&apos;action sociale et des familles) et
+                    déclaration d&apos;activité auprès de la DDPP.
+                  </p>
+                </div>
+                <form action={definirConformiteAssociationAction} className="space-y-2.5">
+                  <select
+                    name="habilitationStatut"
+                    defaultValue={habilitationStatut}
+                    className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                  >
+                    <option value="NON_HABILITEE">Non habilitée</option>
+                    <option value="REGIONALE">Habilitation régionale (DREETS)</option>
+                    <option value="NATIONALE">Habilitation nationale</option>
+                  </select>
+                  <label className="block text-xs text-ink-muted">
+                    Fin de validité de l&apos;habilitation
+                    <input
+                      type="date"
+                      name="habilitationDateFin"
+                      defaultValue={dateInputValue(habilitationDateFin)}
+                      className="mt-1 w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm text-ink"
+                    />
+                  </label>
+
+                  <label className="flex items-center gap-2.5 text-xs text-ink-muted">
+                    <input type="checkbox" name="declarationDdpp" defaultChecked={declarationDdpp} />
+                    Déclaration d&apos;activité (denrées d&apos;origine animale ou végétale) déposée auprès de la DDPP
+                  </label>
+                  <label className="block text-xs text-ink-muted">
+                    Date de déclaration
+                    <input
+                      type="date"
+                      name="declarationDdppDate"
+                      defaultValue={dateInputValue(declarationDdppDate)}
+                      className="mt-1 w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm text-ink"
+                    />
+                  </label>
+
+                  <button
+                    type="submit"
+                    className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+                  >
+                    Enregistrer
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {session.role === "ASSOCIATION" && (
+              <div className="animate-fade-slide-in space-y-3 rounded-2xl border border-border bg-surface p-4" style={{ animationDelay: "90ms" }}>
+                <div>
+                  <h2 className="text-sm font-semibold">Contact en cas de rappel produit</h2>
+                  <p className="mt-0.5 text-xs text-ink-muted">
+                    La personne à prévenir immédiatement (email et téléphone) en cas de retrait/rappel d&apos;un produit
+                    déjà distribué.
+                  </p>
+                </div>
+                <form action={definirContactRappelAction} className="space-y-2.5">
+                  <input
+                    type="text"
+                    name="contactRappelNom"
+                    defaultValue={contactRappelNom}
+                    placeholder="Nom de la personne à prévenir"
+                    className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                  />
+                  <input
+                    type="tel"
+                    name="contactRappelTelephone"
+                    defaultValue={contactRappelTelephone}
+                    placeholder="Téléphone"
+                    className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                  />
+                  <input
+                    type="email"
+                    name="contactRappelEmail"
+                    defaultValue={contactRappelEmail}
+                    placeholder="Email"
+                    className="w-full rounded-xl border border-border bg-surface-alt px-3.5 py-2.5 text-sm"
+                  />
+                  <button
+                    type="submit"
+                    className="w-full rounded-full bg-ink py-2.5 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+                  >
+                    Enregistrer
+                  </button>
+                </form>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-border p-4 text-xs text-ink-muted">
+            Les réglages de votre organisation (présentation, référent, congés, alertes, documents, bénévoles,
+            utilisateurs…) sont gérés par ses administrateurs. Votre accès : {libelleNiveau(session.niveau ?? "ADMINISTRATEUR")}.
           </div>
         )}
 

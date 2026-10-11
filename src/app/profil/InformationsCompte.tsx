@@ -82,7 +82,7 @@ function MonCompte({ nom, email }: { nom: string; email: string }) {
   );
 }
 
-function Organisation({ organisation }: { organisation: OrganisationModifiable }) {
+function Organisation({ organisation, peutModifier }: { organisation: OrganisationModifiable; peutModifier: boolean }) {
   const [etat, formAction, enCours] = useActionState(modifierInformationsOrganisationAction, null);
   // Formulaire ouvert tant qu'aucun enregistrement n'a réussi depuis l'ouverture (une erreur le laisse ouvert).
   const [ouvertAvec, setOuvertAvec] = useState<typeof etat | undefined>(undefined);
@@ -97,7 +97,7 @@ function Organisation({ organisation }: { organisation: OrganisationModifiable }
     <div className="space-y-3 rounded-2xl border border-border bg-surface p-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold">Informations de l&apos;organisation</h2>
-        {!edition && (
+        {!edition && peutModifier && (
           <button type="button" onClick={() => setEdition(true)} className="text-xs font-semibold underline">
             Modifier
           </button>
@@ -234,15 +234,17 @@ export default function InformationsCompte({
   nom,
   email,
   organisation,
+  peutModifierOrganisation,
 }: {
   nom: string;
   email: string;
   organisation: OrganisationModifiable | null;
+  peutModifierOrganisation: boolean;
 }) {
   return (
     <>
       <MonCompte nom={nom} email={email} />
-      {organisation && <Organisation organisation={organisation} />}
+      {organisation && <Organisation organisation={organisation} peutModifier={peutModifierOrganisation} />}
     </>
   );
 }

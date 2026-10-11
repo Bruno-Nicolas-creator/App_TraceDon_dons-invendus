@@ -1,5 +1,6 @@
 "use client";
 
+import { useDroits } from "@/components/DroitsProvider";
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { demarrerSignatureConventionAction } from "../actions";
@@ -25,6 +26,7 @@ export default function ConventionClient({
   docusignConfigure: boolean;
   retour: string | null;
 }) {
+  const { estAdministrateur } = useDroits();
   const [erreur, setErreur] = useState<string | null>(null);
   const [signatureEnCours, setSignatureEnCours] = useState<"DONATEUR" | "ASSOCIATION" | null>(null);
   const [, startTransition] = useTransition();
@@ -114,16 +116,20 @@ export default function ConventionClient({
                 : `${autreNom} n'a pas encore signé.`}
             </div>
 
-            <button
-              type="button"
-              onClick={demarrerSignature}
-              disabled={monStatutSigne || !docusignConfigure || signatureEnCours !== null}
-              className={`w-full rounded-xl border-[1.5px] border-dashed border-[#C7C1B0] py-3.5 text-sm font-semibold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
-                monStatutSigne ? "bg-brand-tint text-brand-dark" : "bg-surface"
-              }`}
-            >
-              {monStatutSigne ? "Vous avez signé" : signatureEnCours ? "Ouverture…" : "Signer la convention"}
-            </button>
+            {estAdministrateur ? (
+              <button
+                type="button"
+                onClick={demarrerSignature}
+                disabled={monStatutSigne || !docusignConfigure || signatureEnCours !== null}
+                className={`w-full rounded-xl border-[1.5px] border-dashed border-[#C7C1B0] py-3.5 text-sm font-semibold transition-transform active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 ${
+                  monStatutSigne ? "bg-brand-tint text-brand-dark" : "bg-surface"
+                }`}
+              >
+                {monStatutSigne ? "Vous avez signé" : signatureEnCours ? "Ouverture…" : "Signer la convention"}
+              </button>
+            ) : (
+              <p className="text-xs text-ink-muted">La convention est signée par un administrateur de votre organisation.</p>
+            )}
             <p className="text-[11px] text-ink-muted">
               La signature ouvre la cérémonie de signature électronique qualifiée DocuSign, directement dans
               l&apos;application.

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import BottomTabBar from "@/components/BottomTabBar";
 import type { MonDon } from "@/lib/mesDons";
 import { annulerDonAction } from "./actions";
+import { useDroits } from "@/components/DroitsProvider";
 
 type Filtre = "TOUS" | "A_TRAITER" | "EN_COURS" | "ANNULE";
 
@@ -83,6 +84,7 @@ function AnnulationDon({ don }: { don: MonDon }) {
 }
 
 function CarteDon({ don }: { don: MonDon }) {
+  const { peutOperer } = useDroits();
   const nature = don.type === "MATERIEL" ? "Don matériel" : "Don alimentaire";
   const couleur =
     don.etat.famille === "ANNULE"
@@ -125,7 +127,7 @@ function CarteDon({ don }: { don: MonDon }) {
         </ul>
       )}
 
-      {don.etat.famille !== "ANNULE" && <AnnulationDon don={don} />}
+      {don.etat.famille !== "ANNULE" && peutOperer && <AnnulationDon don={don} />}
     </div>
   );
 }

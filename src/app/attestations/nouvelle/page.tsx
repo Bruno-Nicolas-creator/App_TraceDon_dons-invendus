@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function NouvelleAttestationPage({ searchParams }: { searchParams: Promise<{ annee?: string }> }) {
   const session = await getSession();
   if (!session || session.role !== "ENTREPRISE" || !session.entrepriseId) redirect("/connexion");
+  if (session.niveau !== "ADMINISTRATEUR") redirect("/archives");
 
   const annees = await anneesAvecBonsEligibles(session.entrepriseId);
   const demandee = Number((await searchParams).annee);

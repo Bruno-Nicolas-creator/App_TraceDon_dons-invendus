@@ -79,6 +79,15 @@ enum PreferenceAlerte {
   SMS_EMAIL
 }
 
+// Niveau d'accès d'un utilisateur dans son organisation (chantier C4c, décision de Bruno) :
+// administrateur (tout), opérateur (le quotidien des dons et des bons), lecture (consultation seule).
+// Sans objet pour le coordinateur. Cf. src/lib/droits.ts.
+enum NiveauAcces {
+  ADMINISTRATEUR
+  OPERATEUR
+  LECTURE
+}
+
 model User {
   id                     String                  @id @default(cuid())
   email                  String                  @unique
@@ -94,6 +103,10 @@ model User {
   // Incrémenté à chaque changement de mot de passe : les sessions ouvertes avec l'ancienne
   // valeur deviennent invalides (cf. getSession dans src/lib/auth.ts).
   sessionVersion         Int                     @default(0)
+  niveauAcces            NiveauAcces             @default(ADMINISTRATEUR)
+  // Accès retiré par un administrateur (décision de Bruno : désactivation, jamais suppression,
+  // pour garder l'historique) : connexion refusée, sessions coupées.
+  desactiveLe            DateTime?
   jetonsReinitialisation JetonReinitialisation[]
   createdAt              DateTime                @default(now())
 }

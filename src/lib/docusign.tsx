@@ -97,8 +97,11 @@ function clientUserId(bonId: string, role: RoleSignataire): string {
 }
 
 async function emailContact(entrepriseId: string | null, associationId: string | null): Promise<string> {
+  // Avec plusieurs utilisateurs par organisation, le signataire inscrit dans l'enveloppe reste le
+  // même : le plus ancien compte actif (en pratique l'administrateur qui a créé l'organisation).
   const utilisateur = await prisma.user.findFirst({
-    where: entrepriseId ? { entrepriseId } : { associationId: associationId! },
+    where: { ...(entrepriseId ? { entrepriseId } : { associationId: associationId! }), desactiveLe: null },
+    orderBy: { createdAt: "asc" },
   });
   if (!utilisateur) throw new Error("Aucun compte utilisateur associé à cette organisation pour la signature.");
   return utilisateur.email;

@@ -31,8 +31,8 @@ export function erreurMotDePasse(motDePasse: string, confirmation: string): stri
  * l'appelant si le compte existe (même réponse dans tous les cas, cf. l'action).
  */
 export async function envoyerLienReinitialisation(email: string, origineSite: string): Promise<void> {
-  const utilisateur = await prisma.user.findUnique({ where: { email }, select: { id: true, nom: true, email: true } });
-  if (!utilisateur) return;
+  const utilisateur = await prisma.user.findUnique({ where: { email }, select: { id: true, nom: true, email: true, desactiveLe: true } });
+  if (!utilisateur || utilisateur.desactiveLe) return;
 
   const jeton = crypto.randomBytes(32).toString("base64url");
   await prisma.$transaction([

@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function NouvelleAttestationInteretGeneralPage() {
   const session = await getSession();
   if (!session || session.role !== "ENTREPRISE" || !session.entrepriseId) redirect("/connexion");
+  if (session.niveau !== "ADMINISTRATEUR") redirect("/archives");
 
   const [conventions, attestations] = await Promise.all([
     prisma.convention.findMany({

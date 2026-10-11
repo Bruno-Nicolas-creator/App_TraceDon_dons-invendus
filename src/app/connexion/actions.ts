@@ -21,7 +21,8 @@ export async function connexionAction(formData: FormData) {
   }
 
   const utilisateur = await prisma.user.findUnique({ where: { email } });
-  if (!utilisateur) {
+  // Un compte désactivé par un administrateur répond comme un compte inconnu.
+  if (!utilisateur || utilisateur.desactiveLe) {
     redirect("/connexion?erreur=1");
   }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useDroits } from "@/components/DroitsProvider";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import BottomTabBar from "@/components/BottomTabBar";
@@ -51,6 +52,7 @@ export default function ArchivesClient({
   role: "ENTREPRISE" | "ASSOCIATION" | "COORDINATEUR";
   nonLusMessages?: number;
 }) {
+  const { estAdministrateur } = useDroits();
   const [onglet, setOnglet] = useState<Onglet>("bons");
   const [annee, setAnnee] = useState<string>("toutes");
   const [partenaire, setPartenaire] = useState<string>("tous");
@@ -145,7 +147,7 @@ export default function ArchivesClient({
       </div>
 
       <main className="flex-1 space-y-2.5 px-5 pb-4">
-        {onglet === "attestations" && role === "ENTREPRISE" && (
+        {onglet === "attestations" && role === "ENTREPRISE" && estAdministrateur && (
           <Link
             href="/attestations/nouvelle"
             className="block w-full rounded-full border border-dashed border-border bg-surface py-2.5 text-center text-sm font-semibold transition-transform active:scale-[0.98]"
@@ -153,7 +155,7 @@ export default function ArchivesClient({
             + Demander un reçu fiscal
           </Link>
         )}
-        {onglet === "interetGeneral" && role === "ENTREPRISE" && (
+        {onglet === "interetGeneral" && role === "ENTREPRISE" && estAdministrateur && (
           <Link
             href="/attestation-interet-general/nouvelle"
             className="block w-full rounded-full border border-dashed border-border bg-surface py-2.5 text-center text-sm font-semibold transition-transform active:scale-[0.98]"

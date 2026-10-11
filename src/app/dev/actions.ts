@@ -15,7 +15,8 @@ export type CibleDev = "ENTREPRISE" | "ASSOCIATION" | "UTILISATEUR";
  */
 async function utilisateurDevPourOrganisation(kind: "ENTREPRISE" | "ASSOCIATION", orgId: string) {
   const champOrg = kind === "ENTREPRISE" ? { entrepriseId: orgId } : { associationId: orgId };
-  const existant = await prisma.user.findFirst({ where: champOrg });
+  // Le plus ancien compte actif de l'organisation (son administrateur d'origine).
+  const existant = await prisma.user.findFirst({ where: { ...champOrg, desactiveLe: null }, orderBy: { createdAt: "asc" } });
   if (existant) return existant;
 
   const nom =

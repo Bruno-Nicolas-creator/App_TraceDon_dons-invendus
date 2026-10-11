@@ -11,7 +11,8 @@ type Cible = { entrepriseId: string } | { associationId: string } | { coordinate
  * association, ou le coordinateur. N'échoue jamais bruyamment.
  */
 export async function notifier(cible: Cible, sujet: string, corps: string, url: string = "/"): Promise<void> {
-  const where = "coordinateur" in cible ? { role: "COORDINATEUR" as const } : cible;
+  // Les comptes désactivés ne reçoivent plus rien.
+  const where = { ...("coordinateur" in cible ? { role: "COORDINATEUR" as const } : cible), desactiveLe: null };
   const utilisateurs = await prisma.user.findMany({ where, select: { id: true, email: true } });
   if (utilisateurs.length === 0) return;
 

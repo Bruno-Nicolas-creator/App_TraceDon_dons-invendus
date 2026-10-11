@@ -12,6 +12,7 @@ import {
   validerArticle,
 } from "@/app/actions";
 import { demarrerSignatureDocuSign } from "./docusign-actions";
+import { useDroits } from "@/components/DroitsProvider";
 import AjouterArticleForm from "@/components/AjouterArticleForm";
 import CompteurAnime from "@/components/CompteurAnime";
 import IconeArticle from "@/components/IconeArticle";
@@ -93,11 +94,13 @@ export default function BonEnlevementClient({
   // toute modification annule la signature déjà posée (cf. src/lib/bonSignature.ts).
   const verrouille = bon.confirme || (donateurSigne && associationSigne) || !!bon.donAnnule;
   const uneSignaturePosee = !verrouille && (donateurSigne || associationSigne);
-  const peutControlerArticles = role === "ASSOCIATION" && !verrouille;
+  // Un utilisateur en lecture seule ne voit aucun bouton d'action (le serveur refuse de toute façon).
+  const { peutOperer } = useDroits();
+  const peutControlerArticles = role === "ASSOCIATION" && !verrouille && peutOperer;
   // Le don matériel repose sur une liste établie avant publication : contrairement à
   // l'alimentaire, il n'y a pas de scan complémentaire à faire au moment de l'enlèvement.
-  const peutAjouterArticles = role === "ENTREPRISE" && !verrouille && bon.typeDon !== "MATERIEL";
-  const peutChoisirBenevole = role === "ASSOCIATION" && !verrouille;
+  const peutAjouterArticles = role === "ENTREPRISE" && !verrouille && bon.typeDon !== "MATERIEL" && peutOperer;
+  const peutChoisirBenevole = role === "ASSOCIATION" && !verrouille && peutOperer;
   const [benevoleCollecteurId, setBenevoleCollecteurId] = useState(bon.benevoleCollecteurId ?? "");
   const [erreurSignature, setErreurSignature] = useState<string | null>(null);
   const [signatureEnCours, setSignatureEnCours] = useState<"DONATEUR" | "ASSOCIATION" | null>(null);
@@ -678,7 +681,7 @@ export default function BonEnlevementClient({
           )}
 
           <div className="flex gap-2.5">
-            {role === "ENTREPRISE" ? (
+            {role === "ENTREPRISE" && peutOperer ? (
               <button
                 type="button"
                 onClick={() => demarrerSignature("DONATEUR")}
@@ -698,7 +701,7 @@ export default function BonEnlevementClient({
                 {donateurSigne ? "Donateur signé" : "Donateur : en attente"}
               </div>
             )}
-            {role === "ASSOCIATION" ? (
+            {role === "ASSOCIATION" && peutOperer ? (
               <button
                 type="button"
                 onClick={() => demarrerSignature("ASSOCIATION")}
@@ -745,14 +748,18 @@ export default function BonEnlevementClient({
         {erreurSignature && (
           <div className="rounded-lg bg-accent-tint px-3 py-2 text-xs text-accent">{erreurSignature}</div>
         )}
-        <button
-          type="button"
-          onClick={confirmer}
-          disabled={confirmationEnCours || !!bon.donAnnule}
-          className="w-full rounded-full bg-brand py-3.5 text-[15px] font-bold text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {confirmationEnCours ? "Confirmation…" : "Confirmer l'enlèvement"}
-        </button>
+        {peutOperer ? (
+          <button
+            type="button"
+            onClick={confirmer}
+            disabled={confirmationEnCours || !!bon.donAnnule}
+            className="w-full rounded-full bg-brand py-3.5 text-[15px] font-bold text-white transition-transform active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {confirmationEnCours ? "Confirmation…" : "Confirmer l'enlèvement"}
+          </button>
+        ) : (
+          <p className="text-center text-xs text-ink-muted">Accès en lecture seule : consultation uniquement.</p>
+        )}
       </footer>
     </div>
   );

@@ -8,6 +8,7 @@ import BandeauMesureAudience from "@/components/BandeauMesureAudience";
 import DevProfilSwitcher from "@/components/DevProfilSwitcher";
 import SuiviNavigation from "@/components/SuiviNavigation";
 import SiteLockScreen from "@/components/SiteLockScreen";
+import { DroitsProvider } from "@/components/DroitsProvider";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -75,13 +76,17 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     ];
   }
 
+  const sessionDroits = await getSession();
+
   return (
     <html
       lang="fr"
       className={`${fraunces.variable} ${publicSans.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
-        {children}
+        <DroitsProvider niveau={sessionDroits?.niveau ?? null} coordinateur={sessionDroits?.role === "COORDINATEUR"}>
+          {children}
+        </DroitsProvider>
         <BandeauMesureAudience />
         <SuiviNavigation />
         {process.env.NODE_ENV !== "production" && <DevProfilSwitcher cleActive={cleActive} comptes={comptes} />}

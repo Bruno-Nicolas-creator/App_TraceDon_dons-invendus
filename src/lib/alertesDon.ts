@@ -54,7 +54,7 @@ export async function destinatairesAlerte(donId: string) {
       alertesActives: true,
       id: { notIn: don.bonsEnlevement.map((b) => b.associationId) },
       periodesConges: { none: { debut: { lte: maintenant }, fin: { gte: maintenant } } },
-      users: { some: {} },
+      users: { some: { desactiveLe: null } },
     },
     select: { id: true, adresse: true, latitude: true, longitude: true, alerteRayonKm: true, alerteFamilles: true },
   });

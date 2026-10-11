@@ -11,7 +11,9 @@ import { demanderChangementEmail } from "@/lib/changementEmail";
 import { natureActiviteValide } from "@/lib/activiteEntreprise";
 import { geocoderAdresse, isGoogleMapsServerConfigured } from "@/lib/googleMaps";
 import { origineRequete } from "@/lib/requestOrigin";
-import { getSessionLimitee as getSession } from "@/lib/sessionLimitee";
+// Par défaut, les réglages de l'organisation sont réservés aux administrateurs ; les actions sur son
+// propre compte (nom, mot de passe, e-mail, notifications) restent ouvertes à tous les niveaux.
+import { getSessionAdministrateur as getSession, getSessionLimitee as getSessionPersonnelle } from "@/lib/sessionLimitee";
 import { prisma } from "@/lib/prisma";
 import { definitionDocumentPourRole, nomFichierSur, validerFichierDocument, type TypeDocument } from "@/lib/documents";
 import { champTropLong, LONGUEUR_MAX_ADRESSE, LONGUEUR_MAX_CHAMP_COURT } from "@/lib/validation";
@@ -365,7 +367,7 @@ export async function changerMotDePasseAction(
   _etat: { ok: true } | { ok: false; error: string } | null,
   formData: FormData
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const session = await getSession();
+  const session = await getSessionPersonnelle();
   if (!session) return { ok: false, error: "Non authentifié." };
   if (await tropDeTentatives(`changement-mdp:${session.userId}`, 5, 15 * 60 * 1000)) {
     return { ok: false, error: "Trop de tentatives. Merci de réessayer dans quelques minutes." };
@@ -464,7 +466,7 @@ export async function modifierInformationsOrganisationAction(_etat: ResultatForm
 
 /** Nom affiché de l'utilisateur connecté (la session est renouvelée pour l'afficher partout). */
 export async function modifierNomAction(_etat: ResultatFormulaire, formData: FormData): Promise<ResultatFormulaire> {
-  const session = await getSession();
+  const session = await getSessionPersonnelle();
   if (!session) return { ok: false, error: "Non authentifié." };
   const nom = String(formData.get("nom") ?? "").trim();
   if (!nom) return { ok: false, error: "Indiquez votre nom." };
@@ -479,7 +481,7 @@ export async function modifierNomAction(_etat: ResultatFormulaire, formData: For
 
 /** Changement d'adresse e-mail : envoie un lien de confirmation à la nouvelle adresse. */
 export async function demanderChangementEmailAction(_etat: ResultatFormulaire, formData: FormData): Promise<ResultatFormulaire> {
-  const session = await getSession();
+  const session = await getSessionPersonnelle();
   if (!session) return { ok: false, error: "Non authentifié." };
   if (await tropDeTentatives(`changement-email:${session.userId}`, 5, 60 * 60 * 1000)) {
     return { ok: false, error: "Trop de demandes. Merci de réessayer plus tard." };
@@ -540,7 +542,7 @@ export async function enregistrerAbonnementPushAction(abonnement: {
   endpoint: string;
   keys: { p256dh: string; auth: string };
 }) {
-  const session = await getSession();
+  const session = await getSessionPersonnelle();
   if (!session) throw new Error("Non authentifié.");
   // N'accepte que les adresses des vrais services de notification des navigateurs : sans ce
   // contrôle, un appel direct à cette action (ce n'est qu'une requête HTTP, pas forcément une vraie
@@ -559,7 +561,7 @@ export async function enregistrerAbonnementPushAction(abonnement: {
 
 /** Retire l'abonnement push de cet appareil (désactivation depuis le profil). */
 export async function retirerAbonnementPushAction(endpoint: string) {
-  const session = await getSession();
+  const session = await getSessionPersonnelle();
   if (!session) throw new Error("Non authentifié.");
   await prisma.pushSubscription.deleteMany({ where: { endpoint, userId: session.userId } });
 }

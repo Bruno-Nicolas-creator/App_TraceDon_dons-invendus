@@ -1,5 +1,6 @@
 "use client";
 
+import { useDroits } from "@/components/DroitsProvider";
 import Link from "next/link";
 import BottomTabBar from "@/components/BottomTabBar";
 
@@ -37,19 +38,22 @@ export default function MessagesClient({
   role: "ENTREPRISE" | "ASSOCIATION" | "COORDINATEUR";
   nonLusMessages?: number;
 }) {
+  const { peutOperer } = useDroits();
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-bg">
       <header className="flex items-center justify-between px-5 pt-5 pb-3">
         <h1 className="font-display text-xl font-semibold">Messages</h1>
-        <Link
-          href="/messages/nouvelle"
-          aria-label="Nouvelle conversation"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white transition-transform active:scale-90"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M12 5V19M5 12H19" stroke="white" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-        </Link>
+        {peutOperer && (
+          <Link
+            href="/messages/nouvelle"
+            aria-label="Nouvelle conversation"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-brand text-white transition-transform active:scale-90"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 5V19M5 12H19" stroke="white" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </Link>
+        )}
       </header>
 
       <main className="flex-1 space-y-1 px-2 pb-4">

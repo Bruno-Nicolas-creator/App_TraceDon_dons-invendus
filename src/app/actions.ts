@@ -5,7 +5,7 @@ import { after } from "next/server";
 import { origineRequete } from "@/lib/requestOrigin";
 import { alerterNouveauDon } from "@/lib/alertesDon";
 import { prisma } from "@/lib/prisma";
-import { getSessionLimitee as getSession } from "@/lib/sessionLimitee";
+import { getSessionOperateur as getSession } from "@/lib/sessionLimitee";
 import { rechercherProduitParCodeBarre, type ProduitScanne } from "@/lib/openFoodFacts";
 import { verifierRappel, type InfoRappel } from "@/lib/rappelConso";
 import { jourSemaineDuJour } from "@/lib/planning";

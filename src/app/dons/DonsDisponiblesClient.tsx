@@ -9,6 +9,7 @@ import TogglePill from "@/components/TogglePill";
 import MapPinIcon from "@/components/MapPinIcon";
 import { lienItineraire } from "@/lib/googleMapsLinks";
 import { sePositionner } from "@/app/actions";
+import { useDroits } from "@/components/DroitsProvider";
 import { suivre } from "@/lib/analytics";
 
 type Vue = "carte" | "liste";
@@ -53,6 +54,7 @@ export default function DonsDisponiblesClient({
   congesAssociationJusquau: string | null;
   nonLusMessages?: number;
 }) {
+  const { peutOperer } = useDroits();
   const [vue, setVue] = useState<Vue>("carte");
   const carteConfiguree = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) && centreCarte !== null;
   // Mémoïsé : sans ça, chaque re-rendu (ex. cliquer une carte, se positionner) recrée ce tableau,
@@ -247,6 +249,8 @@ export default function DonsDisponiblesClient({
                       </Link>
                     )}
                   </div>
+                ) : !peutOperer ? (
+                  <p className="text-center text-xs text-ink-muted">Accès en lecture seule : consultation uniquement.</p>
                 ) : avertissements[don.id] ? (
                   <div className="space-y-2.5 rounded-xl bg-accent-tint p-3">
                     <p className="text-xs leading-relaxed text-accent">{avertissements[don.id]}</p>
